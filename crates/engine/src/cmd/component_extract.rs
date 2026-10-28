@@ -362,6 +362,8 @@ fn part_design(s: &Session, sc: &Scope, stem: &str, cmd: &str) -> Result<(Sessio
     part.named_views.clear();
     part.configs = Default::default();
     part.assembly = Default::default();
+    // The electronics belong to the design the component leaves.
+    part.ecad = Default::default();
     let features: BTreeMap<u64, u64> = sc.inside.iter().map(|f| (*f, *f)).collect();
     let body_map: BTreeMap<String, String> = bodies.iter().map(|b| (b.clone(), b.clone())).collect();
     // Joints from the component to the rest of the design stay here, so they are not copied
@@ -783,6 +785,7 @@ mod tests {
     fn extract_moves_the_history_to_its_own_design_and_links_it() {
         let dir = folder("basic");
         let (mut s, plate, other) = assembly();
+        run(&mut s, "ecad.component.create", json!({"name": "R0603", "prefix": "R"}));
         run(&mut s, "file.save", json!({"path": dir.join("asm.solidcraft")}));
         let (vol, cen) = (volumes(&s), centroids(&s));
         let other_features: Vec<u64> = s.doc.features.iter().filter(|f| f.component == other).map(|f| f.id).collect();
@@ -810,6 +813,7 @@ mod tests {
         let mut part = Session::default();
         run(&mut part, "doc.open", json!({"path": file}));
         assert_eq!(part.doc.name, "plate");
+        assert!(part.doc.ecad.is_empty() && s.doc.ecad.named("R0603").is_some(), "the electronics stay with the design the component leaves");
         assert_eq!(part.doc.components.iter().map(|c| c.name.as_str()).collect::<Vec<_>>(), ["Pin"]);
         assert_eq!(part.doc.occurrences.len(), 1);
         assert_eq!(part.doc.assembly.joints.iter().map(|j| j.name.as_str()).collect::<Vec<_>>(), ["PinHold"]);

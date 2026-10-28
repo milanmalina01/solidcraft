@@ -1,0 +1,58 @@
+{
+  "en": {
+    "cmd.ecad_component_create": "New Electronic Component",
+    "cmd.ecad_component_edit": "Edit Electronic Component",
+    "cmd.ecad_component_copy": "Copy Electronic Component",
+    "cmd.ecad_component_delete": "Delete Electronic Components",
+    "cmd.ecad_component_inspect": "Inspect Electronic Component"
+  },
+  "ar": {
+    "cmd.ecad_component_create": "مكون إلكتروني جديد",
+    "cmd.ecad_component_edit": "تحرير المكون الإلكتروني",
+    "cmd.ecad_component_copy": "نسخ المكون الإلكتروني",
+    "cmd.ecad_component_delete": "حذف المكونات الإلكترونية",
+    "cmd.ecad_component_inspect": "فحص المكون الإلكتروني"
+  },
+  "de": {
+    "cmd.ecad_component_create": "Neues elektronisches Bauteil",
+    "cmd.ecad_component_edit": "Elektronisches Bauteil bearbeiten",
+    "cmd.ecad_component_copy": "Elektronisches Bauteil kopieren",
+    "cmd.ecad_component_delete": "Elektronische Bauteile löschen",
+    "cmd.ecad_component_inspect": "Elektronisches Bauteil prüfen"
+  },
+  "he": {
+    "cmd.ecad_component_create": "רכיב אלקטרוני חדש",
+    "cmd.ecad_component_edit": "עריכת רכיב אלקטרוני",
+    "cmd.ecad_component_copy": "העתקת רכיב אלקטרוני",
+    "cmd.ecad_component_delete": "מחיקת רכיבים אלקטרוניים",
+    "cmd.ecad_component_inspect": "בדיקת רכיב אלקטרוני"
+  },
+  "ja": {
+    "cmd.ecad_component_create": "新しい電子部品",
+    "cmd.ecad_component_edit": "電子部品を編集",
+    "cmd.ecad_component_copy": "電子部品をコピー",
+    "cmd.ecad_component_delete": "電子部品を削除",
+    "cmd.ecad_component_inspect": "電子部品を検査"
+  },
+  "ko": {
+    "cmd.ecad_component_create": "새 전자 부품",
+    "cmd.ecad_component_edit": "전자 부품 편집",
+    "cmd.ecad_component_copy": "전자 부품 복사",
+    "cmd.ecad_component_delete": "전자 부품 삭제",
+    "cmd.ecad_component_inspect": "전자 부품 검사"
+  },
+  "vi": {
+    "cmd.ecad_component_create": "Linh kiện điện tử mới",
+    "cmd.ecad_component_edit": "Sửa linh kiện điện tử",
+    "cmd.ecad_component_copy": "Sao chép linh kiện điện tử",
+    "cmd.ecad_component_delete": "Xóa linh kiện điện tử",
+    "cmd.ecad_component_inspect": "Kiểm tra linh kiện điện tử"
+  },
+  "zh": {
+    "cmd.ecad_component_create": "新建电子元件",
+    "cmd.ecad_component_edit": "编辑电子元件",
+    "cmd.ecad_component_copy": "复制电子元件",
+    "cmd.ecad_component_delete": "删除电子元件",
+    "cmd.ecad_component_inspect": "检查电子元件"
+  }
+}

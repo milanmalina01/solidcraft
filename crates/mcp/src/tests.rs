@@ -819,12 +819,20 @@ fn electronics_commands_are_found_described_and_run_over_mcp() {
     let mut s = server();
     let cmds = tool(&mut s, "list_commands", json!({"filter": "ecad."}));
     let ids: Vec<&str> = cmds.as_array().unwrap().iter().filter_map(|c| c["id"].as_str()).collect();
-    assert!(ids.contains(&"ecad.inspect"), "{ids:?}");
+    for id in
+        ["ecad.inspect", "ecad.component.create", "ecad.component.edit", "ecad.component.copy", "ecad.component.delete", "ecad.component.inspect"]
+    {
+        assert!(ids.contains(&id), "{id} missing from {ids:?}");
+    }
     assert!(ids.iter().all(|id| id.starts_with("ecad.")), "{ids:?}");
     let d = tool(&mut s, "describe_command", json!({"id": "ecad.inspect"}));
     assert_eq!(d["input"]["type"], "object", "{d}");
     assert!(d["output"]["properties"].get("empty").is_some(), "{d}");
     assert_eq!(tool(&mut s, "execute", json!({"command": "ecad.inspect", "params": {}}))["empty"], json!(true));
+    let made = tool(&mut s, "execute", json!({"command": "ecad.component.create", "params": {"name": "R0603", "prefix": "R", "value": "10k"}}));
+    assert_eq!(made["component"], json!({"id": 1, "name": "R0603"}), "{made}");
+    let read = tool(&mut s, "execute", json!({"command": "ecad.component.inspect", "params": {"component": "R0603"}}));
+    assert_eq!(read["component"]["value"], "10k", "{read}");
 }
 
 /// Compatibility shims (docs/compatibility.md): a design saved before the rename (legacy

@@ -169,6 +169,22 @@ A dimension can drive the sketch, or be driven by it and only show the value.
 - **Elsewhere:** dimension, dimensional constraint, driving dimension.
 - **For translators:** not a drawing dimension and not a measured value.
 
+### electronic component
+
+A part that goes on a circuit board, such as a resistor, a chip or a connector, with what a parts
+list needs to buy it.
+
+It has a unique name and a designator prefix (`R` for R1, R2…); its symbol, footprint and 3D
+package come with it.
+
+- **In SolidCraft:** `ecad.component.create`, `ecad.component.edit`, `ecad.component.copy`,
+  `ecad.component.delete`, `ecad.component.inspect`; the `component` parameter of the `ecad.*`
+  commands; `ecad.components` in the design file, with `prefix` (designator prefix) and `mpn`
+  (manufacturer part number).
+- **Don't use:** component alone (a SolidCraft component holds bodies); part; device.
+- **Elsewhere:** component, part, device, library part.
+- **For translators:** not a SolidCraft component and not a standard part.
+
 ### electronics
 
 The part of a design that describes its electric circuit: the electronic components, how they
@@ -366,6 +382,8 @@ share a catalogue entry. Each meaning below gets its own term and, in time, its 
 | | one placed copy of a component | *occurrence* | "Paste (Instance)" on `occurrence.copy` |
 | History | the undo and redo history | history | Undo, Redo |
 | | the list of features | *timeline* | "Feature history" (`ui.feature_history`), "Roll History Marker" |
+| Component | a container of bodies in the design | component | `component.*` |
+| | a part that goes on a circuit board | *electronic component* | `ecad.component.*` |
 | Part | a standard part | *standard part* | `parts.*` |
 | | a body, an occurrence or the design | *body*, *occurrence*, *design* | catalogue texts that say "part" |
 | | a design property | *part number* | Design Properties |

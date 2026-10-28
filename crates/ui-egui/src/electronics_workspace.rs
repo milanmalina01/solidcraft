@@ -180,7 +180,7 @@ fn paint(app: &SolveApp, ui: &egui::Ui, rect: Rect) {
             painter.vline(origin.x, rect.y_range(), Stroke::new(1.4, y_axis));
         }
     }
-    if app.session.doc.ecad.is_empty() {
+    if !app.session.doc.ecad.has_content() {
         let content = crate::shell::content_rect(app, rect);
         let view = Tokens::view();
         let galley = painter.layout_no_wrap(app.tr("electronics.page_empty").to_string(), FontId::proportional(view.font_body), view.text_dim);

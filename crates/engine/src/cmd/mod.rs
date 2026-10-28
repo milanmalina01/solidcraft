@@ -32,6 +32,7 @@ mod construct;
 mod delete;
 mod diagnostics;
 mod ecad;
+mod ecad_component;
 mod edit;
 mod face;
 mod features;
@@ -324,6 +325,7 @@ pub fn command_specs() -> Vec<&'static CommandSpec> {
     v.extend(render::COMMANDS.iter());
     v.extend(render_ui::COMMANDS.iter());
     v.extend(ecad::COMMANDS.iter());
+    v.extend(ecad_component::COMMANDS.iter());
     v
 }
 

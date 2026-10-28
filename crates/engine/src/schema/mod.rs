@@ -55,11 +55,13 @@ mod tests;
 
 // The contracts, by command file.
 pub mod ecad;
+pub mod ecad_component;
 pub mod edit;
 pub mod features;
 pub mod inspect;
 pub mod sketch_constraints;
 
+pub(crate) use check::parse_issue;
 pub use check::{Contract, Issue, ParamCheck, TypedContract, input_schema_for, output_schema_for, run_checked, run_checked_as};
 pub use types::*;
 

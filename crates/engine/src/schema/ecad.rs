@@ -11,11 +11,24 @@ pub struct InspectParams {}
 /// What `ecad.inspect` returns. Later fields describe each part of the electronics as it is added.
 #[derive(Debug, Serialize, JsonSchema)]
 pub struct InspectResult {
-    /// Whether the design has no electronics yet (nothing of them is saved).
+    /// Whether the design has no electronics yet.
     pub empty: bool,
+    /// The electronic components, in the order they were made; left out when there are none.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub components: Vec<ComponentSummary>,
     /// In the warn parameter-check mode: what the call's parameters got wrong.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub param_warnings: Vec<String>,
+}
+
+/// One electronic component in the `ecad.inspect` list (`ecad.component.inspect` has the rest).
+#[derive(Debug, Serialize, JsonSchema)]
+pub struct ComponentSummary {
+    pub id: u64,
+    pub name: String,
+    pub prefix: String,
+    /// `""` when it has none.
+    pub value: String,
 }
 
 #[cfg(test)]

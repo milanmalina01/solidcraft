@@ -201,7 +201,7 @@ pub(crate) fn script_steps(doc: &Document) -> Result<(Vec<Value>, Vec<String>)> 
         (doc.browser_groups.is_empty() && doc.browser_order.is_empty(), "Browser folders and order"),
         (doc.timeline_groups.is_empty(), "timeline folders"),
         (doc.visibility.is_empty(), "hidden items"),
-        (doc.ecad.is_empty(), "electronics"),
+        (!doc.ecad.has_content(), "electronics"),
     ] {
         if !empty {
             omitted.push(what.to_string());

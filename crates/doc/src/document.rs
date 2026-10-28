@@ -3087,6 +3087,17 @@ impl Document {
         *self == normalized
     }
 
+    /// Only the electronics changed: nothing to evaluate. The same whole-Document proof as
+    /// [`Document::differs_only_in_render`].
+    pub fn differs_only_in_ecad(&self, previous: &Document) -> bool {
+        if self.ecad == previous.ecad {
+            return false;
+        }
+        let mut normalized = previous.clone();
+        normalized.ecad = self.ecad.clone();
+        *self == normalized
+    }
+
     /// Only part properties changed (the fields `with_part_properties_of` names): nothing to
     /// evaluate. The same whole-Document proof as [`Document::differs_only_in_render`].
     pub fn differs_only_in_part_properties(&self, previous: &Document) -> bool {
