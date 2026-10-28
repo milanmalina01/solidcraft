@@ -118,6 +118,7 @@ fn same_geometry_inputs(a: &Document, b: &Document) -> bool {
         assembly: _,
         sheet,
         plastic,
+        ecad,
         parts,
         links,
         configs,
@@ -152,6 +153,7 @@ fn same_geometry_inputs(a: &Document, b: &Document) -> bool {
         && *components == b.components
         && *sheet == b.sheet
         && *plastic == b.plastic
+        && *ecad == b.ecad
         && *parts == b.parts
         && *links == b.links
         && *configs == b.configs

@@ -1,0 +1,26 @@
+{
+  "en": {
+    "cmd.ecad_inspect": "Inspect Electronics"
+  },
+  "ar": {
+    "cmd.ecad_inspect": "فحص الإلكترونيات"
+  },
+  "de": {
+    "cmd.ecad_inspect": "Elektronik prüfen"
+  },
+  "he": {
+    "cmd.ecad_inspect": "בדיקת אלקטרוניקה"
+  },
+  "ja": {
+    "cmd.ecad_inspect": "エレクトロニクスを検査"
+  },
+  "ko": {
+    "cmd.ecad_inspect": "전자 설계 검사"
+  },
+  "vi": {
+    "cmd.ecad_inspect": "Kiểm tra điện tử"
+  },
+  "zh": {
+    "cmd.ecad_inspect": "检查电子电路"
+  }
+}

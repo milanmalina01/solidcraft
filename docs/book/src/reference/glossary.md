@@ -169,6 +169,21 @@ A dimension can drive the sketch, or be driven by it and only show the value.
 - **Elsewhere:** dimension, dimensional constraint, driving dimension.
 - **For translators:** not a drawing dimension and not a measured value.
 
+### electronics
+
+The part of a design that describes its electric circuit: the electronic components, how they
+are connected, the schematic and the circuit board.
+
+The Electronics workspace edits it. A design without electronics saves nothing for them.
+
+- **In SolidCraft:** the Electronics workspace, the `ecad.*` commands (`ecad.inspect`) and the
+  design-file key `ecad` (short for electronic CAD).
+- **Don't use:** ECAD or EDA in labels and messages (the ids and the key keep `ecad`); PCB for the
+  whole (the board is one part).
+- **Elsewhere:** ECAD, EDA, electronics design, PCB design.
+- **For translators:** the design's circuit, not the computer's hardware; an electronic component
+  is not a SolidCraft component.
+
 ### feature
 
 One step in the timeline that creates or changes geometry, such as an extrude, a fillet or a

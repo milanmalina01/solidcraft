@@ -2683,6 +2683,9 @@ pub struct Document {
     /// Plastic rules.
     #[serde(default, skip_serializing_if = "crate::plastic::PlasticSettings::is_empty")]
     pub plastic: crate::plastic::PlasticSettings,
+    /// Electronics: what the Electronics workspace edits ([`crate::ecad`]). Not saved while empty.
+    #[serde(default, skip_serializing_if = "crate::ecad::Electronics::is_empty")]
+    pub ecad: crate::ecad::Electronics,
     /// Components that are standard parts (by component id): what to rebuild them from.
     #[serde(default, skip_serializing_if = "std::collections::BTreeMap::is_empty")]
     pub parts: std::collections::BTreeMap<u64, StandardPart>,
@@ -2940,6 +2943,7 @@ impl Document {
             assembly: Default::default(),
             sheet: Default::default(),
             plastic: Default::default(),
+            ecad: Default::default(),
             configs: Default::default(),
             parts: Default::default(),
             links: Default::default(),

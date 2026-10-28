@@ -812,6 +812,21 @@ fn list_commands_filter_by_a_command_id_matches_ids() {
     assert!(ids.iter().all(|id| id.contains("sketch.delete")), "{} commands matched: {ids:?}", ids.len());
 }
 
+/// The electronics commands need no MCP code: an agent finds them with `list_commands`, reads
+/// their schemas with `describe_command` and runs them with `execute`.
+#[test]
+fn electronics_commands_are_found_described_and_run_over_mcp() {
+    let mut s = server();
+    let cmds = tool(&mut s, "list_commands", json!({"filter": "ecad."}));
+    let ids: Vec<&str> = cmds.as_array().unwrap().iter().filter_map(|c| c["id"].as_str()).collect();
+    assert!(ids.contains(&"ecad.inspect"), "{ids:?}");
+    assert!(ids.iter().all(|id| id.starts_with("ecad.")), "{ids:?}");
+    let d = tool(&mut s, "describe_command", json!({"id": "ecad.inspect"}));
+    assert_eq!(d["input"]["type"], "object", "{d}");
+    assert!(d["output"]["properties"].get("empty").is_some(), "{d}");
+    assert_eq!(tool(&mut s, "execute", json!({"command": "ecad.inspect", "params": {}}))["empty"], json!(true));
+}
+
 /// Compatibility shims (docs/compatibility.md): a design saved before the rename (legacy
 /// extension and format tag) opens through MCP, and the legacy resource URIs still read.
 #[test]

@@ -27,6 +27,7 @@ const AREAS: &[(&str, &str)] = &[
     ("file", "Files"),
     ("doc", "Documents"),
     ("edit", "Edit"),
+    ("ecad", "Electronics"),
 ];
 
 pub fn run(root: &Path) -> Result<(), String> {
