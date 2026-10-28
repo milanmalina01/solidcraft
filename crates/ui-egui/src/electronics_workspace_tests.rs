@@ -158,3 +158,64 @@ fn the_control_channel_opens_the_workspace() {
     assert_eq!(h.call("ui.workspace", json!({"workspace": "electronics"}))["ok"], false, "refused while sketching");
     assert!(!active(&h.app));
 }
+
+/// An 0603 resistor over the same commands an agent uses.
+fn r0603(h: &mut Harness) {
+    for (id, p) in [
+        ("ecad.component.create", json!({"name": "R0603", "prefix": "R", "value": "10k"})),
+        (
+            "ecad.pin.add",
+            json!({"component": "R0603", "pins": [{"number": 1, "name": "A", "at": [-5.08, 0], "direction": "right"}, {"number": 2, "name": "B", "at": [5.08, 0], "direction": "left"}]}),
+        ),
+        (
+            "ecad.pad.add",
+            json!({"component": "R0603", "pads": [{"number": 1, "at": [-0.8, 0], "size": [0.9, 1.0]}, {"number": 2, "at": [0.8, 0], "size": [0.9, 1.0]}]}),
+        ),
+    ] {
+        let reply = h.call("engine.execute", json!({"command": id, "params": p}));
+        assert_eq!(reply["ok"], true, "{id}: {reply}");
+    }
+}
+
+#[test]
+fn the_page_follows_the_component_an_agent_builds() {
+    let mut h = Harness::new();
+    h.call("ui.resize", json!({"width": 1440, "height": 900}));
+    enter(&mut h.app, true).unwrap();
+    r0603(&mut h);
+    h.frames(3);
+    // The last command added pads, so the page shows the footprint, framed around its copper.
+    assert_eq!(h.app.electronics.view, crate::electronics_components::View::Footprint);
+    let (one, two) = (crate::scenario::handle_at("electronics:pad:1").unwrap(), crate::scenario::handle_at("electronics:pad:2").unwrap());
+    assert!((one.y - two.y).abs() < 0.5 && two.x > one.x, "pad 2 is right of pad 1 on one line: {one:?} {two:?}");
+    let content = crate::shell::content_rect(&h.app, h.app.viewport.rect.unwrap());
+    assert!(((one.x + two.x) / 2.0 - content.center().x).abs() < 1.0, "Fit centres the copper in the free area");
+    let points_per_mm = (two.x - one.x) / 1.6;
+    assert!(points_per_mm > 20.0, "an 0603 is framed large, not left at the empty page's scale: {points_per_mm}");
+    // Symbol: the pins' connecting ends, 10.16 mm apart.
+    h.step(&json!({"click": {"handle": "electronics:view:symbol"}})).unwrap();
+    h.frames(2);
+    let (a, b) = (crate::scenario::handle_at("electronics:pin:1").unwrap(), crate::scenario::handle_at("electronics:pin:2").unwrap());
+    assert!((a.y - b.y).abs() < 0.5 && b.x > a.x, "{a:?} {b:?}");
+}
+
+#[test]
+fn the_browser_lists_electronic_components_and_picks_one() {
+    let mut h = Harness::new();
+    h.call("ui.resize", json!({"width": 1440, "height": 900}));
+    r0603(&mut h);
+    let reply = h.call("engine.execute", json!({"command": "ecad.component.create", "params": {"name": "LM358"}}));
+    assert_eq!(reply["ok"], true, "{reply}");
+    h.call("ui.workspace", json!({"workspace": "electronics"}));
+    h.frames(2);
+    let document = h.app.session.doc.clone();
+    assert_eq!(crate::electronics_components::shown(&h.app).map(|c| c.name.as_str()), Some("LM358"), "the newest is shown");
+    h.step(&json!({"click": {"handle": "electronics:component:R0603"}})).unwrap();
+    h.frames(2);
+    assert_eq!(crate::electronics_components::shown(&h.app).map(|c| c.name.as_str()), Some("R0603"));
+    assert!(std::sync::Arc::ptr_eq(&document, &h.app.session.doc), "looking changes nothing in the design");
+    h.step(&json!({"click": {"handle": "electronics:browser-model"}})).unwrap();
+    h.frames(2);
+    assert!(crate::scenario::handle_at("electronics:component:R0603").is_none() || h.app.electronics.model_tab);
+    assert!(h.app.electronics.model_tab, "the Browser card shows the model again");
+}

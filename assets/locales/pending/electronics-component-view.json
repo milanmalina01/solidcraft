@@ -1,0 +1,82 @@
+{
+  "en": {
+    "electronics.browser_model": "Model",
+    "electronics.browser_components": "Library",
+    "electronics.view_symbol": "Symbol",
+    "electronics.view_footprint": "Footprint",
+    "electronics.no_components": "No electronic components yet",
+    "electronics.counts": "{pins} pins · {pads} pads",
+    "electronics.no_pins": "{name} has no symbol pins yet",
+    "electronics.no_pads": "{name} has no footprint pads yet"
+  },
+  "ar": {
+    "electronics.browser_model": "النموذج",
+    "electronics.browser_components": "المكتبة",
+    "electronics.view_symbol": "الرمز",
+    "electronics.view_footprint": "البصمة",
+    "electronics.no_components": "لا توجد مكونات إلكترونية بعد",
+    "electronics.counts": "{pins} أطراف · {pads} وسادات",
+    "electronics.no_pins": "لا توجد أطراف رمز لـ {name} بعد",
+    "electronics.no_pads": "لا توجد وسادات بصمة لـ {name} بعد"
+  },
+  "de": {
+    "electronics.browser_model": "Modell",
+    "electronics.browser_components": "Bibliothek",
+    "electronics.view_symbol": "Symbol",
+    "electronics.view_footprint": "Footprint",
+    "electronics.no_components": "Noch keine elektronischen Bauteile",
+    "electronics.counts": "{pins} Pins · {pads} Pads",
+    "electronics.no_pins": "{name} hat noch keine Symbolpins",
+    "electronics.no_pads": "{name} hat noch keine Footprint-Pads"
+  },
+  "he": {
+    "electronics.browser_model": "מודל",
+    "electronics.browser_components": "ספרייה",
+    "electronics.view_symbol": "סמל",
+    "electronics.view_footprint": "טביעת רגל",
+    "electronics.no_components": "עדיין אין רכיבים אלקטרוניים",
+    "electronics.counts": "{pins} פינים · {pads} פדים",
+    "electronics.no_pins": "ל־{name} עדיין אין פינים בסמל",
+    "electronics.no_pads": "ל־{name} עדיין אין פדים בטביעת הרגל"
+  },
+  "ja": {
+    "electronics.browser_model": "モデル",
+    "electronics.browser_components": "ライブラリ",
+    "electronics.view_symbol": "シンボル",
+    "electronics.view_footprint": "フットプリント",
+    "electronics.no_components": "電子部品はまだありません",
+    "electronics.counts": "ピン {pins} · パッド {pads}",
+    "electronics.no_pins": "{name} にはまだシンボルのピンがありません",
+    "electronics.no_pads": "{name} にはまだフットプリントのパッドがありません"
+  },
+  "ko": {
+    "electronics.browser_model": "모델",
+    "electronics.browser_components": "라이브러리",
+    "electronics.view_symbol": "심볼",
+    "electronics.view_footprint": "풋프린트",
+    "electronics.no_components": "아직 전자 부품이 없습니다",
+    "electronics.counts": "핀 {pins}개 · 패드 {pads}개",
+    "electronics.no_pins": "{name}에는 아직 심볼 핀이 없습니다",
+    "electronics.no_pads": "{name}에는 아직 풋프린트 패드가 없습니다"
+  },
+  "vi": {
+    "electronics.browser_model": "Mô hình",
+    "electronics.browser_components": "Thư viện",
+    "electronics.view_symbol": "Ký hiệu",
+    "electronics.view_footprint": "Footprint",
+    "electronics.no_components": "Chưa có linh kiện điện tử nào",
+    "electronics.counts": "{pins} chân · {pads} pad",
+    "electronics.no_pins": "{name} chưa có chân ký hiệu",
+    "electronics.no_pads": "{name} chưa có pad footprint"
+  },
+  "zh": {
+    "electronics.browser_model": "模型",
+    "electronics.browser_components": "资源库",
+    "electronics.view_symbol": "符号",
+    "electronics.view_footprint": "封装",
+    "electronics.no_components": "尚无电子元件",
+    "electronics.counts": "{pins} 个引脚 · {pads} 个焊盘",
+    "electronics.no_pins": "{name} 尚无符号引脚",
+    "electronics.no_pads": "{name} 尚无封装焊盘"
+  }
+}

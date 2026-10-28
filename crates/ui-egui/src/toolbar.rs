@@ -2254,6 +2254,10 @@ pub fn shortcuts(app: &mut SolveApp, ctx: &egui::Context) {
                 if crate::sketch_text_move::cancel_drag(app) || crate::occurrence_drag::cancel(app) {
                     continue;
                 }
+                if crate::electronics_workspace::active(app) {
+                    crate::electronics_editor::escape(app);
+                    continue;
+                }
                 if crate::select_other::is_open(app) {
                     crate::select_other::close(app);
                 } else if app.tool.is_some() {
@@ -2278,6 +2282,10 @@ pub fn shortcuts(app: &mut SolveApp, ctx: &egui::Context) {
             }
             Key::F6 => app.animate_view("fit"),
             Key::Backspace if crate::tools::undo_spline_point(app) => {}
+            // In Electronics the keys delete the picked pin or pad, never the hidden model's selection.
+            Key::Delete | Key::Backspace if crate::electronics_workspace::active(app) => {
+                crate::electronics_editor::delete_picked(app);
+            }
             Key::Delete | Key::Backspace => {
                 if !crate::timeline_left::delete_selected_folders(app) {
                     crate::viewport::delete_selection(app);

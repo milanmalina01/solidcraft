@@ -33,6 +33,12 @@ mod delete;
 mod diagnostics;
 mod ecad;
 mod ecad_component;
+mod ecad_footprint;
+mod ecad_generate;
+mod ecad_generate_geometry;
+mod ecad_graphics;
+mod ecad_package;
+mod ecad_symbol;
 mod edit;
 mod face;
 mod features;
@@ -326,6 +332,11 @@ pub fn command_specs() -> Vec<&'static CommandSpec> {
     v.extend(render_ui::COMMANDS.iter());
     v.extend(ecad::COMMANDS.iter());
     v.extend(ecad_component::COMMANDS.iter());
+    v.extend(ecad_symbol::COMMANDS.iter());
+    v.extend(ecad_footprint::COMMANDS.iter());
+    v.extend(ecad_graphics::COMMANDS.iter());
+    v.extend(ecad_generate::COMMANDS.iter());
+    v.extend(ecad_package::COMMANDS.iter());
     v
 }
 

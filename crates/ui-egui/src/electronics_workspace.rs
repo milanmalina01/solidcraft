@@ -1,7 +1,8 @@
 //! The Electronics workspace: the design's electronics (`doc.ecad`, the `ecad.*` commands) on a
 //! flat 2D page. The page has its own top-down camera, so the shared navigation pans and zooms it
-//! (never orbits) and the Design camera stays where it was. Empty for now: the page shows its grid
-//! and origin until the component library, schematic and board arrive.
+//! (never orbits) and the Design camera stays where it was. It shows one electronic component's
+//! symbol or footprint at a time (`electronics_components`); the schematic and the board come
+//! later.
 
 use egui::{Align2, FontId, Pos2, Rect, Sense, Stroke, pos2};
 use solidcraft_engine::render::{Camera, StandardView, UpAxis};
@@ -38,6 +39,16 @@ impl Default for PageView {
 #[derive(Default)]
 pub struct State {
     pub page: PageView,
+    /// The electronic component the page shows, by id; the newest when none is chosen.
+    pub selected: Option<u64>,
+    /// Its symbol or its footprint.
+    pub view: crate::electronics_components::View,
+    /// The Browser card shows the model rather than the electronic components.
+    pub model_tab: bool,
+    /// The Component panel's pick, drag and typing.
+    pub editor: crate::electronics_editor::Editor,
+    /// The electronic component and view the camera framed last: another one is framed afresh.
+    framed: Option<(u64, crate::electronics_components::View, bool)>,
 }
 
 pub fn active(app: &SolveApp) -> bool {
@@ -87,13 +98,19 @@ pub fn show(app: &mut SolveApp, ui: &mut egui::Ui) {
     let response = ui.interact(rect, ui.id().with("electronics_page"), Sense::click_and_drag());
     app.viewport.rect = Some(rect);
     crate::viewport::refresh_layout(app, ui.ctx().pixels_per_point());
-    if !app.electronics.page.fitted {
+    if !app.electronics.page.fitted || app.electronics.framed != crate::electronics_components::framing(app) {
         fit(app, rect);
     }
-    with_page_camera(app, |app| {
-        crate::navigation::handle(app, ui, rect, &response, crate::navigation::NavCaps { orbit: false, pick: false });
-    });
+    // A press on a pin or a pad picks or drags it; the rest of the pointer navigates the page.
+    if !crate::electronics_editor::page_input(app, ui, rect, &response) {
+        with_page_camera(app, |app| {
+            crate::navigation::handle(app, ui, rect, &response, crate::navigation::NavCaps { orbit: false, pick: false });
+        });
+    }
     paint(app, ui, rect);
+    if app.session.doc.ecad.has_content() {
+        crate::electronics_components::view_switch(app, ui, crate::shell::content_rect(app, rect));
+    }
     crate::scenario::publish_target("electronics:page", rect);
 }
 
@@ -121,20 +138,25 @@ pub(crate) fn with_page_camera(app: &mut SolveApp, navigate: impl FnOnce(&mut So
     app.viewport.mouse = None;
 }
 
-/// Frame the empty page around its origin in the part of `rect` the panels leave free.
+/// Frame the shown drawing, or the empty page around its origin, in the part of `rect` the panels
+/// leave free.
 fn fit(app: &mut SolveApp, rect: Rect) {
     let content = crate::shell::content_rect(app, rect);
     let area = if content.is_positive() { content } else { rect };
-    let scale = f64::from(area.width().min(area.height())) / (2.0 * EMPTY_HALF_EXTENT);
+    let [[x0, y0], [x1, y1]] = crate::electronics_components::bounds(app).unwrap_or([[-EMPTY_HALF_EXTENT; 2], [EMPTY_HALF_EXTENT; 2]]);
+    // A margin around the drawing, and never closer than a 10 mm square.
+    let (w, h) = (((x1 - x0) * 1.5).max(10.0), ((y1 - y0) * 1.5).max(10.0));
+    let scale = (f64::from(area.width()) / w).min(f64::from(area.height()) / h);
     if !(scale.is_finite() && scale > 0.0) {
         return;
     }
     let cam = &mut app.electronics.page.cam;
-    cam.target.x = -f64::from(area.center().x - rect.center().x) / scale;
-    cam.target.y = f64::from(area.center().y - rect.center().y) / scale;
+    cam.target.x = (x0 + x1) / 2.0 - f64::from(area.center().x - rect.center().x) / scale;
+    cam.target.y = (y0 + y1) / 2.0 + f64::from(area.center().y - rect.center().y) / scale;
     cam.target.z = 0.0;
     cam.distance = f64::from(rect.height()) / (2.0 * scale) / 0.4;
     app.electronics.page.fitted = true;
+    app.electronics.framed = crate::electronics_components::framing(app);
 }
 
 /// Page millimetres to screen points for the page's camera over `rect`.
@@ -155,6 +177,11 @@ impl PageMap {
 
     pub(crate) fn to_screen(self, x: f64, y: f64) -> Pos2 {
         pos2((self.ox + x * self.scale) as f32, (self.oy - y * self.scale) as f32)
+    }
+
+    /// Points per millimetre.
+    pub(crate) fn scale(self) -> f64 {
+        self.scale
     }
 
     pub(crate) fn to_page(self, p: Pos2) -> (f64, f64) {
@@ -179,12 +206,17 @@ fn paint(app: &SolveApp, ui: &egui::Ui, rect: Rect) {
         if origin.x.is_finite() && rect.x_range().contains(origin.x) {
             painter.vline(origin.x, rect.y_range(), Stroke::new(1.4, y_axis));
         }
+        crate::electronics_components::paint(app, &painter, map);
     }
-    if !app.session.doc.ecad.has_content() {
+    let has_content = app.session.doc.ecad.has_content();
+    let note = if has_content { crate::electronics_components::empty_note(app) } else { Some(app.tr("electronics.page_empty").to_string()) };
+    if let Some(note) = note {
         let content = crate::shell::content_rect(app, rect);
         let view = Tokens::view();
-        let galley = painter.layout_no_wrap(app.tr("electronics.page_empty").to_string(), FontId::proportional(view.font_body), view.text_dim);
-        let note = Align2::CENTER_TOP.anchor_size(pos2(content.center().x, content.top() + view.space_24), galley.size());
+        // Below the Symbol and Footprint choice when there is one.
+        let top = content.top() + view.space_24 + if has_content { crate::ui_kit::row_height() + view.space_12 } else { 0.0 };
+        let galley = painter.layout_no_wrap(note, FontId::proportional(view.font_body), view.text_dim);
+        let note = Align2::CENTER_TOP.anchor_size(pos2(content.center().x, top), galley.size());
         // The page's own colour behind the note keeps it readable over the grid and the axes.
         painter.rect_filled(note.expand2(egui::vec2(view.space_8, view.space_4)), view.radius_sm, t.viewport_bottom);
         painter.galley(note.min, galley, view.text_dim);

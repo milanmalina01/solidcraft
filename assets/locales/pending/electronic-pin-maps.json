@@ -1,0 +1,26 @@
+{
+  "en": {
+    "cmd.ecad_component_map_pins": "Map Pins to Pads"
+  },
+  "ar": {
+    "cmd.ecad_component_map_pins": "ربط الأطراف بالوسادات"
+  },
+  "de": {
+    "cmd.ecad_component_map_pins": "Pins Pads zuordnen"
+  },
+  "he": {
+    "cmd.ecad_component_map_pins": "מיפוי פינים לפדים"
+  },
+  "ja": {
+    "cmd.ecad_component_map_pins": "ピンをパッドに割り当て"
+  },
+  "ko": {
+    "cmd.ecad_component_map_pins": "핀을 패드에 매핑"
+  },
+  "vi": {
+    "cmd.ecad_component_map_pins": "Gán chân với pad"
+  },
+  "zh": {
+    "cmd.ecad_component_map_pins": "将引脚映射到焊盘"
+  }
+}

@@ -1,0 +1,66 @@
+{
+  "en": {
+    "cmd.ecad_pin_add": "Add Symbol Pins",
+    "cmd.ecad_pin_edit": "Edit Symbol Pin",
+    "cmd.ecad_pin_delete": "Delete Symbol Pins",
+    "cmd.ecad_pad_add": "Add Footprint Pads",
+    "cmd.ecad_pad_edit": "Edit Footprint Pad",
+    "cmd.ecad_pad_delete": "Delete Footprint Pads"
+  },
+  "ar": {
+    "cmd.ecad_pin_add": "إضافة أطراف الرمز",
+    "cmd.ecad_pin_edit": "تحرير طرف الرمز",
+    "cmd.ecad_pin_delete": "حذف أطراف الرمز",
+    "cmd.ecad_pad_add": "إضافة وسادات البصمة",
+    "cmd.ecad_pad_edit": "تحرير وسادة البصمة",
+    "cmd.ecad_pad_delete": "حذف وسادات البصمة"
+  },
+  "de": {
+    "cmd.ecad_pin_add": "Symbolpins hinzufügen",
+    "cmd.ecad_pin_edit": "Symbolpin bearbeiten",
+    "cmd.ecad_pin_delete": "Symbolpins löschen",
+    "cmd.ecad_pad_add": "Footprint-Pads hinzufügen",
+    "cmd.ecad_pad_edit": "Footprint-Pad bearbeiten",
+    "cmd.ecad_pad_delete": "Footprint-Pads löschen"
+  },
+  "he": {
+    "cmd.ecad_pin_add": "הוספת פינים לסמל",
+    "cmd.ecad_pin_edit": "עריכת פין בסמל",
+    "cmd.ecad_pin_delete": "מחיקת פינים מהסמל",
+    "cmd.ecad_pad_add": "הוספת פדים לטביעת הרגל",
+    "cmd.ecad_pad_edit": "עריכת פד בטביעת הרגל",
+    "cmd.ecad_pad_delete": "מחיקת פדים מטביעת הרגל"
+  },
+  "ja": {
+    "cmd.ecad_pin_add": "シンボルのピンを追加",
+    "cmd.ecad_pin_edit": "シンボルのピンを編集",
+    "cmd.ecad_pin_delete": "シンボルのピンを削除",
+    "cmd.ecad_pad_add": "フットプリントのパッドを追加",
+    "cmd.ecad_pad_edit": "フットプリントのパッドを編集",
+    "cmd.ecad_pad_delete": "フットプリントのパッドを削除"
+  },
+  "ko": {
+    "cmd.ecad_pin_add": "심볼 핀 추가",
+    "cmd.ecad_pin_edit": "심볼 핀 편집",
+    "cmd.ecad_pin_delete": "심볼 핀 삭제",
+    "cmd.ecad_pad_add": "풋프린트 패드 추가",
+    "cmd.ecad_pad_edit": "풋프린트 패드 편집",
+    "cmd.ecad_pad_delete": "풋프린트 패드 삭제"
+  },
+  "vi": {
+    "cmd.ecad_pin_add": "Thêm chân ký hiệu",
+    "cmd.ecad_pin_edit": "Sửa chân ký hiệu",
+    "cmd.ecad_pin_delete": "Xóa chân ký hiệu",
+    "cmd.ecad_pad_add": "Thêm pad footprint",
+    "cmd.ecad_pad_edit": "Sửa pad footprint",
+    "cmd.ecad_pad_delete": "Xóa pad footprint"
+  },
+  "zh": {
+    "cmd.ecad_pin_add": "添加符号引脚",
+    "cmd.ecad_pin_edit": "编辑符号引脚",
+    "cmd.ecad_pin_delete": "删除符号引脚",
+    "cmd.ecad_pad_add": "添加封装焊盘",
+    "cmd.ecad_pad_edit": "编辑封装焊盘",
+    "cmd.ecad_pad_delete": "删除封装焊盘"
+  }
+}

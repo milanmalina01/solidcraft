@@ -226,6 +226,19 @@ makes is a *group*.
 - **Elsewhere:** folder, node.
 - **For translators:** not a group and not a folder on disk.
 
+### footprint
+
+The copper pads an electronic component is soldered to, as seen from the top of the circuit board.
+
+Pads connect to the symbol's pins with the same number.
+
+- **In SolidCraft:** `ecad.pad.add`, `ecad.pad.edit`, `ecad.pad.delete`; `footprint.pads` in the
+  design file. A pad has a `number`, a centre `at`, a `size`, a `rotation` and a `side` (top or
+  bottom).
+- **Don't use:** package (the 3D package is a separate part), land pattern in labels.
+- **Elsewhere:** footprint, land pattern, package (in some tools).
+- **For translators:** not a person's footprint and not a 3D shape.
+
 ### group
 
 A named container that someone makes, in the browser or in the timeline, to keep items together.
@@ -349,6 +362,18 @@ a standard size.
 - **Don't use:** library part, part (on its own), content.
 - **Elsewhere:** standard part, library part, fastener, catalogue part.
 - **For translators:** see *Words with more than one meaning*, "part".
+
+### symbol
+
+How an electronic component is drawn on the schematic: its pins, and later its body.
+
+- **In SolidCraft:** `ecad.pin.add`, `ecad.pin.edit`, `ecad.pin.delete`; `symbol.pins` in the
+  design file. A *symbol pin* has a `number`, an optional `name`, an `electrical` type, the point
+  `at` where a wire connects, the `direction` toward the body and a `length`.
+- **Don't use:** pin alone in labels (say symbol pin: Pin to Toolbar and standard-part pins are
+  other things).
+- **Elsewhere:** schematic symbol, gate.
+- **For translators:** a schematic drawing, not a text character or an icon.
 
 ### timeline
 

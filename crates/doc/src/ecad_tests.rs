@@ -1,6 +1,6 @@
 use serde_json::{Value, json};
 
-use super::{ElectronicComponent, Electronics, MAX_COMPONENTS, MAX_DESCRIPTION, MAX_TEXT};
+use super::{ElectronicComponent, Electronics, MAX_COMPONENTS, MAX_DESCRIPTION, MAX_TEXT, Pad, PadKind, PadShape, Pin, PinDirection, PinType, Side};
 use crate::Document;
 use crate::format::{FORMAT, format_string};
 
@@ -79,6 +79,10 @@ fn resistor(id: u64, name: &str) -> ElectronicComponent {
         mpn: "RC0603FR-0710KL".into(),
         manufacturer: "Example Resistors".into(),
         description: "Thick film resistor, 0603, 1%".into(),
+        symbol: Default::default(),
+        footprint: Default::default(),
+        pin_map: None,
+        package: None,
     }
 }
 
@@ -118,7 +122,8 @@ fn the_id_counter_never_falls_behind_an_id_in_use() {
 fn damaged_or_unknown_electronic_components_are_refused() {
     let long = "x".repeat(MAX_TEXT + 1);
     let cases = [
-        json!([{"id": 1, "name": "R0603", "prefix": "R", "footprint": {}}]),
+        json!([{"id": 1, "name": "R0603", "prefix": "R", "datasheet": "r0603.pdf"}]),
+        json!([{"id": 1, "name": "R0603", "prefix": "R", "footprint": {"drill": 1}}]),
         json!([{"id": 0, "name": "R0603", "prefix": "R"}]),
         json!([{"id": 1, "name": "R0603", "prefix": "R"}, {"id": 1, "name": "C0603", "prefix": "C"}]),
         json!([{"id": 1, "name": "R0603", "prefix": "R"}, {"id": 2, "name": "R0603", "prefix": "R"}]),
@@ -155,4 +160,87 @@ fn the_component_cap_is_enforced() {
     assert!(ecad.validate().unwrap_err().contains("at most"));
     ecad.components.pop();
     assert!(ecad.validate().is_ok());
+}
+
+#[test]
+fn pins_and_pads_round_trip_and_connect_by_number() {
+    let mut doc = Document::new("A");
+    let mut r = resistor(1, "R0603");
+    r.symbol.pins = vec![
+        Pin { number: "1".into(), name: String::new(), electrical: PinType::Passive, at: [-5.08, 0.0], direction: PinDirection::Right, length: 2.54 },
+        Pin { number: "2".into(), name: "B".into(), electrical: PinType::Input, at: [5.08, 0.0], direction: PinDirection::Left, length: 2.54 },
+    ];
+    r.footprint.pads = vec![
+        Pad {
+            number: "1".into(),
+            at: [-0.8, 0.0],
+            size: [0.9, 1.0],
+            rotation: 0.0,
+            side: Side::Top,
+            shape: PadShape::Rect,
+            corner: 0.0,
+            kind: PadKind::Smd,
+            drill: None,
+        },
+        Pad {
+            number: "2".into(),
+            at: [0.8, 0.0],
+            size: [0.9, 1.0],
+            rotation: 90.0,
+            side: Side::Bottom,
+            shape: PadShape::Rect,
+            corner: 0.0,
+            kind: PadKind::Smd,
+            drill: None,
+        },
+    ];
+    doc.ecad.components = vec![r];
+    // What opening makes of the counter: one past the largest id.
+    doc.ecad.next_id = 2;
+    let v = saved(&doc);
+    let pins = &v["ecad"]["components"][0]["symbol"]["pins"];
+    assert!(pins[0].get("electrical").is_none() && pins[0].get("name").is_none(), "defaults are not saved: {pins}");
+    assert_eq!(pins[1]["electrical"], json!("input"));
+    let pads = &v["ecad"]["components"][0]["footprint"]["pads"];
+    assert!(pads[0].get("rotation").is_none() && pads[0].get("side").is_none(), "{pads}");
+    assert_eq!(pads[1]["side"], json!("bottom"));
+    let back = Document::from_json(&doc.to_json()).unwrap();
+    assert_eq!(back, doc);
+    let c = &back.ecad.components[0];
+    assert_eq!(c.connections(), vec![("1", vec!["1"]), ("2", vec!["2"])]);
+    assert_eq!(c.symbol.pins[0].body_end(), [-2.54, 0.0]);
+}
+
+#[test]
+fn damaged_pins_and_pads_are_refused() {
+    let base = || json!({"id": 1, "name": "R0603", "prefix": "R"});
+    let pin = json!({"number": "1", "at": [0, 0], "direction": "up", "length": 2.54});
+    let pad = json!({"number": "1", "at": [0, 0], "size": [1, 1]});
+    let mut cases = Vec::new();
+    for (key, list) in [("symbol", json!({"pins": [pin, pin]})), ("footprint", json!({"pads": [pad, pad]}))] {
+        let mut c = base();
+        c[key] = list;
+        cases.push(c);
+    }
+    for (key, item, field, junk) in [
+        ("symbol", "pins", "length", json!(0)),
+        ("symbol", "pins", "direction", json!("sideways")),
+        ("symbol", "pins", "at", json!([0, 1e6])),
+        ("symbol", "pins", "number", json!("")),
+        ("symbol", "pins", "graphics", json!([])),
+        ("footprint", "pads", "size", json!([0, 1])),
+        ("footprint", "pads", "rotation", json!(400)),
+        ("footprint", "pads", "drill", json!(0.8)),
+    ] {
+        let mut one = if key == "symbol" { pin.clone() } else { pad.clone() };
+        one[field] = junk;
+        let mut list = json!({});
+        list[item] = json!([one]);
+        let mut c = base();
+        c[key] = list;
+        cases.push(c);
+    }
+    for c in cases {
+        assert!(with_components(json!([c])).is_err(), "{c} must not open");
+    }
 }

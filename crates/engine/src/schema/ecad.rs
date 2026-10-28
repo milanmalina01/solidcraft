@@ -29,6 +29,12 @@ pub struct ComponentSummary {
     pub prefix: String,
     /// `""` when it has none.
     pub value: String,
+    /// How many pins its symbol has.
+    pub pins: usize,
+    /// How many pads its footprint has.
+    pub pads: usize,
+    /// Pins, pads and no errors (`ecad.component.inspect` lists the problems).
+    pub ready: bool,
 }
 
 #[cfg(test)]

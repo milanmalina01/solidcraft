@@ -1,0 +1,42 @@
+{
+  "en": {
+    "cmd.ecad_symbol_set_graphics": "Set Symbol Graphics",
+    "cmd.ecad_footprint_set_graphics": "Set Footprint Graphics",
+    "cmd.ecad_footprint_courtyard": "Make Courtyard"
+  },
+  "ar": {
+    "cmd.ecad_symbol_set_graphics": "تعيين رسومات الرمز",
+    "cmd.ecad_footprint_set_graphics": "تعيين رسومات البصمة",
+    "cmd.ecad_footprint_courtyard": "إنشاء منطقة الحماية"
+  },
+  "de": {
+    "cmd.ecad_symbol_set_graphics": "Symbolgrafik festlegen",
+    "cmd.ecad_footprint_set_graphics": "Footprint-Grafik festlegen",
+    "cmd.ecad_footprint_courtyard": "Sperrfläche erzeugen"
+  },
+  "he": {
+    "cmd.ecad_symbol_set_graphics": "הגדרת גרפיקת סמל",
+    "cmd.ecad_footprint_set_graphics": "הגדרת גרפיקת טביעת רגל",
+    "cmd.ecad_footprint_courtyard": "יצירת אזור שמור"
+  },
+  "ja": {
+    "cmd.ecad_symbol_set_graphics": "シンボルの図形を設定",
+    "cmd.ecad_footprint_set_graphics": "フットプリントの図形を設定",
+    "cmd.ecad_footprint_courtyard": "コートヤードを作成"
+  },
+  "ko": {
+    "cmd.ecad_symbol_set_graphics": "심볼 그래픽 설정",
+    "cmd.ecad_footprint_set_graphics": "풋프린트 그래픽 설정",
+    "cmd.ecad_footprint_courtyard": "코트야드 만들기"
+  },
+  "vi": {
+    "cmd.ecad_symbol_set_graphics": "Đặt đồ họa ký hiệu",
+    "cmd.ecad_footprint_set_graphics": "Đặt đồ họa footprint",
+    "cmd.ecad_footprint_courtyard": "Tạo vùng courtyard"
+  },
+  "zh": {
+    "cmd.ecad_symbol_set_graphics": "设置符号图形",
+    "cmd.ecad_footprint_set_graphics": "设置封装图形",
+    "cmd.ecad_footprint_courtyard": "生成禁布区"
+  }
+}

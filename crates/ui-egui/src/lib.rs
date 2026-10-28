@@ -61,6 +61,8 @@ pub mod drag_extrude;
 pub mod drag_snap;
 pub mod easyprint_ui;
 pub mod edit_clipboard;
+pub mod electronics_components;
+pub mod electronics_editor;
 pub mod electronics_workspace;
 mod feature_edit;
 #[cfg(test)]
@@ -1100,6 +1102,7 @@ impl SolveApp {
         let id = solidcraft_engine::find_command(id).map_or(id, |spec| spec.id);
         match r {
             Ok(v) => {
+                electronics_components::follow(self, id, v);
                 // Programmatic callers (the control channel, scripts) run outside a render
                 // language scope, so resolve the echo from the saved preference instead of the
                 // thread-local scope. The command's own label is translated too, so the echo
@@ -2283,6 +2286,11 @@ impl SolveApp {
         if render_workspace::active(self) {
             render_ui::shots_strip(self, ui);
             render_workspace::panel(self, ui);
+        }
+        if electronics_workspace::active(self) {
+            electronics_editor::panel(self, ui);
+        } else {
+            shell::register_panel(self, "electronics:editor", None, None);
         }
         if self.ui.show_browser {
             browser::browser(self, ui);

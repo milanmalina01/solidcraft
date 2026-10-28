@@ -56,6 +56,11 @@ mod tests;
 // The contracts, by command file.
 pub mod ecad;
 pub mod ecad_component;
+pub mod ecad_footprint;
+pub mod ecad_generate;
+pub mod ecad_graphics;
+pub mod ecad_package;
+pub mod ecad_symbol;
 pub mod edit;
 pub mod features;
 pub mod inspect;

@@ -219,6 +219,12 @@ pub(crate) fn workspace_content(app: &SolveApp, mut content: Rect) -> Rect {
     if let Some(column) = app.shell.dialog_column {
         content.min.x = (column.right() + gap).clamp(content.left(), content.right());
     }
+    // The Electronics workspace's Component panel, on the right.
+    if crate::electronics_workspace::active(app)
+        && let Some((panel, _)) = app.shell.workspace_panels.get("electronics:editor")
+    {
+        content.max.x = (panel.left() - gap).clamp(content.left(), content.right());
+    }
     content
 }
 

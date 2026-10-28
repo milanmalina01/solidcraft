@@ -411,6 +411,8 @@ fn clear_history(s: &mut Session, sc: &Scope) {
     let (children, inner) = (&sc.children, &sc.inner);
     keep_component_looks(d, &sc.owners, &children.iter().copied().collect());
     d.components.retain(|c| !children.contains(&c.id));
+    // An electronic component's 3D package goes with its model.
+    d.ecad.repoint_packages(|m| children.contains(&m), None);
     d.remove_configuration_components(children);
     d.occurrences.retain(|o| !inner.contains(&o.id));
     d.body_components.retain(|_, c| !sc.subtree.contains(c));
@@ -679,6 +681,8 @@ pub(super) fn replace_with_link(s: &mut Session, p: &Value) -> Result<Value> {
             o.name = format!("{lname}:{k}");
         }
         d.components.retain(|c| c.id != t);
+        // A 3D package modelled by the component now comes from the link.
+        d.ecad.repoint_packages(|m| m == t, Some(linked));
         d.remove_configuration_components(&[t]);
         d.appearances.components.remove(&t);
         d.materials.retain(|b, _| !sc.bodies.contains(b));

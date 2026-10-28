@@ -1,0 +1,34 @@
+{
+  "en": {
+    "cmd.ecad_package_set": "Set 3D Package",
+    "cmd.ecad_package_clear": "Clear 3D Package"
+  },
+  "ar": {
+    "cmd.ecad_package_set": "تعيين الحزمة ثلاثية الأبعاد",
+    "cmd.ecad_package_clear": "مسح الحزمة ثلاثية الأبعاد"
+  },
+  "de": {
+    "cmd.ecad_package_set": "3D-Gehäuse festlegen",
+    "cmd.ecad_package_clear": "3D-Gehäuse entfernen"
+  },
+  "he": {
+    "cmd.ecad_package_set": "הגדרת מארז תלת־ממדי",
+    "cmd.ecad_package_clear": "ניקוי מארז תלת־ממדי"
+  },
+  "ja": {
+    "cmd.ecad_package_set": "3D パッケージを設定",
+    "cmd.ecad_package_clear": "3D パッケージを解除"
+  },
+  "ko": {
+    "cmd.ecad_package_set": "3D 패키지 설정",
+    "cmd.ecad_package_clear": "3D 패키지 지우기"
+  },
+  "vi": {
+    "cmd.ecad_package_set": "Đặt vỏ 3D",
+    "cmd.ecad_package_clear": "Xóa vỏ 3D"
+  },
+  "zh": {
+    "cmd.ecad_package_set": "设置 3D 封装外形",
+    "cmd.ecad_package_clear": "清除 3D 封装外形"
+  }
+}

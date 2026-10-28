@@ -178,6 +178,8 @@ fn skill_reference_returns_bundled_text_without_backend_calls() {
         ("solidcraft-mechanisms", "SKILL.md", include_str!("../../../skills/solidcraft-mechanisms/SKILL.md")),
         ("solidcraft-checking", "SKILL.md", include_str!("../../../skills/solidcraft-checking/SKILL.md")),
         ("solidcraft-editing", "SKILL.md", include_str!("../../../skills/solidcraft-editing/SKILL.md")),
+        ("solidcraft-electronics", "SKILL.md", include_str!("../../../skills/solidcraft-electronics/SKILL.md")),
+        ("solidcraft-electronics", "reference.md", include_str!("../../../skills/solidcraft-electronics/reference.md")),
     ];
     for (skill, file, expected) in docs {
         let args = json!({"skill": skill, "file": file});
@@ -194,7 +196,7 @@ fn skill_reference_returns_bundled_text_without_backend_calls() {
 #[test]
 fn skill_reference_refuses_unknown_names_and_paths_with_available_choices() {
     let mut s = server();
-    let skills = ["solidcraft-checking", "solidcraft-editing", "solidcraft-mechanisms", "solidcraft-modeling"];
+    let skills = ["solidcraft-checking", "solidcraft-editing", "solidcraft-electronics", "solidcraft-mechanisms", "solidcraft-modeling"];
     for skill in ["unknown", "../solidcraft-modeling", "/tmp/solidcraft-modeling"] {
         let r = raw_tool(&mut s, "skill_reference", json!({"skill": skill}));
         assert_eq!(r["result"]["isError"], true, "{r}");
@@ -810,6 +812,32 @@ fn list_commands_filter_by_a_command_id_matches_ids() {
     let ids: Vec<&str> = cmds.as_array().unwrap().iter().filter_map(|c| c["id"].as_str()).collect();
     assert!(ids.contains(&"sketch.delete"), "{ids:?}");
     assert!(ids.iter().all(|id| id.contains("sketch.delete")), "{} commands matched: {ids:?}", ids.len());
+}
+
+/// An agent builds a whole electronic component in one batch, by name only (a batch step can't
+/// use an earlier step's reply), then reads it back as data: the first form of the library
+/// editor's "done when".
+#[test]
+fn an_agent_builds_an_0603_resistor_in_one_batch() {
+    let mut s = server();
+    let steps = json!([
+        {"command": "ecad.component.create", "params": {"name": "R0603", "prefix": "R", "value": "10k"}},
+        {"command": "ecad.pin.add", "params": {"component": "R0603", "pins": [
+            {"number": 1, "at": [-5.08, 0], "direction": "right"},
+            {"number": 2, "at": [5.08, 0], "direction": "left"}
+        ]}},
+        {"command": "ecad.pad.add", "params": {"component": "R0603", "pads": [
+            {"number": 1, "at": [-0.8, 0], "size": [0.9, 1.0]},
+            {"number": 2, "at": [0.8, 0], "size": [0.9, 1.0]}
+        ]}}
+    ]);
+    tool(&mut s, "batch", json!({"commands": steps}));
+    let c = tool(&mut s, "execute", json!({"command": "ecad.component.inspect", "params": {"component": "R0603"}}))["component"].clone();
+    assert_eq!(c["connections"], json!([{"pin": "1", "pads": ["1"]}, {"pin": "2", "pads": ["2"]}]), "{c}");
+    assert_eq!((c["unconnected_pins"].clone(), c["unconnected_pads"].clone()), (json!([]), json!([])));
+    let bbox = c["measured"]["copper_bbox"].clone();
+    let near = |v: &Value, want: f64| v.as_f64().is_some_and(|x| (x - want).abs() < 1e-9);
+    assert!(near(&bbox[0][0], -1.25) && near(&bbox[1][0], 1.25) && near(&bbox[0][1], -0.5) && near(&bbox[1][1], 0.5), "{bbox}");
 }
 
 /// The electronics commands need no MCP code: an agent finds them with `list_commands`, reads
@@ -1523,6 +1551,50 @@ fn mechanisms_skill_example_moves_as_documented() {
     assert!(value(&list, "Stroke") <= 10.0 + 1e-6 && (value(&list, "Stroke") - stroke(hinge)).abs() < 1e-6, "{list}");
 }
 
+/// The worked example in `skills/solidcraft-electronics/reference.md` is what agents copy: the
+/// generated resistor and transistor must measure what the file says, worked out from the EIA and
+/// JEDEC package numbers by hand. This is the library editor's "done when": an agent makes ready
+/// electronic components end to end over MCP.
+#[test]
+fn electronics_skill_example_builds_as_documented() {
+    let doc = include_str!("../../../skills/solidcraft-electronics/reference.md");
+    let start = doc.find("{\"commands\":[").expect("the reference has a worked example");
+    let end = start + doc[start..].find("```").expect("the example's code block ends");
+    let example: Value = serde_json::from_str(&doc[start..end]).expect("the example is JSON");
+    let mut s = server();
+    tool(&mut s, "batch", example);
+    let inspect = |s: &mut Server, name: &str| {
+        tool(s, "execute", json!({"command": "ecad.component.inspect", "params": {"component": name}}))["component"].clone()
+    };
+    let near = |v: &Value, want: f64| v.as_f64().is_some_and(|x| (x - want).abs() < 1e-6);
+    let pad = |c: &Value, n: &str| c["pads"].as_array().unwrap().iter().find(|p| p["number"] == n).cloned().unwrap_or(Value::Null);
+
+    let r = inspect(&mut s, "R0603");
+    for (n, x) in [("1", -0.8), ("2", 0.8)] {
+        let p = pad(&r, n);
+        assert!(near(&p["at"][0], x) && near(&p["at"][1], 0.0) && near(&p["size"][0], 0.6) && near(&p["size"][1], 0.9), "{n}: {p}");
+    }
+    assert!(near(&r["measured"]["min_pad_gap"]["gap"], 1.0), "{}", r["measured"]);
+    let cy = &r["measured"]["courtyard"];
+    assert!(near(&cy["from"][0], -1.35) && near(&cy["from"][1], -0.7) && near(&cy["to"][0], 1.35) && near(&cy["to"][1], 0.7), "{cy}");
+    assert!(near(&cy["area"], 3.78), "{cy}");
+    let bbox = &r["package"]["bbox"];
+    assert!(near(&bbox[0][0], -0.8) && near(&bbox[0][1], -0.4) && near(&bbox[0][2], 0.0), "{bbox}");
+    assert!(near(&bbox[1][0], 0.8) && near(&bbox[1][1], 0.4) && near(&bbox[1][2], 0.45), "{bbox}");
+    assert!(near(&r["package"]["height"], 0.45));
+    assert_eq!((r["ready"].clone(), r["problems"].clone()), (json!(true), json!([])), "{r}");
+
+    let q = inspect(&mut s, "MMBT3904");
+    for (n, x, y) in [("1", -0.95, -0.975), ("2", 0.95, -0.975), ("3", 0.0, 0.975)] {
+        let p = pad(&q, n);
+        assert!(near(&p["at"][0], x) && near(&p["at"][1], y) && near(&p["size"][0], 0.5) && near(&p["size"][1], 1.05), "{n}: {p}");
+    }
+    let gap = &q["measured"]["min_pad_gap"];
+    assert!(near(&gap["gap"], 0.45f64.hypot(0.9)) && gap["pads"] == json!(["1", "3"]), "{gap}");
+    assert_eq!(q["connections"], json!([{"pin": "1", "pads": ["1"]}, {"pin": "2", "pads": ["2"]}, {"pin": "3", "pads": ["3"]}]));
+    assert_eq!(q["ready"], true, "{q}");
+}
+
 /// Every tool and command the agent skills call exists, so a rename or removal can't leave the
 /// skills sending agents to names the server no longer has.
 #[test]
@@ -1537,6 +1609,8 @@ fn skills_name_only_real_tools_and_commands() {
         include_str!("../../../skills/solidcraft-mechanisms/reference.md"),
         include_str!("../../../skills/solidcraft-reporting/SKILL.md"),
         include_str!("../../../skills/solidcraft-reporting/reference/report-template.md"),
+        include_str!("../../../skills/solidcraft-electronics/SKILL.md"),
+        include_str!("../../../skills/solidcraft-electronics/reference.md"),
     ];
     let mut s = server();
     let tools: Vec<String> = tool_definitions().iter().filter_map(|t| t["name"].as_str()).map(str::to_owned).collect();

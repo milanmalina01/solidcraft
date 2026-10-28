@@ -18,6 +18,13 @@ const SKILLS: &[Skill] = &[
     },
     Skill { name: "solidcraft-editing", files: &[("SKILL.md", include_str!("../../../skills/solidcraft-editing/SKILL.md"))] },
     Skill {
+        name: "solidcraft-electronics",
+        files: &[
+            ("SKILL.md", include_str!("../../../skills/solidcraft-electronics/SKILL.md")),
+            ("reference.md", include_str!("../../../skills/solidcraft-electronics/reference.md")),
+        ],
+    },
+    Skill {
         name: "solidcraft-mechanisms",
         files: &[
             ("SKILL.md", include_str!("../../../skills/solidcraft-mechanisms/SKILL.md")),

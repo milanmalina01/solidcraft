@@ -1,0 +1,34 @@
+{
+  "en": {
+    "cmd.ecad_footprint_generate": "Generate Footprint",
+    "cmd.ecad_symbol_generate": "Generate Symbol"
+  },
+  "ar": {
+    "cmd.ecad_footprint_generate": "توليد البصمة",
+    "cmd.ecad_symbol_generate": "توليد الرمز"
+  },
+  "de": {
+    "cmd.ecad_footprint_generate": "Footprint erzeugen",
+    "cmd.ecad_symbol_generate": "Symbol erzeugen"
+  },
+  "he": {
+    "cmd.ecad_footprint_generate": "יצירת טביעת רגל",
+    "cmd.ecad_symbol_generate": "יצירת סמל"
+  },
+  "ja": {
+    "cmd.ecad_footprint_generate": "フットプリントを生成",
+    "cmd.ecad_symbol_generate": "シンボルを生成"
+  },
+  "ko": {
+    "cmd.ecad_footprint_generate": "풋프린트 생성",
+    "cmd.ecad_symbol_generate": "심볼 생성"
+  },
+  "vi": {
+    "cmd.ecad_footprint_generate": "Tạo footprint",
+    "cmd.ecad_symbol_generate": "Tạo ký hiệu"
+  },
+  "zh": {
+    "cmd.ecad_footprint_generate": "生成封装",
+    "cmd.ecad_symbol_generate": "生成符号"
+  }
+}
