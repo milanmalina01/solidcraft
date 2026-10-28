@@ -191,6 +191,12 @@ fn requested_menu_icons_have_artwork_and_match_manifest() {
     ribbon(&mut h, &mut requested);
     solidcraft_ui_egui::render_workspace::enter(&mut h.app, false).unwrap();
     h.frames(3);
+    solidcraft_ui_egui::electronics_workspace::enter(&mut h.app, true).unwrap();
+    h.frames(3);
+    // No tabs yet: the switcher card is what the workspace draws.
+    collect(&mut h, "Electronics workspace", &mut requested);
+    solidcraft_ui_egui::electronics_workspace::enter(&mut h.app, false).unwrap();
+    h.frames(3);
 
     let body = h.app.session.model.state().bodies.first().unwrap().name.clone();
     let sketch = h.app.session.world_state().sketches.first().unwrap().feature;

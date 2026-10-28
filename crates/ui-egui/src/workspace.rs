@@ -577,7 +577,7 @@ pub fn frame_body(app: &crate::SolveApp) -> Option<String> {
 }
 
 pub fn visible_tabs(app: &crate::SolveApp) -> Vec<&'static str> {
-    if crate::render_workspace::active(app) {
+    if crate::render_workspace::active(app) || crate::electronics_workspace::active(app) {
         return Vec::new();
     }
     let mut tabs = TABS.to_vec();
@@ -598,6 +598,13 @@ pub fn visible_tabs(app: &crate::SolveApp) -> Vec<&'static str> {
 pub fn sync_context(app: &mut crate::SolveApp) {
     if crate::render_workspace::active(app) {
         return;
+    }
+    if crate::electronics_workspace::active(app) {
+        if !crate::electronics_workspace::modelling(app) {
+            return;
+        }
+        // A sketch, tool or dialog started here (a shortcut, an agent) works in Design's view.
+        app.ui.tab = "MODEL".into();
     }
     let context = app
         .session
@@ -635,6 +642,30 @@ pub fn sync_context(app: &mut crate::SolveApp) {
     }
     if !visible_tabs(app).contains(&app.ui.tab.as_str()) {
         app.ui.tab = "MODEL".into();
+    }
+}
+
+/// The open workspace, by the name [`switch`] takes: `design`, `render` or `electronics`.
+pub fn current(app: &crate::SolveApp) -> &'static str {
+    if crate::render_workspace::active(app) {
+        "render"
+    } else if crate::electronics_workspace::active(app) {
+        "electronics"
+    } else {
+        "design"
+    }
+}
+
+/// Open the workspace named `design`, `render` or `electronics` (anything else is Design),
+/// leaving the one that is open.
+pub fn switch(app: &mut crate::SolveApp, workspace: &str) -> Result<(), String> {
+    match workspace {
+        "render" => crate::render_workspace::enter(app, true),
+        "electronics" => crate::electronics_workspace::enter(app, true),
+        _ => {
+            crate::electronics_workspace::enter(app, false)?;
+            crate::render_workspace::enter(app, false)
+        }
     }
 }
 

@@ -152,7 +152,7 @@ Additional handles: `ribbon:workspace`, `ribbon:search`, and `ribbon:section:<TA
 
 ## Workspace and section lists
 
-The workspace popup is 470 px wide, anchored below the workspace column. Design and Render keep their existing menu actions and enablement; planned workspaces cannot be selected. Each row also publishes `workspace:menu:<design|render|animation|simulation|manufacture|drawing>`. The constraint cells publish `ribbon:constraint:<command id>` alongside their existing `button:` and `toolbar:` handles. No icon assets or command ids were added.
+The workspace popup is 470 px wide, anchored below the workspace column. Design, Render and Electronics keep their menu actions (Render and Electronics can be chosen only when no sketch, tool, dialog or file load is open); planned workspaces cannot be selected. Each row also publishes `workspace:menu:<design|render|electronics|animation|simulation|manufacture|drawing>`. The constraint cells publish `ribbon:constraint:<command id>` alongside their existing `button:` and `toolbar:` handles. No icon assets or command ids were added.
 
 Section lists use 30 px command rows, 20 px semantic icons, monospace shortcuts, hover pins and a pinning footer. `workspace::groups` optionally supplies headings and command order. MODEL / MODIFY uses EDGES, FACES, BODIES and SPECIALISE; unlisted commands follow the final heading in their original order. This ordering does not change promoted buttons or saved pins.
 

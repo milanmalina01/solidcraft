@@ -1222,7 +1222,8 @@ pub fn toolbar(app: &mut SolveApp, ui: &mut egui::Ui) {
         if render {
             crate::ui_kit::StageBar::workspace(ui, ws, "ws_render", app.tr("ui.render"), app.tr("ui.ribbon_workspace"));
         } else {
-            let workspace_icon = if render { "ws_render" } else { "ws_design" };
+            let electronics = crate::electronics_workspace::active(app);
+            let workspace_icon = if electronics { "ws_electronics" } else { "ws_design" };
             icons::paint_icon(
                 &painter,
                 Rect::from_center_size(pos2(ws.center().x, ws.top() + if labels { 39.0 } else { 25.0 }), vec2(30.0, 30.0)),
@@ -1232,7 +1233,7 @@ pub fn toolbar(app: &mut SolveApp, ui: &mut egui::Ui) {
             ribbon_text(
                 ui,
                 pos2(ws.center().x, ws.top() + if labels { 69.0 } else { 50.0 }),
-                app.tr(if render { "ui.render" } else { "ui.design" }),
+                app.tr(if electronics { "ui.electronics" } else { "ui.design" }),
                 t.font_button,
                 t.text,
                 true,

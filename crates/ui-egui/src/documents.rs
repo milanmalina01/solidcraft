@@ -291,6 +291,7 @@ pub fn adopt(app: &mut SolveApp, session: Session) {
         crate::sketch_attachment_ui::clear(app);
         app.session.replace_design(session);
         crate::render_workspace::reset_document(app);
+        let _ = crate::electronics_workspace::enter(app, false);
         app.session.invalidate_view(rev);
         app.cam = Camera::default();
         app.fit_view();
@@ -379,6 +380,7 @@ pub fn close(app: &mut SolveApp, i: usize, force: bool) {
         app.session.replace_design(Session::default());
         app.session.revision = rev + 1;
         crate::prefs::apply_new_design(app);
+        let _ = crate::electronics_workspace::enter(app, false);
         app.cam = Camera::default();
         app.fit_view();
         put_view(app, DocView::default());

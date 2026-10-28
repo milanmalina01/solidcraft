@@ -432,14 +432,14 @@ fn dispatch(app: &mut SolveApp, ctx: &egui::Context, method: &str, p: &Value) ->
     match method {
         "ui.workspace" => {
             if let Some(workspace) = s("workspace") {
-                if !matches!(workspace, "design" | "render") {
-                    return err("workspace must be design or render");
+                if !matches!(workspace, "design" | "render" | "electronics") {
+                    return err("workspace must be design, render or electronics");
                 }
-                if let Err(e) = crate::render_workspace::enter(app, workspace == "render") {
+                if let Err(e) = crate::workspace::switch(app, workspace) {
                     return err(e);
                 }
             }
-            ok(json!({"workspace":if crate::render_workspace::active(app) {"render"} else {"design"}}))
+            ok(json!({"workspace": crate::workspace::current(app)}))
         }
         "engine.execute" | "command" => {
             let Some(id) = s("command").or(s("id")) else { return err("missing `command`") };
@@ -588,6 +588,12 @@ fn dispatch(app: &mut SolveApp, ctx: &egui::Context, method: &str, p: &Value) ->
                     }
                     if crate::workspace::render_tab(&u.tab) != crate::render_workspace::active(app)
                         && let Err(e) = crate::render_workspace::enter(app, crate::workspace::render_tab(&u.tab))
+                    {
+                        return err(e);
+                    }
+                    let electronics = u.tab == crate::electronics_workspace::TAB;
+                    if electronics != crate::electronics_workspace::active(app)
+                        && let Err(e) = crate::electronics_workspace::enter(app, electronics)
                     {
                         return err(e);
                     }

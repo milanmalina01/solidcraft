@@ -266,13 +266,16 @@ pub(crate) fn workspace_menu(ui: &mut egui::Ui, items: &[Item], key_row: Option<
                 let (slug, description, tabs) = match item.label.as_str() {
                     "Design" => ("design", "ui.workspace_design_description", Some("ui.workspace_design_tabs")),
                     "Render" => ("render", "ui.workspace_render_description", Some("ui.workspace_render_tabs")),
+                    "Electronics" => ("electronics", "ui.workspace_electronics_description", None),
                     "Animation" => ("animation", "ui.workspace_animation_description", None),
                     "Simulation" => ("simulation", "ui.workspace_simulation_description", None),
                     "Manufacture" => ("manufacture", "ui.workspace_manufacture_description", None),
                     "Drawing" => ("drawing", "ui.workspace_drawing_description", None),
                     _ => continue,
                 };
-                let planned = tabs.is_none();
+                // Planned workspaces are the switcher's generic `ui.workspace` rows; a built one with
+                // no tabs yet (Electronics) has no tabs line.
+                let planned = item.id == "ui.workspace";
                 let current = item.shortcut == "current";
                 let (accent, soft) = if !planned && slug == "render" {
                     (t.render_fill, t.render_soft)
@@ -281,7 +284,7 @@ pub(crate) fn workspace_menu(ui: &mut egui::Ui, items: &[Item], key_row: Option<
                     (accent, t.panel.lerp_to_gamma(accent, 0.10))
                 };
                 let (r, resp) = ui.allocate_exact_size(
-                    vec2(width, if planned { t.space_24 * 2.0 + t.space_12 } else { t.space_24 * 3.0 }),
+                    vec2(width, if tabs.is_none() { t.space_24 * 2.0 + t.space_12 } else { t.space_24 * 3.0 }),
                     if item.enabled { Sense::click() } else { Sense::hover() },
                 );
                 for handle in [format!("menu:{}", item.id), format!("workspace:menu:{slug}")] {

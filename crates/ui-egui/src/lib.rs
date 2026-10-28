@@ -61,6 +61,7 @@ pub mod drag_extrude;
 pub mod drag_snap;
 pub mod easyprint_ui;
 pub mod edit_clipboard;
+pub mod electronics_workspace;
 mod feature_edit;
 #[cfg(test)]
 mod font_literals_tests;
@@ -606,6 +607,8 @@ pub struct SolveApp {
     pending_fit: Option<(Camera, solidcraft_engine::geom::Aabb3, bool)>,
     /// The sheet metal flat pattern's own pan and zoom.
     pub flat_view: dialogs_sheet::FlatView,
+    /// The Electronics workspace's page and its own pan and zoom.
+    pub electronics: electronics_workspace::State,
     /// The start page.
     pub home: home::HomeState,
     /// The 3D mouse: which device, its reading, and the calibration window.
@@ -749,6 +752,7 @@ impl SolveApp {
             fitted: false,
             pending_fit: None,
             flat_view: Default::default(),
+            electronics: Default::default(),
             embedded: false,
             home: home::HomeState::default(),
             space_mouse: Default::default(),
@@ -1114,6 +1118,7 @@ impl SolveApp {
                 if matches!(id, "file.new" | "doc.open" | "doc.recover") {
                     documents::reset_chat(self);
                     render_workspace::reset_document(self);
+                    let _ = electronics_workspace::enter(self, false);
                     dim_view::cancel();
                     self.menu.props = None;
                     sketch_attachment_ui::clear(self);
@@ -1193,9 +1198,9 @@ impl SolveApp {
             return;
         }
         // Front … Isometric (Ctrl+1…7 by default) turn the view as the view cube's faces do. The
-        // flat pattern is a 2D page: it has no other side to turn to.
+        // flat pattern and the Electronics page are 2D pages: they have no other side to turn to.
         if solidcraft_engine::standard_view(id).is_some() {
-            if !dialogs_sheet::flat_active(self) {
+            if !dialogs_sheet::flat_active(self) && !electronics_workspace::active(self) {
                 // `view.isometric` → "isometric", which `StandardView::parse` reads as Iso.
                 self.animate_view(id.trim_start_matches("view."));
                 self.home.open = false;
@@ -1203,7 +1208,7 @@ impl SolveApp {
             return;
         }
         if id == "view.normal_to" {
-            if self.run(id, json!({"camera": self.cam})).is_ok() {
+            if !electronics_workspace::active(self) && self.run(id, json!({"camera": self.cam})).is_ok() {
                 self.follow_view_request(true);
                 self.home.open = false;
             }
@@ -1794,6 +1799,10 @@ impl SolveApp {
             self.flat_view.fitted = false;
             return;
         }
+        if electronics_workspace::active(self) {
+            self.electronics.page.fitted = false;
+            return;
+        }
         if render_workspace::active(self) {
             self.cancel_view_animation();
             match solidcraft_engine::product_scene::extract(&self.session) {
@@ -1881,7 +1890,7 @@ impl SolveApp {
 
     /// Frame everything shown, keeping the orientation (animated; the selection is ignored).
     pub fn animate_fit_all(&mut self) {
-        if dialogs_sheet::flat_active(self) {
+        if dialogs_sheet::flat_active(self) || electronics_workspace::active(self) {
             self.animate_view("fit");
             return;
         }
@@ -1918,6 +1927,11 @@ impl SolveApp {
         // The flat pattern is a 2D view: Fit and Home frame it, and the Design camera stays put.
         if dialogs_sheet::flat_active(self) {
             self.flat_view.fitted = false;
+            return;
+        }
+        // So is the Electronics page.
+        if electronics_workspace::active(self) {
+            self.electronics.page.fitted = false;
             return;
         }
         if render_workspace::active(self) {
@@ -2202,7 +2216,8 @@ impl SolveApp {
         }
         let floating = render_workspace::active(self) || ui_kit::Container::new(ui.ctx(), ui_kit::Surface::Panel).floating();
         timeline::follow_view_pick(self);
-        let show_timeline = self.ui.show_timeline && !render_workspace::active(self);
+        // The History lists the 3D features: Render and Electronics don't show it.
+        let show_timeline = self.ui.show_timeline && !render_workspace::active(self) && !electronics_workspace::active(self);
         let left_timeline = show_timeline && self.preferences.timeline_left;
         timeline_left::animate_folds(self, ui.ctx());
         if !floating && !self.embedded {
@@ -2324,6 +2339,8 @@ impl SolveApp {
     fn show_workspace(&mut self, ui: &mut egui::Ui) {
         if render_workspace::active(self) {
             render_workspace::show(self, ui);
+        } else if electronics_workspace::active(self) {
+            electronics_workspace::show(self, ui);
         } else {
             viewport::show(self, ui);
         }

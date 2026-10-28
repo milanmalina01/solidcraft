@@ -39,7 +39,7 @@ pub(crate) fn holds(app: &SolveApp) -> bool {
 
 /// The History is drawn at the left this frame (beside or under the browser).
 fn left_history(app: &SolveApp) -> bool {
-    app.ui.show_timeline && app.preferences.timeline_left && !crate::render_workspace::active(app)
+    app.ui.show_timeline && app.preferences.timeline_left && !crate::render_workspace::active(app) && !crate::electronics_workspace::active(app)
 }
 
 /// The column a dialog of `width` holds, laid out in `available` (the space the browser and a

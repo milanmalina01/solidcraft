@@ -344,7 +344,9 @@ pub(crate) fn view_key(app: &mut SolveApp, ctx: &egui::Context, key: egui::Key, 
         return false;
     }
     let result = crate::render_workspace::result_active(app);
-    if key == Key::Num8 && ctrl && !mods.shift && !result {
+    // The Electronics page is flat too: it pans, and has nothing to turn or look at.
+    let page = crate::electronics_workspace::active(app);
+    if key == Key::Num8 && ctrl && !mods.shift && !result && !page {
         crate::viewport::look_at_selection(app);
         return true;
     }
@@ -362,11 +364,13 @@ pub(crate) fn view_key(app: &mut SolveApp, ctx: &egui::Context, key: egui::Key, 
             let params = json!({"motion": "pan", "delta": [dx * step, dy * step]});
             if result {
                 crate::render_workspace::with_result_camera(app, |app| camera_motion(app, rect, params));
+            } else if page {
+                crate::electronics_workspace::with_page_camera(app, |app| camera_motion(app, rect, params));
             } else {
                 camera_motion(app, rect, params);
             }
         }
-    } else if !repeat && !result {
+    } else if !repeat && !result && !page {
         let degrees = if mods.shift { 90.0 } else { 15.0 };
         app.viewport.key_hold = Some(KeyHold { key, action, shift: mods.shift, since: app.now });
         // Turn from where a step in flight is going, so taps add up and the one animation is
@@ -374,14 +378,14 @@ pub(crate) fn view_key(app: &mut SolveApp, ctx: &egui::Context, key: egui::Key, 
         let from = app.cam_anim.map_or(app.cam, |a| a.to);
         let _ = app.run("view.navigate", json!({"camera": from, "action": action, "degrees": degrees}));
     }
-    ctrl || !result
+    ctrl || !(result || page)
 }
 
 /// Each frame an arrow turning the view is held past a tap: turn at a steady rate by the frame's
 /// time, with no animation of its own. Ends when the key is released or the keyboard goes
 /// elsewhere.
 pub(crate) fn step_key_hold(app: &mut SolveApp, ctx: &egui::Context) {
-    if crate::render_workspace::result_active(app) {
+    if crate::render_workspace::result_active(app) || crate::electronics_workspace::active(app) {
         app.viewport.key_hold = None;
         return;
     }

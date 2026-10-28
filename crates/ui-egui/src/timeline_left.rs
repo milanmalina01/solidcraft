@@ -67,8 +67,13 @@ pub(crate) fn strip_width(app: &SolveApp) -> f32 {
         .unwrap_or_else(|| crate::ui_kit::history_snap_width(app.preferences.timeline_left_width))
 }
 
+/// The History is docked at the left. Electronics doesn't show it, so the Browser lays out alone.
+pub(crate) fn at_left(app: &SolveApp) -> bool {
+    app.ui.show_timeline && app.preferences.timeline_left && !crate::electronics_workspace::active(app)
+}
+
 pub(crate) fn stacked(app: &SolveApp) -> bool {
-    app.ui.show_timeline && app.preferences.timeline_left && app.preferences.timeline_under_browser
+    at_left(app) && app.preferences.timeline_under_browser
 }
 
 fn header_outer_height() -> f32 {

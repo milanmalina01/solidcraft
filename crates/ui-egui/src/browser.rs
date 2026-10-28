@@ -986,7 +986,7 @@ pub fn browser(app: &mut SolveApp, ui: &mut egui::Ui) {
         Container::new(ui.ctx(), Surface::Panel).joined(crate::ui_kit::DockEdges { left: true, top: true, bottom: stacked, ..Default::default() });
     let gap = container.gap();
     let width = browser_width(app.preferences.browser_width);
-    let vertical = app.ui.show_timeline && app.preferences.timeline_left;
+    let vertical = crate::timeline_left::at_left(app);
     let mut available = available;
     if !stacked {
         available.min.x += crate::agent_chat::left_inset(app, available);
@@ -1125,7 +1125,7 @@ fn browser_contents(app: &mut SolveApp, ui: &mut egui::Ui, acts: &mut Actions, c
             (app.preferences.timeline_left_browser_collapsed && app.shell.history_folding.is_none_or(|p| p[0] >= 1.0))
                 || ui.available_height() <= t.space_3
         } else {
-            app.tree.panel_collapsed && !(app.ui.show_timeline && app.preferences.timeline_left)
+            app.tree.panel_collapsed && !crate::timeline_left::at_left(app)
         })
     {
         return;
@@ -1149,7 +1149,7 @@ fn browser_header(app: &mut SolveApp, ui: &mut egui::Ui, collapsible: bool) {
     let (rect, _) = ui.allocate_exact_size(vec2(ui.available_width(), HEADER_H), Sense::hover());
     let response = ui.interact(rect, ui.id().with("browser_header"), if collapsible { Sense::click() } else { Sense::hover() });
     crate::scenario::publish_target("browser:header", rect);
-    let vertical = app.ui.show_timeline && app.preferences.timeline_left;
+    let vertical = crate::timeline_left::at_left(app);
     let stacked = crate::timeline_left::stacked(app);
     let collapsed = collapsible && if stacked { app.preferences.timeline_left_browser_collapsed } else { !vertical && app.tree.panel_collapsed };
     if vertical {

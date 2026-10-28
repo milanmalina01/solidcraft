@@ -1,26 +1,58 @@
 {
   "en": {
-    "cmd.ecad_inspect": "Inspect Electronics"
+    "cmd.ecad_inspect": "Inspect Electronics",
+    "electronics.finish_operation": "Finish the open sketch, tool or dialog before opening Electronics",
+    "electronics.page_empty": "No electronics in this design yet",
+    "ui.electronics": "Electronics",
+    "ui.workspace_electronics_description": "Electronic components, schematics and circuit boards"
   },
   "ar": {
-    "cmd.ecad_inspect": "فحص الإلكترونيات"
+    "cmd.ecad_inspect": "فحص الإلكترونيات",
+    "electronics.finish_operation": "أنهِ الرسم أو الأداة أو مربع الحوار المفتوح قبل فتح الإلكترونيات",
+    "electronics.page_empty": "لا توجد إلكترونيات في هذا التصميم بعد",
+    "ui.electronics": "الإلكترونيات",
+    "ui.workspace_electronics_description": "المكونات الإلكترونية والمخططات ولوحات الدوائر"
   },
   "de": {
-    "cmd.ecad_inspect": "Elektronik prüfen"
+    "cmd.ecad_inspect": "Elektronik prüfen",
+    "electronics.finish_operation": "Beenden Sie die offene Skizze, das Werkzeug oder den Dialog, bevor Sie Elektronik öffnen",
+    "electronics.page_empty": "Dieses Design enthält noch keine Elektronik",
+    "ui.electronics": "Elektronik",
+    "ui.workspace_electronics_description": "Elektronische Bauteile, Schaltpläne und Leiterplatten"
   },
   "he": {
-    "cmd.ecad_inspect": "בדיקת אלקטרוניקה"
+    "cmd.ecad_inspect": "בדיקת אלקטרוניקה",
+    "electronics.finish_operation": "יש לסיים את הסקיצה, הכלי או תיבת הדו־שיח הפתוחים לפני פתיחת אלקטרוניקה",
+    "electronics.page_empty": "אין עדיין אלקטרוניקה בתכן הזה",
+    "ui.electronics": "אלקטרוניקה",
+    "ui.workspace_electronics_description": "רכיבים אלקטרוניים, סכמות ומעגלים מודפסים"
   },
   "ja": {
-    "cmd.ecad_inspect": "エレクトロニクスを検査"
+    "cmd.ecad_inspect": "エレクトロニクスを検査",
+    "electronics.finish_operation": "エレクトロニクスを開く前に、開いているスケッチ、ツール、またはダイアログを終了してください",
+    "electronics.page_empty": "このデザインにはまだエレクトロニクスがありません",
+    "ui.electronics": "エレクトロニクス",
+    "ui.workspace_electronics_description": "電子部品、回路図、プリント基板"
   },
   "ko": {
-    "cmd.ecad_inspect": "전자 설계 검사"
+    "cmd.ecad_inspect": "전자 설계 검사",
+    "electronics.finish_operation": "전자 설계를 열기 전에 열려 있는 스케치, 도구 또는 대화 상자를 완료하세요",
+    "electronics.page_empty": "이 디자인에는 아직 전자 설계가 없습니다",
+    "ui.electronics": "전자 설계",
+    "ui.workspace_electronics_description": "전자 부품, 회로도 및 회로 기판"
   },
   "vi": {
-    "cmd.ecad_inspect": "Kiểm tra điện tử"
+    "cmd.ecad_inspect": "Kiểm tra điện tử",
+    "electronics.finish_operation": "Hãy hoàn tất bản phác thảo, công cụ hoặc hộp thoại đang mở trước khi mở Điện tử",
+    "electronics.page_empty": "Thiết kế này chưa có phần điện tử",
+    "ui.electronics": "Điện tử",
+    "ui.workspace_electronics_description": "Linh kiện điện tử, sơ đồ mạch và bảng mạch"
   },
   "zh": {
-    "cmd.ecad_inspect": "检查电子电路"
+    "cmd.ecad_inspect": "检查电子电路",
+    "electronics.finish_operation": "请先完成打开的草图、工具或对话框，再打开电子电路",
+    "electronics.page_empty": "此设计尚无电子电路",
+    "ui.electronics": "电子电路",
+    "ui.workspace_electronics_description": "电子元件、原理图和电路板"
   }
 }
