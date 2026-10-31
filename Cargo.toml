@@ -31,6 +31,9 @@ solidcraft-3dx-client = { path = "crates/threedx-client" }
 
 # foundation
 thiserror = "2"
+# Polygon booleans and offsets for the board's copper pours (MIT, pure Rust, no unsafe in its
+# API); only crates/geom/src/region.rs names it.
+i_overlay = { version = "9.1", default-features = false }
 serde = { version = "1", features = ["derive", "rc"] }
 # derive macros (crates/derive); already in the tree through serde_derive
 proc-macro2 = "1"
