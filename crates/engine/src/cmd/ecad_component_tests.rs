@@ -43,22 +43,22 @@ fn an_electronic_component_is_made_read_and_listed() {
         ("mpn", json!("RC0603FR-0710KL")),
         ("manufacturer", json!("Example Resistors")),
         ("description", json!("Thick film resistor, 0603, 1%")),
+        ("symbol", json!(null)),
         ("pins", json!([])),
-        ("pads", json!([])),
-        ("pin_map", json!(null)),
+        ("variants", json!([])),
         ("ready", json!(false)),
     ] {
         assert_eq!(c[key], want, "{key}");
     }
     let codes: Vec<&str> = c["problems"].as_array().unwrap().iter().filter_map(|p| p["code"].as_str()).collect();
-    assert_eq!(codes, ["no_pins", "no_pads"], "a new component says what it still needs");
+    assert_eq!(codes, ["no_symbol"], "a new component says what it still needs");
     assert_eq!(run(&mut s, "ecad.component.inspect", json!({"component": 1})), full, "by id or by name");
     assert_eq!(run(&mut s, "ecad.component.inspect", json!({"component": 2}))["component"]["prefix"], "U");
     assert_eq!(
         run(&mut s, "ecad.inspect", json!({})),
-        json!({"empty": false, "components": [
-            {"id": 1, "name": "R0603", "prefix": "R", "value": "10k", "pins": 0, "pads": 0, "ready": false},
-            {"id": 2, "name": "LM358", "prefix": "U", "value": "", "pins": 0, "pads": 0, "ready": false}
+        json!({"empty": false, "counts": {"symbols": 0, "footprints": 0, "packages": 0, "components": 2}, "components": [
+            {"id": 1, "name": "R0603", "prefix": "R", "value": "10k", "symbol": null, "variants": [], "pins": 0, "pads": 0, "ready": false},
+            {"id": 2, "name": "LM358", "prefix": "U", "value": "", "symbol": null, "variants": [], "pins": 0, "pads": 0, "ready": false}
         ]})
     );
 }
@@ -99,7 +99,8 @@ fn copies_get_a_new_id_and_deletes_take_all_or_none() {
     );
     assert_eq!(run(&mut s, "ecad.component.create", json!({"name": "R0603"}))["component"]["id"], 3, "ids are never reused");
     assert_eq!(run(&mut s, "ecad.component.delete", json!({"components": [3]}))["deleted"][0]["id"], 3);
-    assert_eq!(run(&mut s, "ecad.inspect", json!({})), json!({"empty": true}), "the id counter alone is no electronics");
+    let none = json!({"components": 0, "footprints": 0, "packages": 0, "symbols": 0});
+    assert_eq!(run(&mut s, "ecad.inspect", json!({})), json!({"empty": true, "counts": none}), "the id counter alone is no electronics");
     s.execute("edit.undo", &json!({})).unwrap();
     s.execute("edit.undo", &json!({})).unwrap();
     s.execute("edit.undo", &json!({})).unwrap();
@@ -131,7 +132,7 @@ fn wrong_names_say_what_there_is() {
         assert!(e.contains(says), "{p}: {e}");
     }
     let e = refused(&mut s, "ecad.component.edit", json!({"component": [1], "value": "1"}));
-    assert!(e.contains("`component` must be an electronic component's id or name"), "{e}");
+    assert!(e.contains("`component` must be an id or a name"), "{e}");
     let e = refused(&mut s, "ecad.component.delete", json!({"components": ["R0603", true]}));
     assert!(e.contains("`components[1]` must be"), "{e}");
     let e = refused(&mut s, "ecad.component.delete", json!({"components": []}));
@@ -169,7 +170,8 @@ fn electronic_components_survive_save_and_open() {
     let r0603 = run(&mut s, "ecad.component.inspect", json!({"component": "R0603"}));
     run(&mut s, "file.save", json!({"path": path}));
     run(&mut s, "file.new", json!({}));
-    assert_eq!(run(&mut s, "ecad.inspect", json!({})), json!({"empty": true}));
+    let none = json!({"components": 0, "footprints": 0, "packages": 0, "symbols": 0});
+    assert_eq!(run(&mut s, "ecad.inspect", json!({})), json!({"empty": true, "counts": none}));
     run(&mut s, "doc.open", json!({"path": path}));
     assert!(!s.is_dirty());
     assert_eq!(run(&mut s, "ecad.inspect", json!({})), before);
@@ -180,13 +182,43 @@ fn electronic_components_survive_save_and_open() {
 
 #[test]
 fn hostile_electronic_component_params_never_panic() {
-    let keys = ["component", "components", "name", "prefix", "value", "mpn", "manufacturer", "description"];
-    for id in ["ecad.component.create", "ecad.component.edit", "ecad.component.copy", "ecad.component.delete", "ecad.component.inspect"] {
+    let keys = [
+        "component",
+        "components",
+        "name",
+        "prefix",
+        "value",
+        "mpn",
+        "manufacturer",
+        "description",
+        "symbol",
+        "footprint",
+        "package",
+        "variant",
+        "map",
+        "by_number",
+        "with_parts",
+    ];
+    let ids = [
+        "ecad.component.create",
+        "ecad.component.edit",
+        "ecad.component.copy",
+        "ecad.component.delete",
+        "ecad.component.inspect",
+        "ecad.component.map_pins",
+        "ecad.component.variant.add",
+        "ecad.component.variant.edit",
+        "ecad.component.variant.delete",
+    ];
+    for id in ids {
         for key in keys {
             for junk in crate::tests::hostile_values() {
                 let mut s = Session::default();
                 resistor(&mut s);
-                let base = json!({"component": "R0603", "components": ["R0603"], "name": "R2"});
+                run(&mut s, "ecad.symbol.generate", json!({"symbol": "RES", "component": "R0603", "style": "resistor"}));
+                run(&mut s, "ecad.footprint.generate", json!({"footprint": "0603", "component": "R0603", "package": "chip", "size": "0603"}));
+                run(&mut s, "ecad.schematic.place", json!({"parts": [{"component": "R0603", "at": [0, 0]}]}));
+                let base = json!({"component": "R0603", "components": ["R0603"], "name": "R2", "variant": "0603", "map": {"1": [1]}});
                 let mut p = base.clone();
                 p[key] = junk.clone();
                 let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| s.execute(id, &p)));
@@ -201,15 +233,17 @@ fn hostile_electronic_component_params_never_panic() {
 fn a_hole_connects_no_pin() {
     let mut s = Session::default();
     run(&mut s, "ecad.component.create", json!({"name": "J", "prefix": "J"}));
-    run(&mut s, "ecad.pin.add", json!({"component": "J", "pins": [{"number": 1, "at": [0, 0], "direction": "right"}]}));
+    run(&mut s, "ecad.symbol.create", json!({"name": "J", "component": "J"}));
+    run(&mut s, "ecad.pin.add", json!({"symbol": "J", "pins": [{"number": 1, "at": [0, 0], "direction": "right"}]}));
+    run(&mut s, "ecad.footprint.create", json!({"name": "J", "component": "J"}));
     run(
         &mut s,
         "ecad.pad.add",
-        json!({"component": "J", "pads": [{"number": 1, "at": [0, 0], "size": [2, 2], "shape": "round", "kind": "hole", "drill": 2}]}),
+        json!({"footprint": "J", "pads": [{"number": 1, "at": [0, 0], "size": [2, 2], "shape": "round", "kind": "hole", "drill": 2}]}),
     );
     let c = run(&mut s, "ecad.component.inspect", json!({"component": "J"}))["component"].clone();
-    assert_eq!(c["unconnected_pins"], json!(["1"]), "a pin numbered like a hole is not connected to it");
-    assert_eq!(c["ready"], false);
+    assert_eq!(c["variants"][0]["unconnected_pins"], json!(["1"]), "a pin numbered like a hole is not connected to it");
+    assert_eq!((c["ready"].clone(), c["variants"][0]["ready"].clone()), (json!(false), json!(false)));
     let e = refused(&mut s, "ecad.component.map_pins", json!({"component": "J", "map": {"1": [1]}}));
     assert!(e.contains("unplated hole"), "{e}");
 }
@@ -218,19 +252,55 @@ fn a_hole_connects_no_pin() {
 fn replacing_the_pins_drops_a_map_that_named_them() {
     let mut s = Session::default();
     resistor(&mut s);
+    run(&mut s, "ecad.symbol.create", json!({"name": "R", "component": "R0603"}));
     run(
         &mut s,
         "ecad.pin.add",
-        json!({"component": "R0603", "pins": [{"number": 1, "at": [-5.08, 0], "direction": "right", "row": {"count": 2, "pitch": [10.16, 0]}}]}),
+        json!({"symbol": "R", "pins": [{"number": 1, "at": [-5.08, 0], "direction": "right", "row": {"count": 2, "pitch": [10.16, 0]}}]}),
     );
+    run(&mut s, "ecad.footprint.create", json!({"name": "R0603", "component": "R0603"}));
     run(
         &mut s,
         "ecad.pad.add",
-        json!({"component": "R0603", "pads": [{"number": 1, "at": [-0.8, 0], "size": [0.9, 1], "row": {"count": 2, "pitch": [1.6, 0]}}]}),
+        json!({"footprint": "R0603", "pads": [{"number": 1, "at": [-0.8, 0], "size": [0.9, 1], "row": {"count": 2, "pitch": [1.6, 0]}}]}),
     );
     run(&mut s, "ecad.component.map_pins", json!({"component": "R0603", "map": {"1": [2], "2": [1]}}));
-    let r = run(&mut s, "ecad.pin.add", json!({"component": "R0603", "replace": true, "pins": [{"number": "A", "at": [0, 0], "direction": "up"}]}));
+    let r = run(&mut s, "ecad.pin.add", json!({"symbol": "R", "replace": true, "pins": [{"number": "A", "at": [0, 0], "direction": "up"}]}));
     assert_eq!(r["pin_map_cleared"], true);
-    let r = run(&mut s, "ecad.pad.add", json!({"component": "R0603", "pads": [{"number": 3, "at": [5, 0], "size": [1, 1]}]}));
+    assert_eq!(run(&mut s, "ecad.component.inspect", json!({"component": "R0603"}))["component"]["variants"][0]["pin_map"], json!(null));
+    run(&mut s, "ecad.component.map_pins", json!({"component": "R0603", "map": {"A": [1]}}));
+    let r = run(&mut s, "ecad.pad.add", json!({"footprint": "R0603", "pads": [{"number": 3, "at": [5, 0], "size": [1, 1]}]}));
     assert_eq!(r["pin_map_cleared"], false, "adding without replace keeps the map");
+    let r = run(&mut s, "ecad.pad.add", json!({"footprint": "R0603", "replace": true, "pads": [{"number": 9, "at": [0, 0], "size": [1, 1]}]}));
+    assert_eq!(r["pin_map_cleared"], true, "a footprint's pads replaced drop the variant's map that named them");
+}
+
+#[test]
+fn variants_build_one_component_with_several_footprints() {
+    let mut s = Session::default();
+    resistor(&mut s);
+    run(&mut s, "ecad.footprint.generate", json!({"footprint": "R0603", "package": "chip", "size": "0603"}));
+    run(&mut s, "ecad.footprint.generate", json!({"footprint": "R0805", "package": "chip", "size": "0805"}));
+    run(&mut s, "ecad.symbol.generate", json!({"symbol": "RES", "component": "R0603", "style": "resistor"}));
+    let r = run(&mut s, "ecad.component.variant.add", json!({"component": "R0603", "name": "0603", "footprint": "R0603"}));
+    assert_eq!(r["variant"], "0603");
+    run(&mut s, "ecad.component.variant.add", json!({"component": "R0603", "name": "0805", "footprint": "R0805"}));
+    let e = refused(&mut s, "ecad.component.variant.add", json!({"component": "R0603", "name": "0805"}));
+    assert!(e.contains("0805"), "names are unique in the component: {e}");
+    let c = run(&mut s, "ecad.component.inspect", json!({"component": "R0603"}))["component"].clone();
+    let names: Vec<&str> = c["variants"].as_array().unwrap().iter().filter_map(|v| v["name"].as_str()).collect();
+    assert_eq!(names, ["0603", "0805"]);
+    assert_eq!(c["ready"], true, "{c}");
+    // A part is built with the first variant unless it names another; a variant in use stays.
+    let r = run(&mut s, "ecad.schematic.place", json!({"parts": [{"component": "R0603", "at": [0, 0], "variant": "0805"}]}));
+    assert_eq!(r["parts"][0]["variant"], "0805");
+    let e = refused(&mut s, "ecad.component.variant.delete", json!({"component": "R0603", "variant": "0805"}));
+    assert!(e.contains("R1"), "{e}");
+    let r = run(&mut s, "ecad.component.variant.edit", json!({"component": "R0603", "variant": "0805", "name": "R0805"}));
+    assert!(r["changed"].as_array().is_some_and(|c| c.contains(&json!("name"))), "{r}");
+    assert_eq!(run(&mut s, "ecad.schematic.inspect", json!({}))["parts"][0]["variant"], "R0805", "parts built with it follow the rename");
+    let r = run(&mut s, "ecad.component.variant.delete", json!({"component": "R0603", "variant": "0603"}));
+    assert_eq!(r["variant"], "0603");
+    let e = refused(&mut s, "ecad.component.variant.edit", json!({"component": "R0603", "variant": "nope", "name": "x"}));
+    assert!(e.contains("nope"), "{e}");
 }

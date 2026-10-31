@@ -1,6 +1,6 @@
 {
   "en": {
-    "cmd.ecad_component_map_pins": "Map Pins to Pads"
+    "cmd.ecad_component_map_pins": "Connect"
   },
   "ar": {
     "cmd.ecad_component_map_pins": "ربط الأطراف بالوسادات"

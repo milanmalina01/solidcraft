@@ -106,6 +106,7 @@ fn same_geometry_inputs(a: &Document, b: &Document) -> bool {
         format,
         format_pending,
         name,
+        kind,
         units,
         metadata,
         params,
@@ -142,6 +143,7 @@ fn same_geometry_inputs(a: &Document, b: &Document) -> bool {
         && *format == b.format
         && *format_pending == b.format_pending
         && *name == b.name
+        && *kind == b.kind
         && *units == b.units
         && *metadata == b.metadata
         && *params == b.params

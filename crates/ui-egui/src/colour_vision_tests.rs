@@ -340,6 +340,40 @@ fn groups(t: &Tokens) -> Vec<Group> {
         group("form tab", &[("form_accent", t.form_accent)], &[("toolbar", t.toolbar)]),
         group("agent status", &[("agent_ok", t.agent_ok), ("agent_busy", t.agent_busy)], &[("app_bar", t.app_bar)]),
         group("logo", &[("logo[0]", t.logo[0]), ("logo[1]", t.logo[1]), ("logo[2]", t.logo[2])], &[("app_bar", t.app_bar)]),
+        // A circuit board: its copper layers, plated holes and airwires on the page; the design
+        // rule check's marks on copper of either side; the silkscreen, documentation, outline and
+        // keepout hatching, over copper too.
+        group(
+            "board copper",
+            &[
+                ("pcb_copper_top", t.pcb_copper_top),
+                ("pcb_copper_bottom", t.pcb_copper_bottom),
+                ("pcb_copper_inner[0]", t.pcb_copper_inner[0]),
+                ("pcb_copper_inner[1]", t.pcb_copper_inner[1]),
+                ("pcb_copper_inner[2]", t.pcb_copper_inner[2]),
+                ("pcb_copper_inner[3]", t.pcb_copper_inner[3]),
+                ("pcb_copper_inner[4]", t.pcb_copper_inner[4]),
+                ("pcb_copper_inner[5]", t.pcb_copper_inner[5]),
+                ("pcb_plated", t.pcb_plated),
+                ("pcb_airwire", t.pcb_airwire),
+            ],
+            &[("viewport_bottom", t.viewport_bottom)],
+        ),
+        group(
+            "board check marks",
+            &[("pcb_drc_error", t.pcb_drc_error), ("pcb_drc_warning", t.pcb_drc_warning)],
+            &[("pcb_copper_top", t.pcb_copper_top), ("pcb_copper_bottom", t.pcb_copper_bottom), ("viewport_bottom", t.viewport_bottom)],
+        ),
+        group(
+            "board legend",
+            &[
+                ("pcb_silkscreen", t.pcb_silkscreen),
+                ("pcb_outline", t.pcb_outline),
+                ("pcb_documentation", t.pcb_documentation),
+                ("pcb_keepout", t.pcb_keepout),
+            ],
+            &[("viewport_bottom", t.viewport_bottom), ("pcb_copper_top", t.pcb_copper_top), ("pcb_copper_bottom", t.pcb_copper_bottom)],
+        ),
     ];
     // Tab fills and small-text inks have distinct jobs: compare each with its actual
     // grounds, rather than with the same-hue fill/ink. WCAG text ratios are also guarded
@@ -535,6 +569,8 @@ const NO_MEANING: &[(&str, &str)] = &[
     ("icons.highlight", "white ink on viewport markers and the agent pointer"),
     ("icons.agent", "the agent's pointer, alone"),
     ("icons.marker_halo", "a dark halo under a marker"),
+    // An opacity, not a colour: a pour is its layer's copper colour, measured in `board copper`.
+    ("pcb_pour_alpha", "the opacity of a copper pour over the page"),
 ];
 
 /// Every token field, by path (`sketch`, `analysis.draft`, `triad`…): the arrays of distinct
@@ -745,10 +781,25 @@ fn each_mode_changes_only_its_table() {
         "sketch_accent",
         "preview_sketch",
         "form_success_fill",
+        "pcb_copper_inner",
+        "pcb_plated",
+        "pcb_silkscreen",
+        "pcb_documentation",
+        "pcb_keepout",
+        "pcb_drc_error",
     ];
     let mut red_green_light =
         red_green_both.into_iter().filter(|name| !["surface_accent", "mesh_accent", "form_accent"].contains(name)).collect::<Vec<_>>();
-    red_green_light.extend(["sketch_projected", "sketch_locked", "timeline_item_error", "construction_geom", "glyph_text", "form_success"]);
+    red_green_light.extend([
+        "sketch_projected",
+        "sketch_locked",
+        "timeline_item_error",
+        "construction_geom",
+        "glyph_text",
+        "form_success",
+        "pcb_outline",
+    ]);
+    let tritan_board = ["pcb_copper_inner", "pcb_plated", "pcb_airwire", "pcb_keepout", "pcb_drc_error"];
     for (dark, mode, want) in [
         (false, ColorVision::Protan, set(&red_green_light)),
         (true, ColorVision::Protan, set(&red_green_both)),
@@ -768,7 +819,11 @@ fn each_mode_changes_only_its_table() {
                 "glyph_text",
                 "preview_sketch",
                 "analysis.hatch",
-            ]),
+                "pcb_silkscreen",
+            ]
+            .into_iter()
+            .chain(tritan_board)
+            .collect::<Vec<_>>()),
         ),
         (
             true,
@@ -784,7 +839,11 @@ fn each_mode_changes_only_its_table() {
                 "glyph_text",
                 "preview_sketch",
                 "analysis.hatch",
-            ]),
+                "pcb_outline",
+            ]
+            .into_iter()
+            .chain(tritan_board)
+            .collect::<Vec<_>>()),
         ),
     ] {
         let base = Tokens::themed(dark, ColorVision::Off);

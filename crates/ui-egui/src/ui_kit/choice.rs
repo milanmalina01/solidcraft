@@ -235,14 +235,23 @@ pub(crate) fn checkbox_row(ui: &mut egui::Ui, key: &str, label: &str, on: bool) 
         ui.painter().rect_filled(rect, t.control_radius, t.hover);
     }
     super::checks::paint_box(ui, square, &response, on, false);
+    // Named as the form rows are, so the control channel reaches it by its label too; a form row
+    // with the same label drawn before it this frame keeps the name.
+    let name = format!("dialog:{label}");
+    if crate::scenario::handle_at(&name).is_none() {
+        crate::scenario::publish_handle(&name, rect.center());
+    }
+    crate::scenario::publish_rect(&format!("dialog:widget:{label}"), rect);
+    crate::scenario::publish_target(&format!("dialog:row:{label}"), rect);
     let label = crate::i18n::tr_label(label);
-    let painter = ui
-        .painter()
-        .with_clip_rect(ui.clip_rect().intersect(egui::Rect::from_min_max(rect.min, egui::pos2(square.left() - t.space_6, rect.bottom()))));
-    painter.text(rect.left_center(), egui::Align2::LEFT_CENTER, label, egui::FontId::proportional(t.font_label), t.form_ink);
+    let room = egui::Rect::from_min_max(rect.min, egui::pos2(square.left() - t.space_6, rect.bottom()));
+    let painter = ui.painter().with_clip_rect(ui.clip_rect().intersect(room));
+    let drawn = painter.text(rect.left_center(), egui::Align2::LEFT_CENTER, label, egui::FontId::proportional(t.font_label), t.form_ink);
     response.widget_info(|| egui::WidgetInfo::selected(egui::WidgetType::Checkbox, ui.is_enabled(), on, label));
     crate::scenario::publish_target(&format!("sketch_palette:toggle:{key}"), rect);
-    response.on_hover_text(label).clicked()
+    // The label as a tooltip only when it is cut off: one that repeats what the row shows would
+    // only cover the next row.
+    if drawn.right() > room.right() { response.on_hover_text(label).clicked() } else { response.clicked() }
 }
 
 /// Compact bold/italic toggles for text. Tokens: scope font/control tokens.

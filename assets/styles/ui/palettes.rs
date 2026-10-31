@@ -226,6 +226,26 @@ impl Tokens {
             bend_up: Color32::from_rgb(30, 140, 50),
             bend_down: Color32::from_rgb(200, 90, 20),
             interference: Color32::from_rgb(235, 45, 40),
+            pcb_copper_top: Color32::from_rgb(196, 40, 36),
+            pcb_copper_bottom: Color32::from_rgb(40, 104, 196),
+            // Amber, lime (yellower than the plated green), magenta, cyan, orange, violet.
+            pcb_copper_inner: [
+                Color32::from_rgb(176, 124, 0),
+                Color32::from_rgb(128, 134, 0),
+                Color32::from_rgb(170, 40, 150),
+                Color32::from_rgb(0, 134, 156),
+                Color32::from_rgb(204, 96, 0),
+                Color32::from_rgb(110, 70, 200),
+            ],
+            pcb_plated: Color32::from_rgb(30, 140, 60),
+            pcb_silkscreen: Color32::from_rgb(92, 90, 78),
+            pcb_documentation: Color32::from_rgb(106, 90, 160),
+            pcb_outline: Color32::from_rgb(166, 124, 0),
+            pcb_airwire: Color32::from_rgb(0, 128, 118),
+            pcb_pour_alpha: 0.4,
+            pcb_keepout: Color32::from_rgb(176, 60, 100),
+            pcb_drc_error: Color32::from_rgb(210, 30, 30),
+            pcb_drc_warning: Color32::from_rgb(196, 136, 0),
             continuity: [
                 Color32::from_rgb(0, 158, 115),
                 Color32::from_rgb(0, 114, 178),
@@ -361,6 +381,25 @@ impl Tokens {
         t.box_crossing = Color32::from_rgb(80, 200, 120);
         t.bend_up = Color32::from_rgb(110, 200, 120);
         t.bend_down = Color32::from_rgb(240, 150, 80);
+        t.pcb_copper_top = Color32::from_rgb(226, 74, 66);
+        t.pcb_copper_bottom = Color32::from_rgb(86, 150, 226);
+        t.pcb_copper_inner = [
+            Color32::from_rgb(222, 170, 52),
+            Color32::from_rgb(192, 214, 70),
+            Color32::from_rgb(214, 92, 190),
+            Color32::from_rgb(64, 196, 214),
+            Color32::from_rgb(238, 138, 58),
+            Color32::from_rgb(156, 116, 232),
+        ];
+        t.pcb_plated = Color32::from_rgb(92, 190, 104);
+        t.pcb_silkscreen = Color32::from_rgb(236, 236, 230);
+        t.pcb_documentation = Color32::from_rgb(176, 164, 212);
+        t.pcb_outline = Color32::from_rgb(236, 198, 84);
+        t.pcb_airwire = Color32::from_rgb(140, 220, 208);
+        t.pcb_pour_alpha = 0.45;
+        t.pcb_keepout = Color32::from_rgb(240, 180, 200);
+        t.pcb_drc_error = Color32::from_rgb(255, 84, 84);
+        t.pcb_drc_warning = Color32::from_rgb(255, 200, 40);
         t.form_ink = t.text;
         t.form_dim = Color32::from_rgb(180, 187, 200);
         t.form_primary = t.accent;
@@ -408,6 +447,38 @@ impl Tokens {
             t.bend_down = Color32::from_rgb(200, 120, 0);
             t.sketch_accent = icon_primary(crate::icon_svg::SKETCH_RED_GREEN[0]);
         }
+        // Circuit board layers and marks, measured in `colour_vision_tests` (top and bottom copper
+        // keep their colours).
+        if dark {
+            t.pcb_copper_inner = [
+                Color32::from_rgb(225, 210, 165),
+                Color32::from_rgb(195, 225, 75),
+                Color32::from_rgb(195, 105, 165),
+                Color32::from_rgb(45, 210, 225),
+                Color32::from_rgb(240, 135, 0),
+                Color32::from_rgb(105, 90, 195),
+            ];
+            t.pcb_plated = Color32::from_rgb(60, 180, 135);
+            t.pcb_silkscreen = Color32::from_rgb(210, 240, 240);
+            t.pcb_documentation = Color32::from_rgb(165, 150, 180);
+            t.pcb_keepout = Color32::from_rgb(255, 180, 180);
+            t.pcb_drc_error = Color32::from_rgb(255, 90, 135);
+        } else {
+            t.pcb_copper_inner = [
+                Color32::from_rgb(180, 135, 60),
+                Color32::from_rgb(195, 180, 60),
+                Color32::from_rgb(135, 0, 105),
+                Color32::from_rgb(0, 150, 195),
+                Color32::from_rgb(225, 180, 150),
+                Color32::from_rgb(60, 0, 210),
+            ];
+            t.pcb_plated = Color32::from_rgb(45, 120, 75);
+            t.pcb_silkscreen = Color32::from_rgb(60, 60, 45);
+            t.pcb_documentation = Color32::from_rgb(105, 60, 120);
+            t.pcb_outline = Color32::from_rgb(165, 135, 30);
+            t.pcb_keepout = Color32::from_rgb(150, 60, 90);
+            t.pcb_drc_error = Color32::from_rgb(210, 90, 90);
+        }
         t
     }
 
@@ -429,6 +500,29 @@ impl Tokens {
         } else {
             t.sketch_locked = Color32::from_rgb(20, 165, 70);
             t.box_crossing = Color32::from_rgb(200, 60, 120);
+        }
+        // Circuit board layers and marks, measured in `colour_vision_tests` (top and bottom copper
+        // keep their colours).
+        if dark {
+            t.pcb_copper_inner[0] = Color32::from_rgb(225, 180, 90);
+            t.pcb_copper_inner[2] = Color32::from_rgb(255, 105, 195);
+            t.pcb_copper_inner[3] = Color32::from_rgb(45, 210, 240);
+            t.pcb_copper_inner[4] = Color32::from_rgb(165, 135, 90);
+            t.pcb_plated = Color32::from_rgb(135, 195, 120);
+            t.pcb_outline = Color32::from_rgb(225, 180, 60);
+            t.pcb_airwire = Color32::from_rgb(210, 255, 255);
+            t.pcb_keepout = Color32::from_rgb(225, 195, 225);
+            t.pcb_drc_error = Color32::from_rgb(255, 120, 135);
+        } else {
+            t.pcb_copper_inner[2] = Color32::from_rgb(150, 60, 135);
+            t.pcb_copper_inner[3] = Color32::from_rgb(150, 165, 180);
+            t.pcb_copper_inner[4] = Color32::from_rgb(240, 120, 30);
+            t.pcb_copper_inner[5] = Color32::from_rgb(120, 0, 225);
+            t.pcb_plated = Color32::from_rgb(90, 135, 90);
+            t.pcb_silkscreen = Color32::from_rgb(105, 105, 60);
+            t.pcb_airwire = Color32::from_rgb(60, 165, 150);
+            t.pcb_keepout = Color32::from_rgb(150, 75, 90);
+            t.pcb_drc_error = Color32::from_rgb(165, 90, 90);
         }
         t
     }

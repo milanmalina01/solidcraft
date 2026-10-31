@@ -1,34 +1,42 @@
 {
   "en": {
-    "cmd.ecad_package_set": "Set 3D Package",
-    "cmd.ecad_package_clear": "Clear 3D Package"
+    "cmd.ecad_package_create": "3D Package",
+    "cmd.ecad_package_delete": "Delete 3D Package",
+    "cmd.ecad_package_edit": "Edit 3D Package"
   },
   "ar": {
-    "cmd.ecad_package_set": "تعيين الحزمة ثلاثية الأبعاد",
-    "cmd.ecad_package_clear": "مسح الحزمة ثلاثية الأبعاد"
+    "cmd.ecad_package_create": "حزمة ثلاثية الأبعاد",
+    "cmd.ecad_package_delete": "حذف الحزمة ثلاثية الأبعاد",
+    "cmd.ecad_package_edit": "تحرير الحزمة ثلاثية الأبعاد"
   },
   "de": {
-    "cmd.ecad_package_set": "3D-Gehäuse festlegen",
-    "cmd.ecad_package_clear": "3D-Gehäuse entfernen"
+    "cmd.ecad_package_create": "3D-Gehäuse",
+    "cmd.ecad_package_delete": "3D-Gehäuse löschen",
+    "cmd.ecad_package_edit": "3D-Gehäuse bearbeiten"
   },
   "he": {
-    "cmd.ecad_package_set": "הגדרת מארז תלת־ממדי",
-    "cmd.ecad_package_clear": "ניקוי מארז תלת־ממדי"
+    "cmd.ecad_package_create": "מארז תלת־ממדי",
+    "cmd.ecad_package_delete": "מחיקת מארז תלת־ממדי",
+    "cmd.ecad_package_edit": "עריכת מארז תלת־ממדי"
   },
   "ja": {
-    "cmd.ecad_package_set": "3D パッケージを設定",
-    "cmd.ecad_package_clear": "3D パッケージを解除"
+    "cmd.ecad_package_create": "3D パッケージ",
+    "cmd.ecad_package_delete": "3D パッケージを削除",
+    "cmd.ecad_package_edit": "3D パッケージを編集"
   },
   "ko": {
-    "cmd.ecad_package_set": "3D 패키지 설정",
-    "cmd.ecad_package_clear": "3D 패키지 지우기"
+    "cmd.ecad_package_create": "3D 패키지",
+    "cmd.ecad_package_delete": "3D 패키지 삭제",
+    "cmd.ecad_package_edit": "3D 패키지 편집"
   },
   "vi": {
-    "cmd.ecad_package_set": "Đặt vỏ 3D",
-    "cmd.ecad_package_clear": "Xóa vỏ 3D"
+    "cmd.ecad_package_create": "Gói 3D",
+    "cmd.ecad_package_delete": "Xóa gói 3D",
+    "cmd.ecad_package_edit": "Sửa gói 3D"
   },
   "zh": {
-    "cmd.ecad_package_set": "设置 3D 封装外形",
-    "cmd.ecad_package_clear": "清除 3D 封装外形"
+    "cmd.ecad_package_create": "3D 封装",
+    "cmd.ecad_package_delete": "删除 3D 封装",
+    "cmd.ecad_package_edit": "编辑 3D 封装"
   }
 }

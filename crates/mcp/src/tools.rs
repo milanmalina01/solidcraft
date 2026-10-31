@@ -327,8 +327,9 @@ pub fn tool_definitions() -> Vec<Value> {
             "skill_reference",
             "Skill reference",
             "Read a document of SolidCraft's bundled agent skills (solidcraft-modeling, solidcraft-mechanisms, \
-             solidcraft-editing, solidcraft-checking, solidcraft-electronics) from the copy built into SolidCraft. `file` defaults to reference.md; \
-             each skill also has SKILL.md. Unknown skills or files are refused with the available ones.",
+             solidcraft-editing, solidcraft-checking, solidcraft-electronics, solidcraft-pcb) from the copy built into SolidCraft. `file` defaults \
+             to reference.md; each skill also has SKILL.md, and solidcraft-pcb's references are reference/workflow.md and the other files its \
+             SKILL.md lists. Unknown skills or files are refused with the available ones.",
             obj(
                 json!({
                     "skill": string("Skill name, such as solidcraft-modeling"),

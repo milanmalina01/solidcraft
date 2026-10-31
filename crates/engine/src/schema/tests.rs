@@ -366,7 +366,7 @@ fn the_level_survives_a_new_design() {
 /// `items`, `minItems`, `maxItems`, `uniqueItems`, `enum`, `minLength`, `maxLength`, `minimum`,
 /// `maximum`, `exclusiveMinimum`, `exclusiveMaximum`, `anyOf`, `not` and `$ref`. (`integer`
 /// here is what serde reads as one, so `1.0` is not.)
-pub(super) fn conforms(root: &Value, node: &Value, v: &Value) -> bool {
+pub(crate) fn conforms(root: &Value, node: &Value, v: &Value) -> bool {
     if let Some(name) = node.get("$ref").and_then(Value::as_str).and_then(|r| r.strip_prefix("#/$defs/")) {
         return root.get("$defs").and_then(|d| d.get(name)).is_some_and(|t| conforms(root, t, v));
     }

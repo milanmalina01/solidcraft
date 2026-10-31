@@ -847,8 +847,19 @@ fn parsed_frame_violations(ast: &syn::File) -> Vec<String> {
         }
         fn visit_expr_path(&mut self, expr: &'ast syn::ExprPath) {
             let names: Vec<_> = expr.path.segments.iter().map(|s| s.ident.to_string()).collect();
+            // egui's `Frame`, `Window` and `Modal` (`Frame::NONE`, `egui::Frame::group`,
+            // `egui::containers::Window::new`), not a variant of the same name (`ItemKind::Frame`).
+            let container = |k: usize, s: &str| {
+                matches!(s, "Frame" | "Window" | "Modal")
+                    && k.checked_sub(1)
+                        .and_then(|j| names.get(j))
+                        .is_none_or(|before| matches!(before.as_str(), "egui" | "containers" | "frame" | "window" | "modal"))
+            };
             if !names.iter().any(|s| s == "ui_kit")
-                && names.iter().any(|s| matches!(s.as_str(), "Frame" | "Window" | "Modal" | "shell_card" | "dock_frame") || self.aliases.contains(s))
+                && names
+                    .iter()
+                    .enumerate()
+                    .any(|(k, s)| container(k, s) || matches!(s.as_str(), "shell_card" | "dock_frame") || self.aliases.contains(s))
             {
                 self.found.push(names.join("::"));
             }
@@ -907,10 +918,12 @@ fn window_guard_rejects_frames_aliases_and_native_windows_but_accepts_kit_compos
             crate::frame::shell_card(fill); crate::frame::dock_frame(ctx, side);
         }
         fn kit() { crate::ui_kit::Window::new(id, icon, title); crate::ui_kit::Confirm::new(id, icon, title); }
+        fn variants(kind: Option<ItemKind>) { if let Some(ItemKind::Frame) = kind { Shape::Window; } }
+        fn nested() { egui::containers::Frame::NONE; }
         #[cfg(test)] mod tests { fn ignored() { egui::Frame::NONE; } }
     "#,
     );
-    assert_eq!(found.len(), 6, "{found:?}");
+    assert_eq!(found.len(), 7, "{found:?}");
 }
 
 #[test]

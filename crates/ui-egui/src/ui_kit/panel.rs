@@ -689,6 +689,7 @@ pub struct Window<'a> {
     page_rows: f32,
     page_padding: egui::Vec2,
     left_slot: bool,
+    resizable: bool,
 }
 
 impl<'a> Window<'a> {
@@ -711,7 +712,15 @@ impl<'a> Window<'a> {
             page_rows: 16.0,
             page_padding: vec2(Tokens::get().space_16, Tokens::get().space_16),
             left_slot: false,
+            resizable: false,
         }
+    }
+
+    /// The card's edges drag to resize it (egui keeps the size it was given, as it keeps its
+    /// place): for a long window of tables and lists.
+    pub(crate) fn resizable(mut self) -> Self {
+        self.resizable = true;
+        self
     }
 
     /// Pin the card at `align` of the screen, `offset` away (it then no longer moves).
@@ -818,7 +827,8 @@ impl<'a> Window<'a> {
                         .id_salt("window_body")
                         .max_height(height)
                         .min_scrolled_height(0.0)
-                        .auto_shrink([false, true])
+                        // A resizable card's body fills the height it was dragged to.
+                        .auto_shrink([false, !self.resizable])
                         .show(ui, body);
                 } else {
                     body(ui);
@@ -872,19 +882,22 @@ impl<'a> Window<'a> {
             scenario::publish_rect("dialog:window", shown.response.rect);
             return shown.inner;
         }
+        let screen = ctx.content_rect();
         let window = super::Container::new(ctx, super::Surface::Window)
             .window(self.title)
             .id(self.id)
             .title_bar(false)
             .collapsible(false)
-            .resizable(false)
-            .min_width(inner_width)
-            .max_width(inner_width)
+            .resizable(self.resizable)
+            .min_width(if self.resizable { inner_width * 0.6 } else { inner_width })
+            .max_width(if self.resizable { dimension(screen.width()) } else { inner_width })
             .default_width(inner_width)
             .scroll(false)
             .frame(frame)
             .fade_in(false)
             .fade_out(false);
+        let window =
+            if self.resizable { window.default_height(dimension(screen.height()) * 0.6).min_height(super::row_height() * 6.0) } else { window };
         let window = match (self.anchor, self.placed) {
             (Some((align, offset)), _) => window.anchor(align, offset),
             (None, Some((pivot, pos))) => window.pivot(pivot).default_pos(pos),

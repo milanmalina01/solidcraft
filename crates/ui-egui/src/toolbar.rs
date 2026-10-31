@@ -496,6 +496,8 @@ pub fn app_bar(app: &mut SolveApp, ui: &mut egui::Ui) {
 pub enum FileAction {
     /// Create a design using the document lifecycle.
     New,
+    /// Create an electronics library or an electronics design, in its own tab.
+    NewElectronics(solidcraft_engine::doc::DocumentKind),
     /// Pick a design or an exchange file to open.
     Open,
     /// Save the active design, asking for a path when needed.
@@ -514,6 +516,10 @@ pub enum FileAction {
     ExportMesh(&'static str),
     /// Start an existing interactive command.
     Command(&'static str),
+    /// An electronics design's print pages: the Export Pages window.
+    ExportPages,
+    /// An electronics design's parts list as CSV: where to save it, then it is written.
+    ExportPartsList,
     /// Open an entry from the recent-design list.
     OpenRecent(String),
     /// Clear recent designs and their last-opened dates.
@@ -531,8 +537,15 @@ pub enum FileAction {
 impl FileAction {
     /// Whether this action is available in the current document, picker and report state.
     pub fn enabled(&self, app: &SolveApp) -> bool {
-        let needs_design = matches!(self, Self::Save | Self::SaveAs | Self::Undo | Self::Redo | Self::ExportMesh(_) | Self::Command(_))
-            || matches!(self, Self::Export(extension) if *extension != "json");
+        let needs_design = matches!(
+            self,
+            Self::Save | Self::SaveAs | Self::Undo | Self::Redo | Self::ExportMesh(_) | Self::Command(_) | Self::ExportPages | Self::ExportPartsList
+        ) || matches!(self, Self::Export(extension) if *extension != "json");
+        // An electronics design exports its pages and parts list, not 3D files; a 3D design the
+        // other way round; an electronics library neither (its JSON aside).
+        let kind = app.session.doc.kind;
+        let electronics = kind == solidcraft_engine::doc::DocumentKind::ElectronicsDesign;
+        let three_d = !kind.is_electronics();
         // An open bug report describes the designs as they are, and a window opened behind it
         // covers it (#7188). Quit too, as behind any modal window: it would switch to a design
         // with unsaved changes under the report, and ask about it where it can't be answered.
@@ -542,6 +555,11 @@ impl FileAction {
             Self::Redo => !app.session.redo.is_empty(),
             Self::ClearRecent => !app.home.recent.is_empty(),
             Self::AgentChat => crate::agent_chat::app_bar_button_shown(app),
+            Self::ExportPages => electronics,
+            // One save at a time: a second would lose the first's status line.
+            Self::ExportPartsList => electronics && !crate::electronics_export::saving(app),
+            Self::ExportMesh(_) | Self::Command("file.send_to_slicer" | "file.export_view_dxf") => three_d,
+            Self::Export(extension) => three_d || *extension == "json",
             _ => true,
         };
         !app.file_picker_busy() && !app.file_load.busy() && !behind_report && (!needs_design || design_shown(app)) && available
@@ -560,6 +578,7 @@ impl FileAction {
         }
         match self {
             Self::New => crate::documents::new_design(app),
+            Self::NewElectronics(kind) => crate::documents::new_electronics(app, *kind),
             Self::Open => app.pick_open(|app, path| {
                 if let Some(path) = path {
                     app.open_path_async(&path);
@@ -573,6 +592,8 @@ impl FileAction {
             Self::Export(extension) => export(app, extension),
             Self::ExportMesh(format) => crate::dialogs_save_mesh::start_with_format(app, format),
             Self::Command(command) => app.start(command),
+            Self::ExportPages => crate::electronics_export::open(app),
+            Self::ExportPartsList => crate::electronics_export::save_parts_list(app),
             Self::OpenRecent(path) => crate::home::open_recent(app, path),
             Self::ClearRecent => {
                 app.home.recent.clear();
@@ -614,6 +635,15 @@ fn file_menu(app: &mut SolveApp, ctx: &egui::Context) {
                 if item(ui, app.tr("ui.new_design"), "Ctrl+N", "new") {
                     FileAction::New.run(app);
                     close = true;
+                }
+                for (key, kind) in [
+                    ("ui.new_electronics_design", solidcraft_engine::doc::DocumentKind::ElectronicsDesign),
+                    ("ui.new_electronics_library", solidcraft_engine::doc::DocumentKind::ElectronicsLibrary),
+                ] {
+                    if item(ui, app.tr(key), "", "ws_electronics") {
+                        FileAction::NewElectronics(kind).run(app);
+                        close = true;
+                    }
                 }
                 if item(ui, &format!("{}…", app.tr("ui.open")), "Ctrl+O", "open") {
                     FileAction::Open.run(app);
@@ -674,33 +704,48 @@ fn file_menu(app: &mut SolveApp, ctx: &egui::Context) {
                     close = true;
                 }
                 ui.separator();
-                if item_if(ui, "Export STL…", "", "mesh_export", shown) {
-                    FileAction::ExportMesh("stl").run(app);
-                    close = true;
-                }
-                if item_if(ui, "Export 3MF…", "", "mesh_export", shown) {
-                    FileAction::ExportMesh("3mf").run(app);
-                    close = true;
-                }
-                if item_if(ui, "Send to Slicer", "", "mesh_export", shown && crate::dialogs_save_mesh::available(app)) {
-                    app.start("file.send_to_slicer");
-                    close = true;
-                }
-                if item_if(ui, "Export STEP…", "", "export", shown) {
-                    FileAction::Export("step").run(app);
-                    close = true;
-                }
-                if item_if(ui, app.tr_label("Export Current View as DXF…"), "", "export", shown) {
-                    FileAction::Command("file.export_view_dxf").run(app);
-                    close = true;
-                }
-                if item_if(ui, "Export OBJ…", "", "export", shown) {
-                    FileAction::Export("obj").run(app);
-                    close = true;
-                }
-                if item_if(ui, "Export URDF…", "", "export", shown) {
-                    FileAction::Export("urdf").run(app);
-                    close = true;
+                // An electronics design exports its print pages (the window of the OUTPUT group's
+                // button) and its parts list; the 3D exports are for 3D designs (an electronics
+                // library has neither).
+                if app.session.doc.kind == solidcraft_engine::doc::DocumentKind::ElectronicsDesign {
+                    if item_if(ui, &format!("{}…", app.tr("electronics.export_title")), "", "export", shown && app.file_picker.is_none()) {
+                        FileAction::ExportPages.run(app);
+                        close = true;
+                    }
+                    if item_if(ui, &format!("{}…", app.tr("electronics.export_parts_menu")), "", "export", FileAction::ExportPartsList.enabled(app))
+                    {
+                        FileAction::ExportPartsList.run(app);
+                        close = true;
+                    }
+                } else if !app.session.doc.kind.is_electronics() {
+                    if item_if(ui, "Export STL…", "", "mesh_export", shown) {
+                        FileAction::ExportMesh("stl").run(app);
+                        close = true;
+                    }
+                    if item_if(ui, "Export 3MF…", "", "mesh_export", shown) {
+                        FileAction::ExportMesh("3mf").run(app);
+                        close = true;
+                    }
+                    if item_if(ui, "Send to Slicer", "", "mesh_export", shown && crate::dialogs_save_mesh::available(app)) {
+                        app.start("file.send_to_slicer");
+                        close = true;
+                    }
+                    if item_if(ui, "Export STEP…", "", "export", shown) {
+                        FileAction::Export("step").run(app);
+                        close = true;
+                    }
+                    if item_if(ui, app.tr_label("Export Current View as DXF…"), "", "export", shown) {
+                        FileAction::Command("file.export_view_dxf").run(app);
+                        close = true;
+                    }
+                    if item_if(ui, "Export OBJ…", "", "export", shown) {
+                        FileAction::Export("obj").run(app);
+                        close = true;
+                    }
+                    if item_if(ui, "Export URDF…", "", "export", shown) {
+                        FileAction::Export("urdf").run(app);
+                        close = true;
+                    }
                 }
                 if item(ui, "Export Design as JSON…", "", "export") {
                     FileAction::Export("json").run(app);
@@ -959,8 +1004,13 @@ fn ribbon_label_lines(painter: &egui::Painter, label: &str, width: f32) -> Vec<S
 fn ribbon_button_galley(painter: &egui::Painter, label: &str, width: f32, color: Color32) -> std::sync::Arc<egui::Galley> {
     let lines = ribbon_button_lines(painter, label, width);
     // Explicit newlines only: egui must never split an oversized word.
-    let mut job = egui::text::LayoutJob::simple(lines.join("\n"), FontId::proportional(crate::theme::Tokens::get().font_body), color, f32::INFINITY);
+    let size = crate::theme::Tokens::get().font_body;
+    let mut job = egui::text::LayoutJob::simple(lines.join("\n"), FontId::proportional(size), color, f32::INFINITY);
     job.halign = egui::Align::Center;
+    // A tight line height keeps a two-line label inside the button's frame.
+    for section in &mut job.sections {
+        section.format.line_height = Some(size + 2.0);
+    }
     painter.layout_job(job)
 }
 
@@ -1222,22 +1272,21 @@ pub fn toolbar(app: &mut SolveApp, ui: &mut egui::Ui) {
         if render {
             crate::ui_kit::StageBar::workspace(ui, ws, "ws_render", app.tr("ui.render"), app.tr("ui.ribbon_workspace"));
         } else {
-            let electronics = crate::electronics_workspace::active(app);
-            let workspace_icon = if electronics { "ws_electronics" } else { "ws_design" };
+            // An electronics document shows its kind.
+            let kind = app.session.doc.kind;
+            let workspace_icon = if kind.is_electronics() { "ws_electronics" } else { "ws_design" };
+            let workspace_label = match kind {
+                solidcraft_engine::doc::DocumentKind::ElectronicsLibrary => "ui.electronics_library",
+                solidcraft_engine::doc::DocumentKind::ElectronicsDesign => "ui.electronics",
+                solidcraft_engine::doc::DocumentKind::Design => "ui.design",
+            };
             icons::paint_icon(
                 &painter,
                 Rect::from_center_size(pos2(ws.center().x, ws.top() + if labels { 39.0 } else { 25.0 }), vec2(30.0, 30.0)),
                 workspace_icon,
                 1.0,
             );
-            ribbon_text(
-                ui,
-                pos2(ws.center().x, ws.top() + if labels { 69.0 } else { 50.0 }),
-                app.tr(if electronics { "ui.electronics" } else { "ui.design" }),
-                t.font_button,
-                t.text,
-                true,
-            );
+            ribbon_text(ui, pos2(ws.center().x, ws.top() + if labels { 69.0 } else { 50.0 }), app.tr(workspace_label), t.font_button, t.text, true);
             let label = app.tr("ui.ribbon_workspace");
             let label_width =
                 painter.layout_no_wrap(label.to_string(), FontId::proportional(crate::theme::Tokens::get().font_small), t.text_dim).size().x;
@@ -1263,6 +1312,8 @@ pub fn toolbar(app: &mut SolveApp, ui: &mut egui::Ui) {
             // Create Sketch never lands in last_command (it is not repeatable).
             (None, Some(d)) if matches!(d.kind, crate::dialogs::Kind::Sketch) => Some("sketch.create".to_string()),
             (None, Some(_)) => app.last_command.as_ref().map(|(id, _)| id.clone()),
+            // The Electronics workspace's armed tool.
+            _ if crate::electronics_workspace::active(app) => crate::electronics_editor::running(app).map(str::to_string),
             _ => None,
         };
         let mut px = ribbon_left;
@@ -1440,6 +1491,7 @@ pub fn toolbar(app: &mut SolveApp, ui: &mut egui::Ui) {
                 if !finish
                     && (resp.is_pointer_button_down_on()
                         || running.as_deref() == Some(selected.id)
+                        || crate::electronics_workspace::pressed(app, selected.id)
                         || family_open
                         || (selected.id == "view.shots_strip" && app.preferences.render_shots_strip))
                 {
@@ -1489,7 +1541,9 @@ pub fn toolbar(app: &mut SolveApp, ui: &mut egui::Ui) {
                     let label = app.tr_label(if button_label == selected.label { info.label } else { button_label });
                     let color = if info.enabled { t.text } else { t.text_dim };
                     let galley = ribbon_button_galley(&painter, label, whole.width() - BUTTON_LABEL_PADDING, color);
-                    painter.galley(pos2(whole.center().x, whole.top() + 32.0), galley, t.text);
+                    // Two lines start a little higher so both stay inside the frame drawn on hover and press.
+                    let label_top = if galley.rows.len() > 1 { 30.0 } else { 32.0 };
+                    painter.galley(pos2(whole.center().x, whole.top() + label_top), galley, t.text);
                 }
             }
             if !collapsed && drawn > large.len() {
@@ -2116,8 +2170,18 @@ pub(crate) fn selection_filter(app: &mut SolveApp, ui: &mut egui::Ui) {
 /// Two Esc presses within this many seconds finish the open sketch.
 pub const ESCAPE_TWICE_S: f64 = 0.4;
 
+/// The electronics board was shown at the last frame, where Cmd+R and Cmd+F turn and flip anyway.
+static BOARD_KEYS: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+/// Whether a key press (`key` as the browser names it) is the board's Cmd/Ctrl+R or Cmd/Ctrl+F,
+/// with the board shown: the browser build keeps it from the browser (reload, find in page).
+pub fn board_takes_key(key: &str, command: bool, shift: bool, alt: bool) -> bool {
+    command && !shift && !alt && matches!(key, "r" | "R" | "f" | "F") && BOARD_KEYS.load(std::sync::atomic::Ordering::Relaxed)
+}
+
 /// Global keyboard shortcuts (when no text field has focus).
 pub fn shortcuts(app: &mut SolveApp, ctx: &egui::Context) {
+    BOARD_KEYS.store(design_shown(app) && crate::electronics_workspace::board(app), std::sync::atomic::Ordering::Relaxed);
     if design_shown(app) {
         crate::navigation::step_key_hold(app, ctx);
     } else {
@@ -2200,12 +2264,22 @@ pub fn shortcuts(app: &mut SolveApp, ctx: &egui::Context) {
                     });
                 }
                 _ if !shown => {}
+                // Ctrl+Shift+Z redoes, as the macOS menu's Redo does.
+                Key::Z if mods.shift && !mods.alt => drop(app.run("edit.redo", json!({}))),
                 Key::Z => {
-                    if !crate::tools::undo_spline_point(app) {
+                    if !crate::tools::undo_spline_point(app) && !crate::electronics_board_route::undo_step(app) {
                         drop(app.run("edit.undo", json!({})));
                     }
                 }
                 Key::Y => drop(app.run("edit.redo", json!({}))),
+                // Cmd+R and Cmd+F turn and flip the board's pick even where it comes too close to
+                // another net's copper, as Cmd-clicking Rotate and Flip does.
+                Key::R if crate::electronics_workspace::board(app) && !mods.shift && !mods.alt => {
+                    crate::electronics_board::rotate_anyway(app);
+                }
+                Key::F if crate::electronics_workspace::board(app) && !mods.shift && !mods.alt => {
+                    crate::electronics_board::flip_anyway(app);
+                }
                 // Copy, Cut and Paste, and Paste New with Shift (`edit_clipboard::handle`).
                 Key::C | Key::X if !mods.shift && !mods.alt => {}
                 Key::V if !mods.alt => {}
@@ -2275,13 +2349,49 @@ pub fn shortcuts(app: &mut SolveApp, ctx: &egui::Context) {
             Key::S if !mods.shift && !mods.alt => {
                 app.start("ui.palette");
             }
+            // V while routing on the board: on to the next copper layer through a via (Shift+V the
+            // one before).
+            Key::V if crate::electronics_workspace::board(app) && !mods.alt => {
+                crate::electronics_board_route::switch_layer(app, !mods.shift);
+            }
+            // `/` while routing on the board turns the bend style the other way round.
+            Key::Slash if crate::electronics_workspace::board(app) => {
+                crate::electronics_board_route::flip_bend(app);
+            }
             Key::V => crate::context_menu::toggle_visibility(app),
+            // F2 renames the selection; in an electronics document, the document itself.
+            Key::F2 if crate::electronics_workspace::active(app) => {
+                // Under the design's Browser row while it shows.
+                let at = crate::scenario::rect_of("electronics:design:electronics:design")
+                    .map(|r| r.left_bottom())
+                    .or_else(|| ctx.input(|i| i.pointer.latest_pos()))
+                    .unwrap_or(ctx.content_rect().center());
+                crate::electronics_design::rename(app, at);
+            }
             Key::F2 => {
                 let at = ctx.input(|i| i.pointer.latest_pos()).unwrap_or(ctx.content_rect().center());
                 crate::context_menu::rename_selection(app, at);
             }
             Key::F6 => app.animate_view("fit"),
+            // Home frames the electronics page too, as F6 and Fit do.
+            Key::Home if crate::electronics_workspace::active(app) => app.animate_view("fit"),
+            // R turns what an Electronics tool places, or the picked pin or pad.
+            Key::R if crate::electronics_workspace::active(app) && !mods.shift && !mods.alt => {
+                crate::electronics_editor::rotate(app, ctx);
+            }
+            Key::X if crate::electronics_workspace::schematic(app) && !mods.shift && !mods.alt => {
+                crate::electronics_schematic::mirror(app);
+            }
+            // F flips the picked footprints, tracks and vias to the other side of the board.
+            Key::F if crate::electronics_workspace::board(app) && !mods.shift && !mods.alt => {
+                crate::electronics_board::flip(app);
+            }
             Key::Backspace if crate::tools::undo_spline_point(app) => {}
+            // On the board Backspace first steps the route back; Delete takes the picked segment
+            // alone, Shift+Delete the whole track.
+            Key::Delete | Key::Backspace if crate::electronics_workspace::board(app) => {
+                crate::electronics_board::delete_key(app, k == Key::Backspace, mods.shift);
+            }
             // In Electronics the keys delete the picked pin or pad, never the hidden model's selection.
             Key::Delete | Key::Backspace if crate::electronics_workspace::active(app) => {
                 crate::electronics_editor::delete_picked(app);
@@ -2291,6 +2401,8 @@ pub fn shortcuts(app: &mut SolveApp, ctx: &egui::Context) {
                     crate::viewport::delete_selection(app);
                 }
             }
+            // Design's letter shortcuts would open its tools over the electronics page.
+            _ if crate::electronics_workspace::active(app) => {}
             _ => crate::keymap::press(app, &crate::keymap::key_name(k, mods), repeat),
         }
     }
@@ -3527,6 +3639,38 @@ mod ribbon_label_tests {
             let lines = ribbon_button_lines(&painter, &crate::bidi::visual("אחת שתיים שלוש ארבע חמש"), 50.0);
             assert_eq!(lines.len(), 2);
             assert!(lines[1].starts_with('…'), "{lines:?}");
+        });
+        output.textures_delta.clear();
+    }
+
+    /// A label on two lines ends inside the button's frame (drawn on hover and press) in every
+    /// language: its lines are set close, whatever line gap the script's font has.
+    #[test]
+    fn a_two_line_button_label_ends_inside_the_button_in_every_language() {
+        let ctx = crate::fonts::test_context();
+        let mut output = ctx.run_ui(egui::RawInput::default(), |ui| {
+            let painter = ui.painter().clone();
+            let specs = solidcraft_engine::command_specs();
+            let mut two_lines = 0;
+            for section in crate::workspace::SECTIONS {
+                let (commands, count) = crate::workspace::layout(section.tab, section.panel, &specs).unwrap();
+                for command in commands.iter().take(count) {
+                    for catalog in crate::i18n::LOCALES {
+                        let locale = crate::i18n::Locale::for_language(catalog.id);
+                        let label = locale.label(crate::workspace::ribbon_button_label(command));
+                        let width = ribbon_button_width(&painter, label) - BUTTON_LABEL_PADDING;
+                        let galley = ribbon_button_galley(&painter, label, width, Color32::WHITE);
+                        if galley.rows.len() < 2 {
+                            continue;
+                        }
+                        two_lines += 1;
+                        // As the toolbar draws it: a two-line label starts 30 points down the button.
+                        let bottom = 30.0 + galley.size().y;
+                        assert!(bottom <= BUTTON_HEIGHT, "{} ({}): {label} ends {bottom} down a {BUTTON_HEIGHT} button", command.id, catalog.id);
+                    }
+                }
+            }
+            assert!(two_lines > 0, "some labels take two lines");
         });
         output.textures_delta.clear();
     }

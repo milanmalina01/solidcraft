@@ -821,21 +821,25 @@ fn list_commands_filter_by_a_command_id_matches_ids() {
 fn an_agent_builds_an_0603_resistor_in_one_batch() {
     let mut s = server();
     let steps = json!([
-        {"command": "ecad.component.create", "params": {"name": "R0603", "prefix": "R", "value": "10k"}},
-        {"command": "ecad.pin.add", "params": {"component": "R0603", "pins": [
+        {"command": "ecad.symbol.create", "params": {"name": "R"}},
+        {"command": "ecad.pin.add", "params": {"symbol": "R", "pins": [
             {"number": 1, "at": [-5.08, 0], "direction": "right"},
             {"number": 2, "at": [5.08, 0], "direction": "left"}
         ]}},
-        {"command": "ecad.pad.add", "params": {"component": "R0603", "pads": [
+        {"command": "ecad.footprint.create", "params": {"name": "R0603"}},
+        {"command": "ecad.pad.add", "params": {"footprint": "R0603", "pads": [
             {"number": 1, "at": [-0.8, 0], "size": [0.9, 1.0]},
             {"number": 2, "at": [0.8, 0], "size": [0.9, 1.0]}
-        ]}}
+        ]}},
+        {"command": "ecad.component.create", "params": {"name": "R0603", "prefix": "R", "value": "10k", "symbol": "R", "footprint": "R0603"}}
     ]);
     tool(&mut s, "batch", json!({"commands": steps}));
     let c = tool(&mut s, "execute", json!({"command": "ecad.component.inspect", "params": {"component": "R0603"}}))["component"].clone();
-    assert_eq!(c["connections"], json!([{"pin": "1", "pads": ["1"]}, {"pin": "2", "pads": ["2"]}]), "{c}");
-    assert_eq!((c["unconnected_pins"].clone(), c["unconnected_pads"].clone()), (json!([]), json!([])));
-    let bbox = c["measured"]["copper_bbox"].clone();
+    let v = &c["variants"][0];
+    assert_eq!(v["connections"], json!([{"pin": "1", "pads": ["1"]}, {"pin": "2", "pads": ["2"]}]), "{c}");
+    assert_eq!((v["unconnected_pins"].clone(), v["unconnected_pads"].clone()), (json!([]), json!([])));
+    let f = tool(&mut s, "execute", json!({"command": "ecad.footprint.inspect", "params": {"footprint": "R0603"}}))["footprint"].clone();
+    let bbox = f["copper_bbox"].clone();
     let near = |v: &Value, want: f64| v.as_f64().is_some_and(|x| (x - want).abs() < 1e-9);
     assert!(near(&bbox[0][0], -1.25) && near(&bbox[1][0], 1.25) && near(&bbox[0][1], -0.5) && near(&bbox[1][1], 0.5), "{bbox}");
 }
@@ -1569,36 +1573,92 @@ fn electronics_skill_example_builds_as_documented() {
     let near = |v: &Value, want: f64| v.as_f64().is_some_and(|x| (x - want).abs() < 1e-6);
     let pad = |c: &Value, n: &str| c["pads"].as_array().unwrap().iter().find(|p| p["number"] == n).cloned().unwrap_or(Value::Null);
 
-    let r = inspect(&mut s, "R0603");
+    let footprint = |s: &mut Server, name: &str| {
+        tool(s, "execute", json!({"command": "ecad.footprint.inspect", "params": {"footprint": name}}))["footprint"].clone()
+    };
+
+    let f = footprint(&mut s, "R0603");
     for (n, x) in [("1", -0.8), ("2", 0.8)] {
-        let p = pad(&r, n);
+        let p = pad(&f, n);
         assert!(near(&p["at"][0], x) && near(&p["at"][1], 0.0) && near(&p["size"][0], 0.6) && near(&p["size"][1], 0.9), "{n}: {p}");
     }
-    assert!(near(&r["measured"]["min_pad_gap"]["gap"], 1.0), "{}", r["measured"]);
-    let cy = &r["measured"]["courtyard"];
+    assert!(near(&f["min_pad_gap"]["gap"], 1.0), "{}", f["min_pad_gap"]);
+    let cy = &f["courtyard"];
     assert!(near(&cy["from"][0], -1.35) && near(&cy["from"][1], -0.7) && near(&cy["to"][0], 1.35) && near(&cy["to"][1], 0.7), "{cy}");
     assert!(near(&cy["area"], 3.78), "{cy}");
-    let bbox = &r["package"]["bbox"];
+    let r = inspect(&mut s, "R0603-10k");
+    let package = &r["variants"][0]["package"];
+    let bbox = &package["bbox"];
     assert!(near(&bbox[0][0], -0.8) && near(&bbox[0][1], -0.4) && near(&bbox[0][2], 0.0), "{bbox}");
     assert!(near(&bbox[1][0], 0.8) && near(&bbox[1][1], 0.4) && near(&bbox[1][2], 0.45), "{bbox}");
-    assert!(near(&r["package"]["height"], 0.45));
+    assert!(near(&package["height"], 0.45));
     assert_eq!((r["ready"].clone(), r["problems"].clone()), (json!(true), json!([])), "{r}");
 
-    let q = inspect(&mut s, "MMBT3904");
+    let f = footprint(&mut s, "SOT-23");
     for (n, x, y) in [("1", -0.95, -0.975), ("2", 0.95, -0.975), ("3", 0.0, 0.975)] {
-        let p = pad(&q, n);
+        let p = pad(&f, n);
         assert!(near(&p["at"][0], x) && near(&p["at"][1], y) && near(&p["size"][0], 0.5) && near(&p["size"][1], 1.05), "{n}: {p}");
     }
-    let gap = &q["measured"]["min_pad_gap"];
+    let gap = &f["min_pad_gap"];
     assert!(near(&gap["gap"], 0.45f64.hypot(0.9)) && gap["pads"] == json!(["1", "3"]), "{gap}");
-    assert_eq!(q["connections"], json!([{"pin": "1", "pads": ["1"]}, {"pin": "2", "pads": ["2"]}, {"pin": "3", "pads": ["3"]}]));
+    // The npn shape: base two grid steps left of the origin, collector and emitter one step right
+    // and three up or down, numbered as SOT-23 numbers its pads.
+    let npn = tool(&mut s, "execute", json!({"command": "ecad.symbol.inspect", "params": {"symbol": "NPN"}}))["symbol"].clone();
+    let pins = npn["pins"].as_array().unwrap();
+    assert_eq!(pins.len(), 3, "{npn}");
+    for (pin, (number, name, x, y)) in pins.iter().zip([("1", "B", -5.08, 0.0), ("2", "E", 2.54, -7.62), ("3", "C", 2.54, 7.62)]) {
+        assert!(pin["number"] == number && pin["name"] == name && near(&pin["at"][0], x) && near(&pin["at"][1], y), "{pin}");
+    }
+    let q = inspect(&mut s, "MMBT3904");
+    assert_eq!(q["variants"][0]["connections"], json!([{"pin": "1", "pads": ["1"]}, {"pin": "2", "pads": ["2"]}, {"pin": "3", "pads": ["3"]}]));
     assert_eq!(q["ready"], true, "{q}");
 }
 
-/// Every tool and command the agent skills call exists, so a rename or removal can't leave the
-/// skills sending agents to names the server no longer has.
+/// The tool and command names a skill's text calls or names: a call in backticks is `name {}`,
+/// `name {"json":…}` or `name {placeholder}` (a tool when the name is snake_case, a command when it
+/// is a dotted id); a command named in backticks is its dotted id, alone or with others sharing its
+/// stem (`ecad.pin.add|edit|delete`), whose first part is one of `namespaces` (so quality codes
+/// such as `pi.current` and fields such as `package.bbox` aren't names); JSON examples name
+/// commands as "command":"id". Field lists such as `sides {bottom,right,top,left}` and
+/// `created: {…}` aren't calls. Sorted, each once.
+fn skill_names(doc: &str, namespaces: &[&str]) -> Vec<String> {
+    let ident = |w: &str| !w.is_empty() && w.chars().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '_' || c == '.');
+    let word = |w: &str| !w.is_empty() && w.chars().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '_');
+    let mut names = Vec::new();
+    for span in doc.split('`').skip(1).step_by(2) {
+        if let Some((head, args)) = span.split_once(" {") {
+            let name = head.rsplit(' ').next().unwrap_or(head);
+            if let Some(args) = args.strip_suffix('}') {
+                let call_like = args.is_empty() || args.starts_with('"') || args.chars().all(|c| c.is_ascii_lowercase() || c == '_');
+                if ident(name) && call_like {
+                    names.push(name.to_owned());
+                }
+            }
+        }
+        let mut stems = span.split_once(" {").map_or(span, |(head, _)| head).trim().split('|');
+        let stem = stems.next().unwrap_or_default();
+        let others: Vec<&str> = stems.collect();
+        let Some((prefix, _)) = stem.rsplit_once('.') else { continue };
+        if stem.split('.').all(word) && namespaces.contains(&stem.split('.').next().unwrap_or_default()) && others.iter().all(|w| word(w)) {
+            names.push(stem.to_owned());
+            names.extend(others.iter().map(|w| format!("{prefix}.{w}")));
+        }
+    }
+    names.extend(doc.split("\"command\":\"").skip(1).filter_map(|rest| rest.split('"').next()).map(str::to_owned));
+    names.sort();
+    names.dedup();
+    names
+}
+
+/// Every tool and command the agent skills call or name exists, so a rename or removal can't
+/// leave the skills sending agents to names the server no longer has.
 #[test]
 fn skills_name_only_real_tools_and_commands() {
+    let sample = "Run `ecad.pin.add|edit {\"symbol\":…}`, `solid.box {length}` or `measure {}`; not a code `pi.current`, a field \
+                  `package.bbox`, a list `sides {bottom,right,top,left}` or a pattern `ecad.board.*`. {\"command\":\"doc.open\"}";
+    assert_eq!(skill_names(sample, &["doc", "ecad", "solid"]), ["doc.open", "ecad.pin.add", "ecad.pin.edit", "measure", "solid.box"]);
+    // Names a skill gives to say that they are not commands.
+    const NOT_COMMANDS: [&str; 1] = ["file.open"];
     let docs = [
         include_str!("../../../skills/solidcraft-modeling/SKILL.md"),
         include_str!("../../../skills/solidcraft-modeling/reference.md"),
@@ -1611,33 +1671,83 @@ fn skills_name_only_real_tools_and_commands() {
         include_str!("../../../skills/solidcraft-reporting/reference/report-template.md"),
         include_str!("../../../skills/solidcraft-electronics/SKILL.md"),
         include_str!("../../../skills/solidcraft-electronics/reference.md"),
+        include_str!("../../../skills/solidcraft-pcb/SKILL.md"),
+        include_str!("../../../skills/solidcraft-pcb/reference/workflow.md"),
+        include_str!("../../../skills/solidcraft-pcb/reference/placement.md"),
+        include_str!("../../../skills/solidcraft-pcb/reference/routing-dfm.md"),
+        include_str!("../../../skills/solidcraft-pcb/reference/power-ground.md"),
+        include_str!("../../../skills/solidcraft-pcb/reference/signal-integrity.md"),
+        include_str!("../../../skills/solidcraft-pcb/reference/rf-emc.md"),
+        include_str!("../../../skills/solidcraft-pcb/reference/silkscreen-assembly.md"),
+        include_str!("../../../skills/solidcraft-pcb/reference/manufacturing.md"),
+        include_str!("../../../skills/solidcraft-pcb/reference/review.md"),
     ];
     let mut s = server();
     let tools: Vec<String> = tool_definitions().iter().filter_map(|t| t["name"].as_str()).map(str::to_owned).collect();
     let commands: Vec<String> =
         tool(&mut s, "list_commands", json!({})).as_array().unwrap().iter().filter_map(|c| c["id"].as_str()).map(str::to_owned).collect();
+    let mut namespaces: Vec<&str> = commands.iter().filter_map(|c| c.split_once('.').map(|(n, _)| n)).collect();
+    namespaces.sort_unstable();
+    namespaces.dedup();
+    for name in NOT_COMMANDS {
+        assert!(!commands.iter().any(|c| c == name), "`{name}` is a command now: the skills that say it isn't are wrong");
+    }
     let mut checked = 0;
     for doc in docs {
-        // A call in backticks is `name {}`, `name {"json":…}` or `name {placeholder}`: a tool when the
-        // name is snake_case, a command when it is a dotted id. Field lists such as
-        // `sides {bottom,right,top,left}` and `created: {…}` aren't calls. JSON examples name
-        // commands as "command":"id".
-        let ident = |w: &str| !w.is_empty() && w.chars().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '_' || c == '.');
-        let calls = doc.split('`').skip(1).step_by(2).filter_map(|span| {
-            let (head, args) = span.split_once(" {")?;
-            let name = head.rsplit(' ').next()?;
-            let args = args.strip_suffix('}')?;
-            let call_like = args.is_empty() || args.starts_with('"') || args.chars().all(|c| c.is_ascii_lowercase() || c == '_');
-            (ident(name) && call_like).then_some(name)
-        });
-        let in_json = doc.split("\"command\":\"").skip(1).filter_map(|rest| rest.split('"').next());
-        for name in calls.chain(in_json) {
-            let known = if name.contains('.') { commands.iter().any(|c| c == name) } else { tools.iter().any(|t| t == name) };
-            assert!(known, "a skill calls `{name}`, which is neither a tool nor a command");
+        for name in skill_names(doc, &namespaces).iter().filter(|n| !NOT_COMMANDS.contains(&n.as_str())) {
+            let known = if name.contains('.') { commands.contains(name) } else { tools.contains(name) };
+            assert!(known, "a skill calls or names `{name}`, which is neither a tool nor a command");
             checked += 1;
         }
     }
-    assert!(checked > 30, "only {checked} tool and command names found in the skills");
+    assert!(checked > 200, "only {checked} tool and command names found in the skills");
+}
+
+/// Every quality and design rule check code names a section of the solidcraft-pcb guide that is
+/// there, and the guide's links between its files lead to headings, in the files
+/// `skill_reference` serves (each the same as in `skills/`): an agent sent to `routing-dfm#vias`
+/// finds that section. A renamed heading fails here, and so does a link to one that isn't there.
+#[test]
+fn quality_codes_match_skill_sections() {
+    use solidcraft_engine::doc::ecad::quality::catalog::section_misses;
+    let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../skills/solidcraft-pcb");
+    let mut names: Vec<String> = std::fs::read_dir(dir.join("reference"))
+        .unwrap()
+        .filter_map(|e| e.ok()?.file_name().to_str()?.strip_suffix(".md").map(str::to_owned))
+        .collect();
+    names.sort();
+    assert!(names.len() >= 9, "{names:?}");
+    let mut s = server();
+    // The reference files by their names in a section (`power-ground`), and SKILL.md, whose
+    // links are checked too.
+    let mut files: Vec<(String, String)> = Vec::new();
+    for (name, file) in names.iter().map(|n| (n.clone(), format!("reference/{n}.md"))).chain([("SKILL".to_owned(), "SKILL.md".to_owned())]) {
+        let r = raw_tool(&mut s, "skill_reference", json!({"skill": "solidcraft-pcb", "file": file}));
+        assert_ne!(r["result"]["isError"], true, "skill_reference doesn't serve {file}: {r}");
+        let text = r["result"]["content"][0]["text"].as_str().unwrap().to_owned();
+        assert!(text == std::fs::read_to_string(dir.join(&file)).unwrap(), "skill_reference serves another {file} than skills/ has");
+        files.push((name, text));
+    }
+    let as_refs = |files: &[(String, String)]| -> Vec<String> {
+        let refs: Vec<(&str, &str)> = files.iter().map(|(n, t)| (n.as_str(), t.as_str())).collect();
+        section_misses(&refs)
+    };
+    assert_eq!(as_refs(&files), Vec::<String>::new());
+
+    // A heading renamed under the codes that name it, and a link to a heading that isn't there.
+    let mut broken = files.clone();
+    for (name, text) in &mut broken {
+        if name.as_str() == "routing-dfm" {
+            *text = text.lines().map(|l| if l == "## Vias" { "## Via holes" } else { l }).collect::<Vec<_>>().join("\n");
+        }
+        if name.as_str() == "placement" {
+            text.push_str("\nSee `power-ground#no-such-heading`.\n");
+        }
+    }
+    let misses = as_refs(&broken);
+    for want in ["annular_ring → routing-dfm#vias", "placement → power-ground#no-such-heading"] {
+        assert!(misses.iter().any(|m| m == want), "{want} not found in {misses:?}");
+    }
 }
 
 /// Every tool the server instructions name (a bare `snake_case` word in backticks) is a real tool.

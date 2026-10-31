@@ -184,6 +184,15 @@ impl Locale {
         if text == "Untitled" {
             return Some(self.text("ui.untitled").to_string());
         }
+        // A new electronics document's name, until it is named or saved.
+        use solidcraft_engine::doc::DocumentKind;
+        for (kind, id) in
+            [(DocumentKind::ElectronicsDesign, "electronics.untitled_design"), (DocumentKind::ElectronicsLibrary, "electronics.untitled_library")]
+        {
+            if text == kind.default_name() {
+                return Some(self.text(id).to_string());
+            }
+        }
         for (prefix, id) in [("Sketch", "browser.sketch_name"), ("Body", "browser.body_name"), ("Component", "browser.component_name")] {
             if let Some(number) = text.strip_prefix(prefix)
                 && !number.is_empty()

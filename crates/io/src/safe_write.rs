@@ -250,6 +250,67 @@ mod tests {
         let _ = std::fs::remove_dir_all(&d);
     }
 
+    /// A fresh lock written in this boot of this computer by a process that is gone (the app
+    /// crashed) frees the design at once; one whose process still runs, one from another boot or
+    /// another computer, and one that does not say which boot (an older lock) hold it until they
+    /// go stale. The same pid in another boot is another process, not this one.
+    #[cfg(unix)]
+    #[test]
+    fn a_fresh_lock_of_a_crashed_process_in_this_boot_frees_the_design_and_any_other_waits() {
+        use crate::design_lock as lock;
+        let d = dir("design-lock-boot");
+        let design = d.join("Bracket.solidcraft");
+        std::fs::write(&design, b"one").unwrap();
+        let now = lock::now_secs();
+        let mine = lock::Lock::mine(now);
+        #[cfg(any(target_vendor = "apple", target_os = "linux"))]
+        assert!(!mine.boot.is_empty(), "this system says which boot this is");
+        assert!(mine.is_mine() && !mine.is_dead());
+        // A process that ran and is gone, as a crashed app is.
+        let mut child = std::process::Command::new("true").spawn().unwrap();
+        let gone = child.id();
+        child.wait().unwrap();
+        let crashed = lock::Lock { pid: gone, ..mine.clone() };
+        let held = |l: &lock::Lock| {
+            lock::write(&design, l).unwrap();
+            lock::held_elsewhere(&design, now)
+        };
+        if mine.boot.is_empty() {
+            assert!(!crashed.is_dead(), "where the boot can't be told, a lock waits to go stale");
+            assert!(held(&crashed).is_some());
+        } else {
+            assert!(crashed.is_dead() && !crashed.is_mine());
+            assert!(held(&crashed).is_none(), "the crashed app's design opens at once");
+        }
+        // Its process still runs (this test's parent): open elsewhere.
+        let running = lock::Lock { pid: std::os::unix::process::parent_id(), ..mine.clone() };
+        assert!(!running.is_dead());
+        assert_eq!(held(&running).map(|l| l.pid), Some(running.pid));
+        // Another boot, another computer, or no boot said: the pid can't be asked about.
+        for other in [
+            lock::Lock { boot: "another boot".into(), ..crashed.clone() },
+            lock::Lock { host: "WORKSHOP-PC".into(), ..crashed.clone() },
+            lock::Lock { boot: String::new(), ..crashed.clone() },
+        ] {
+            assert!(!other.is_dead(), "{other:?}");
+            assert!(held(&other).is_some(), "{other:?}");
+            // ... until it goes stale.
+            assert!(held(&lock::Lock { refreshed: now - lock::STALE_SECS - 1, ..other.clone() }).is_none());
+        }
+        // This process's pid in another boot is another process.
+        let earlier = lock::Lock { boot: "another boot".into(), ..mine.clone() };
+        assert!(!earlier.is_mine());
+        assert!(held(&earlier).is_some());
+        // The boot is saved with the lock, and a lock written before locks kept it reads as none.
+        lock::write(&design, &mine).unwrap();
+        assert_eq!(lock::read(&design), Some(mine.clone()));
+        let old = serde_json::json!({"host": mine.host, "user": mine.user, "app": "0.24.0", "pid": gone, "opened": now, "refreshed": now});
+        std::fs::write(lock::lock_path(&design), old.to_string()).unwrap();
+        assert_eq!(lock::read(&design).map(|l| l.boot), Some(String::new()));
+        assert!(lock::held_elsewhere(&design, now).is_some(), "an old lock waits to go stale");
+        let _ = std::fs::remove_dir_all(&d);
+    }
+
     #[test]
     fn create_does_not_replace_an_existing_destination() {
         let d = dir("create");

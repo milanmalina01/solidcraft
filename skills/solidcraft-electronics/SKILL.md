@@ -1,42 +1,39 @@
 ---
 name: solidcraft-electronics
-description: Use when making electronic components in SolidCraft through its MCP server - a part's symbol pins, footprint pads, pin-to-pad map, silkscreen, fab and courtyard graphics and 3D package - or when a component is not ready to place. Read reference.md for the worked example.
+description: Use when making electronic components in SolidCraft through its MCP server - library symbols, footprints and 3D packages, the components that use them, pin-to-pad maps and graphics - or when a component is not ready to place. Read reference.md for the commands and the worked example.
 ---
 
-# SolidCraft electronics: electronic components
+# SolidCraft electronics: the library and electronic components
 
-An electronic component (a resistor, a chip, a connector) lives in the design and owns its symbol, its footprint and a link to its 3D package. Every change is an `ecad.*` command: run them with `execute` or `batch`, and read them back as data with `ecad.component.inspect`; you never need a screenshot.
+The library holds separate, shared items: symbols (pins, body), footprints (pads; silkscreen, fab, courtyard graphics) and 3D packages (a SolidCraft component placed on a footprint). An electronic component names one symbol and one or more variants, each a footprint with its own pin-to-pad map and optional 3D package; the first is the default. One footprint (SOT-23) serves many components. Every change is an `ecad.*` command (`execute` or `batch`); read results back as data with `ecad.library.inspect`, `ecad.symbol.inspect`, `ecad.footprint.inspect` and `ecad.component.inspect`, never a screenshot.
 
 ## Conventions
-- Lengths in millimetres; x right, y up, seen from the top of the board; angles in degrees, counter-clockwise.
-- A pin's `at` is where a wire connects and `direction` points toward the body. Keep pin ends on the 2.54 mm grid.
-- A pad's `at` is its centre, `size` is `[w, h]` before `rotation`. A pin connects to the pad with its number unless `ecad.component.map_pins` says otherwise.
-- The 3D package is an ordinary SolidCraft component; its origin goes on the footprint's origin, and the board's top is z = 0.
+- Millimetres; x right, y up, seen from the board's top; degrees counter-clockwise.
+- Items are named by id or name. Ids share one space; names are unique within a kind.
+- A pin's `at` is where a wire connects, `direction` points toward the body; keep pin ends on the 2.54 mm grid.
+- A pad's `at` is its centre, `size` `[w, h]` before `rotation`. A pin connects to the pad with its number unless the variant's map says otherwise.
+- A 3D package's origin goes on the footprint's origin; the board's top is z = 0.
 
 ## The fast way
-1. `ecad.component.create {"name":"R0603","prefix":"R","value":"10k"}`
-2. `ecad.footprint.generate {"component":"R0603","package":"chip","size":"0603"}`: chip, sot23, soic, qfn, dip or header. It makes the pads, the fab outline, a pin-1 mark and the courtyard.
-3. `ecad.symbol.generate {"component":"R0603","style":"resistor"}`: resistor, capacitor, or box with a pin list.
-4. `ecad.component.inspect {"component":"R0603"}`: check `ready`, `problems`, `measured`.
+1. `ecad.footprint.generate {"footprint":"R0603","package":"chip","size":"0603"}`: a new name makes the footprint (chip, sot23, soic, qfn, dip, header), with pads, fab outline, pin-1 mark and courtyard.
+2. `ecad.symbol.generate {"symbol":"Resistor","style":"resistor"}`: a standard shape (passives, diodes, LEDs, crystals, switches, transistors; pins in reference.md) or `box` with a pin list.
+3. `ecad.component.create {"name":"R0603-10k","prefix":"R","value":"10k","symbol":"Resistor","footprint":"R0603"}`: the footprint becomes the first variant.
+4. `ecad.component.inspect {"component":"R0603-10k"}`: check `ready`, `problems`, and each variant's `problems` and `connections`.
 
-Batch steps can't read earlier replies, so name components and pins yourself and refer to them by name and number.
-
-## By hand
-- `ecad.pin.add` and `ecad.pad.add` take lists; a `row` `{count, pitch}` repeats one item, numbering on from its number. `replace: true` rebuilds the list.
-- `ecad.pin.edit`, `ecad.pad.edit`, `ecad.pin.delete`, `ecad.pad.delete` change one item or several by number.
-- Pads: `shape` rect, round, oval or rounded_rect; `kind` smd, through_hole (give a `drill`) or hole.
-- `ecad.symbol.set_graphics` and `ecad.footprint.set_graphics` (per `layer`: silkscreen, fab, courtyard) replace one set; `ecad.footprint.courtyard` draws the courtyard round the pads and the fab outline.
-- `ecad.package.set {"component":…,"model":…}` links a SolidCraft component (built with solid commands, or the one `file.insert_step` makes).
+Batch steps can't read earlier replies: name items yourself and refer to them by name.
 
 ## Reading problems
-`ready` is true with pins, pads and no errors. Fix errors first:
-- `pads_overlap`: move pads apart; `measured.min_pad_gap` shows the closest pair.
-- `pin_unconnected`: add a pad with the pin's number, or map it.
+A variant is `ready` with the symbol's pins, the footprint's pads and no errors; a component when every variant is. Fix errors first:
+- `pads_overlap`: move pads apart; `ecad.footprint.inspect` gives `min_pad_gap`.
+- `pin_unconnected`: add a pad with the pin's number, or map it (`ecad.component.map_pins`).
 - `pad_outside_courtyard`: run `ecad.footprint.courtyard` again.
-- `package_missing`: set another package, or clear it.
-Warnings (`courtyard_missing`, `pad_unconnected`, `no_pins`, `no_pads`) don't block placing.
+- `package_missing`: give the package another `model` (`ecad.package.edit`), or take it off the variant.
+Warnings (`courtyard_missing`, `pad_unconnected`, `no_pins`, `no_pads`, `no_symbol`, `no_footprint`) don't block placing.
 
 ## Traps
-- `component` means the electronic component in `ecad.*` commands; `model` is the SolidCraft one.
-- Copied numbers must come from public package drawings (JEDEC, EIA), never from another tool's library.
+- `component` is the electronic component in `ecad.*` commands; `model` is the SolidCraft one.
+- Editing a shared symbol or footprint changes every component using it (pin maps and schematic wires follow): copy it first to change one.
+- A shape numbers pins as the usual part does (a diode's cathode 1, a transistor's base 1); for another pinout give `pins` by role: `{"number":2,"name":"K"}`.
+- Deleting an item a component uses is refused unless `force: true` clears the references.
+- Package numbers come from public drawings (JEDEC, EIA), never another tool's library.
 - A refused call changes nothing and names the item: `pads[2]: …`.

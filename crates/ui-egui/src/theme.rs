@@ -810,6 +810,23 @@ pub struct Tokens {
     pub bend_down: Color32,
     /// Interference: the clash fill, before its shading.
     pub interference: Color32,
+    /// A circuit board's copper on the top, on the bottom and on its inner layers (in turn, from
+    /// inner layer 1), its plated through-hole pads and vias, its silkscreen and documentation
+    /// layer, its outline and the airwires still to route; a copper pour's fill is its layer's
+    /// colour at `pcb_pour_alpha`, a keepout is hatched in `pcb_keepout`, and the design rule
+    /// check marks errors and warnings in `pcb_drc_error` and `pcb_drc_warning`.
+    pub pcb_copper_top: Color32,
+    pub pcb_copper_bottom: Color32,
+    pub pcb_copper_inner: [Color32; 6],
+    pub pcb_plated: Color32,
+    pub pcb_silkscreen: Color32,
+    pub pcb_documentation: Color32,
+    pub pcb_outline: Color32,
+    pub pcb_airwire: Color32,
+    pub pcb_pour_alpha: f32,
+    pub pcb_keepout: Color32,
+    pub pcb_drc_error: Color32,
+    pub pcb_drc_warning: Color32,
     /// Continuity Analysis seams, best to worst as `inspect.continuity` judges them: smooth (G2),
     /// tangent with a curvature jump (G1), a crease (G0) and a gap. Bluish green, blue, yellow
     /// and reddish purple stay apart in every colour vision mode, so no mode changes them.
@@ -924,6 +941,18 @@ impl Tokens {
             bend_up: view.bend_up,
             bend_down: view.bend_down,
             interference: view.interference,
+            pcb_copper_top: view.pcb_copper_top,
+            pcb_copper_bottom: view.pcb_copper_bottom,
+            pcb_copper_inner: view.pcb_copper_inner,
+            pcb_plated: view.pcb_plated,
+            pcb_silkscreen: view.pcb_silkscreen,
+            pcb_documentation: view.pcb_documentation,
+            pcb_outline: view.pcb_outline,
+            pcb_airwire: view.pcb_airwire,
+            pcb_pour_alpha: view.pcb_pour_alpha,
+            pcb_keepout: view.pcb_keepout,
+            pcb_drc_error: view.pcb_drc_error,
+            pcb_drc_warning: view.pcb_drc_warning,
             continuity: view.continuity,
             analysis: view.analysis,
             ..self

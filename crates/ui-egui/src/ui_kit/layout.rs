@@ -67,6 +67,24 @@ pub(crate) fn row<R>(ui: &mut Ui, text: &str, control: impl FnOnce(&mut Ui) -> R
     sized_row(ui, text, row_height(), control)
 }
 
+/// A label/control row whose controls wrap onto more lines (a row of chips): as tall as they
+/// took last frame, so none that wraps is clipped out of sight or reach. Tokens: `row`.
+pub(crate) fn wrapped_row<R>(ui: &mut Ui, text: &str, control: impl FnOnce(&mut Ui) -> R) -> R {
+    let id = ui.id().with(("sc_wrapped_row", text));
+    let least = row_height();
+    let height = ui.data(|d| d.get_temp::<f32>(id)).unwrap_or(least).max(least);
+    let (result, used) = sized_row(ui, text, height, |ui| {
+        let inner = ui.horizontal_wrapped(control);
+        (inner.inner, inner.response.rect.height())
+    });
+    let used = dimension(used).max(least);
+    if (used - height).abs() > 0.5 {
+        ui.data_mut(|d| d.insert_temp(id, used));
+        ui.ctx().request_repaint();
+    }
+    result
+}
+
 /// Declarative expression row; retains the field's completion and accepted Enter. Tokens: `row, field`.
 pub(crate) fn expr_row(ui: &mut Ui, label: &str, value: &mut String) -> bool {
     row(ui, label, |ui| super::field(ui, value))

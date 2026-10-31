@@ -4547,6 +4547,16 @@ fn agent_chip(app: &mut SolveApp, ui: &egui::Ui, view: Rect, taken: &[Rect]) -> 
 /// How long a status message stays in the view (milliseconds).
 const STATUS_TOAST_MS: f64 = 6000.0;
 
+/// The same toasts (the six-second status, errors in the error style, ongoing work, the agent
+/// chip) over a page that replaces the 3D view: the Electronics workspace's schematic, board and
+/// library pages.
+pub(crate) fn page_toasts(app: &mut SolveApp, ui: &egui::Ui, page: Rect) {
+    // The 3D view's navigation bar and axis view, laid out when it last showed, are not on the page.
+    let layout = app.viewport.layout.take();
+    transient_messages(app, ui, page);
+    app.viewport.layout = layout;
+}
+
 /// A single visual pattern for ongoing work, the existing six-second status and the 3D mouse
 /// calibration offer, stacked from the bottom of the free view. Returns the toasts' rects.
 fn transient_messages(app: &mut SolveApp, ui: &egui::Ui, viewport: Rect) -> Vec<Rect> {

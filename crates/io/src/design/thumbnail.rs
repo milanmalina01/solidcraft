@@ -48,23 +48,33 @@ pub(super) fn read<R: Read + Seek>(reader: &mut PackageReader<R>) -> Result<Vec<
 pub fn read_design_thumbnail(bytes: &[u8]) -> Option<Vec<u8>> {
     DesignContainerReader::new(Cursor::new(bytes)).ok()?.thumbnail()
 }
+/// What kind of document a design file holds, without importing or reading the source blobs:
+/// for showing it as what it is before it is opened. `None` when it can't be told (a file that
+/// is not a design container, or unreadable).
+pub fn read_design_kind_file(path: &str) -> Option<solidcraft_doc::DocumentKind> {
+    container_file(path)?.kind()
+}
 /// Read a portable picture without importing or reading the source blobs.
 pub fn read_design_thumbnail_file(path: &str) -> Option<Vec<u8>> {
-    #[cfg(not(target_arch = "wasm32"))]
-    let source = {
-        crate::vfs::check(path).ok()?;
-        let metadata = std::fs::metadata(path).ok()?;
-        if !metadata.is_file() || metadata.len() > MAX_DESIGN_BYTES as u64 {
-            return None;
-        }
-        let source = std::fs::File::open(path).ok()?;
-        let metadata = source.metadata().ok()?;
-        if !metadata.is_file() || metadata.len() > MAX_DESIGN_BYTES as u64 {
-            return None;
-        }
-        source
-    };
-    #[cfg(target_arch = "wasm32")]
-    let source = Cursor::new(crate::vfs::read(path, MAX_DESIGN_BYTES).ok()?);
-    DesignContainerReader::new(source).ok()?.thumbnail()
+    container_file(path)?.thumbnail()
+}
+/// A design file's container reader, within the size budget.
+#[cfg(not(target_arch = "wasm32"))]
+fn container_file(path: &str) -> Option<DesignContainerReader<std::fs::File>> {
+    crate::vfs::check(path).ok()?;
+    let metadata = std::fs::metadata(path).ok()?;
+    if !metadata.is_file() || metadata.len() > MAX_DESIGN_BYTES as u64 {
+        return None;
+    }
+    let source = std::fs::File::open(path).ok()?;
+    let metadata = source.metadata().ok()?;
+    if !metadata.is_file() || metadata.len() > MAX_DESIGN_BYTES as u64 {
+        return None;
+    }
+    DesignContainerReader::new(source).ok()
+}
+/// A design file's container reader, within the size budget.
+#[cfg(target_arch = "wasm32")]
+fn container_file(path: &str) -> Option<DesignContainerReader<Cursor<Vec<u8>>>> {
+    DesignContainerReader::new(Cursor::new(crate::vfs::read(path, MAX_DESIGN_BYTES).ok()?)).ok()
 }

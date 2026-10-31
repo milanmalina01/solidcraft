@@ -11,6 +11,10 @@ workspace = true
 [dependencies]
 serde = { workspace = true }
 thiserror = { workspace = true }
+i_overlay = { workspace = true }
+# Triangles of the board's copper pours for drawing them (MIT OR Apache-2.0; already in the tree
+# through the kernel).
+spade = { workspace = true }
 
 [dev-dependencies]
 serde_json = { workspace = true }

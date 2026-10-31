@@ -8,7 +8,7 @@ use std::sync::Arc;
 mod native_cache;
 mod thumbnail;
 pub use native_cache::read_design_geometry;
-pub use thumbnail::{THUMBNAIL_SIZE, read_design_thumbnail, read_design_thumbnail_file};
+pub use thumbnail::{THUMBNAIL_SIZE, read_design_kind_file, read_design_thumbnail, read_design_thumbnail_file};
 
 use serde_json::{Map, Value, json};
 use sha2::{Digest, Sha256};
@@ -630,6 +630,18 @@ impl<R: Read + Seek> DesignContainerReader<R> {
     /// Portable PNG picture only; no source blobs or geometry are evaluated.
     pub fn thumbnail(&mut self) -> Option<Vec<u8>> {
         thumbnail::read(&mut self.reader).ok()
+    }
+
+    /// What the document is (a 3D design, an electronics library or design), from its metadata
+    /// alone: no blobs, geometry or migrations. `None` when that cannot be read.
+    pub fn kind(&mut self) -> Option<solidcraft_doc::DocumentKind> {
+        #[derive(serde::Deserialize)]
+        struct Kind {
+            #[serde(default)]
+            kind: solidcraft_doc::DocumentKind,
+        }
+        let document = self.reader.document(16 << 20).ok()?;
+        serde_json::from_slice::<Kind>(&document).ok().map(|k| k.kind)
     }
 
     /// The saved model, when this build wrote it for exactly this document.

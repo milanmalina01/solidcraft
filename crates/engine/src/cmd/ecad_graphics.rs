@@ -1,13 +1,13 @@
-//! Graphics on an electronic component: its symbol's body, and its footprint's silkscreen,
-//! fabrication and courtyard layers. Each call replaces one whole set, so it can be run again with
+//! Graphics in the library: a symbol's body, and a footprint's silkscreen, fabrication and
+//! courtyard layers. Each call replaces one whole set, so it can be run again with
 //! the same result; graphics never connect anything.
 
 use serde_json::Value;
 use solidcraft_doc::ecad::graphics::{DEFAULT_WIDTH, graphics_bbox, shapes_bbox, validate_all};
-use solidcraft_doc::ecad::{BoardLayer, ElectronicComponent, Graphic, GraphicType};
+use solidcraft_doc::ecad::{BoardLayer, FootprintItem, Graphic, GraphicType};
 
 use super::CommandSpec;
-use super::ecad::{id_of, load, parse, reply, side, store};
+use super::ecad::{item_id, load_footprint, load_symbol, parse, reply, side, store_footprint, store_symbol};
 use crate::params::bad;
 use crate::schema::ecad_component::{CourtyardOut, GraphicKind, GraphicSpec, Layer};
 use crate::schema::ecad_graphics::{CourtyardParams, CourtyardResult, FootprintParams, GraphicsResult, SymbolParams};
@@ -21,20 +21,22 @@ pub static COMMANDS: &[CommandSpec] = &[
         .contract(&SYMBOL_CONTRACT)
         .output(output_schema_for::<GraphicsResult>)
         .params(
-            "component: id|name; graphics: [{type: line|rect|circle|arc|polygon|text, points?, from?, to?, center?, radius?, start?, sweep?, at?, text?, height?, rotation?, width? (0.15), fill?}] (replaces the body) → {component, count, bbox}",
+            "symbol: id|name; graphics: [{type: line|rect|circle|arc|polygon|text, points?, from?, to?, center?, radius?, start?, sweep?, at?, text?, height?, rotation?, width? (0.15), fill?}] (replaces the body) → {item: {id, name}, count, bbox}",
         ),
     CommandSpec::new("ecad.footprint.set_graphics", "Set Footprint Graphics", crate::checked!("ecad.footprint.set_graphics", footprint))
         .icon("edit")
         .doc_only()
         .contract(&FOOTPRINT_CONTRACT)
         .output(output_schema_for::<GraphicsResult>)
-        .params("component: id|name; layer: silkscreen|fab|courtyard; side? (top); graphics: [as for the symbol] (replaces that layer) → {component, count, bbox}"),
-    CommandSpec::new("ecad.footprint.courtyard", "Make Courtyard", crate::checked!("ecad.footprint.courtyard", courtyard))
-        .icon("new")
+        .params(
+            "footprint: id|name; layer: silkscreen|fab|courtyard; side? (top); graphics: [as for the symbol] (replaces that layer) → {item: {id, name}, count, bbox}",
+        ),
+    CommandSpec::new("ecad.footprint.courtyard", "Courtyard", crate::checked!("ecad.footprint.courtyard", courtyard))
+        .icon("offset")
         .doc_only()
         .contract(&COURTYARD_CONTRACT)
         .output(output_schema_for::<CourtyardResult>)
-        .params("component: id|name; margin? (0.25 mm); side? (top) → {component, courtyard: {from, to, area}}: a rectangle round the pads and fab outline"),
+        .params("footprint: id|name; margin? (0.25 mm); side? (top) → {footprint, courtyard: {from, to, area}}: a rectangle round the pads and fab outline"),
 ];
 
 const SYMBOL_CONTRACT: TypedContract<SymbolParams> = TypedContract::new();
@@ -127,55 +129,51 @@ pub(super) fn graphic_out(g: &Graphic) -> GraphicSpec {
 fn symbol(s: &mut Session, p: &Value) -> Result<Value> {
     const CMD: &str = "ecad.symbol.set_graphics";
     let p: SymbolParams = parse(CMD, p)?;
-    let mut c = load(s, &p.component, CMD)?;
+    let mut sym = load_symbol(s, &p.symbol, CMD)?;
     let graphics: Vec<Graphic> = p.graphics.into_iter().map(|g| graphic(g, None)).collect();
     validate_all(&graphics, false).map_err(|e| bad(CMD, e))?;
     let bbox = graphics_bbox(&graphics);
     let count = graphics.len();
-    c.symbol.graphics = graphics;
-    let component = id_of(&c);
-    store(s, c, CMD)?;
-    reply(GraphicsResult { component, count, bbox, param_warnings: Vec::new() })
+    sym.graphics = graphics;
+    let item = item_id(sym.id, &sym.name);
+    store_symbol(s, sym, &[], false, CMD)?;
+    reply(GraphicsResult { item, count, bbox, param_warnings: Vec::new() })
 }
 
 fn footprint(s: &mut Session, p: &Value) -> Result<Value> {
     const CMD: &str = "ecad.footprint.set_graphics";
     let p: FootprintParams = parse(CMD, p)?;
-    let mut c = load(s, &p.component, CMD)?;
+    let mut fp = load_footprint(s, &p.footprint, CMD)?;
     let on = (layer(p.layer), p.side.map(side).unwrap_or_default());
     let graphics: Vec<Graphic> = p.graphics.into_iter().map(|g| graphic(g, Some(on))).collect();
     validate_all(&graphics, true).map_err(|e| bad(CMD, e))?;
     let bbox = graphics_bbox(&graphics);
     let count = graphics.len();
-    c.footprint.graphics.retain(|g| (g.layer, g.side) != (Some(on.0), on.1));
-    c.footprint.graphics.extend(graphics);
-    let component = id_of(&c);
-    store(s, c, CMD)?;
-    reply(GraphicsResult { component, count, bbox, param_warnings: Vec::new() })
+    fp.graphics.retain(|g| (g.layer, g.side) != (Some(on.0), on.1));
+    fp.graphics.extend(graphics);
+    let item = item_id(fp.id, &fp.name);
+    store_footprint(s, fp, &[], false, CMD)?;
+    reply(GraphicsResult { item, count, bbox, param_warnings: Vec::new() })
 }
 
 fn courtyard(s: &mut Session, p: &Value) -> Result<Value> {
     const CMD: &str = "ecad.footprint.courtyard";
     let p: CourtyardParams = parse(CMD, p)?;
-    let mut c = load(s, &p.component, CMD)?;
-    let courtyard = make_courtyard(&mut c, p.margin.unwrap_or(0.25), p.side.map(side).unwrap_or_default()).map_err(|e| bad(CMD, e))?;
-    let component = id_of(&c);
-    store(s, c, CMD)?;
-    reply(CourtyardResult { component, courtyard, param_warnings: Vec::new() })
+    let mut fp = load_footprint(s, &p.footprint, CMD)?;
+    let courtyard = make_courtyard(&mut fp, p.margin.unwrap_or(0.25), p.side.map(side).unwrap_or_default()).map_err(|e| bad(CMD, e))?;
+    let footprint = item_id(fp.id, &fp.name);
+    store_footprint(s, fp, &[], false, CMD)?;
+    reply(CourtyardResult { footprint, courtyard, param_warnings: Vec::new() })
 }
 
 /// Replace the courtyard on `on_side` with a rectangle `margin` outside the pads and the
 /// fabrication outline on that side.
-pub(super) fn make_courtyard(
-    c: &mut ElectronicComponent,
-    margin: f64,
-    on_side: solidcraft_doc::ecad::Side,
-) -> std::result::Result<CourtyardOut, String> {
+pub(super) fn make_courtyard(c: &mut FootprintItem, margin: f64, on_side: solidcraft_doc::ecad::Side) -> std::result::Result<CourtyardOut, String> {
     if !(margin.is_finite() && (0.0..=5.0).contains(&margin)) {
         return Err("`margin` must be 0 to 5 mm".into());
     }
-    let pads = c.footprint.pads.iter().filter(|pad| pad.kind != solidcraft_doc::ecad::PadKind::Smd || pad.side == on_side).flat_map(|pad| pad.bbox());
-    let fab = shapes_bbox(c.footprint.layer(BoardLayer::Fab, on_side)).map(|[a, b]| vec![a, b]).unwrap_or_default();
+    let pads = c.pads.iter().filter(|pad| pad.kind != solidcraft_doc::ecad::PadKind::Smd || pad.side == on_side).flat_map(|pad| pad.bbox());
+    let fab = shapes_bbox(c.layer(BoardLayer::Fab, on_side)).map(|[a, b]| vec![a, b]).unwrap_or_default();
     let Some([[x0, y0], [x1, y1]]) = solidcraft_doc::ecad::bbox(pads.chain(fab)) else {
         return Err(format!("`{}` has no pads or fabrication outline on that side to put a courtyard round", c.name));
     };
@@ -183,8 +181,8 @@ pub(super) fn make_courtyard(
     let mut rect = super::ecad_generate_geometry::rect(Some(BoardLayer::Courtyard), from, to, COURTYARD_WIDTH);
     rect.side = on_side;
     rect.validate()?;
-    c.footprint.graphics.retain(|g| (g.layer, g.side) != (Some(BoardLayer::Courtyard), on_side));
-    c.footprint.graphics.push(rect);
+    c.graphics.retain(|g| (g.layer, g.side) != (Some(BoardLayer::Courtyard), on_side));
+    c.graphics.push(rect);
     Ok(CourtyardOut { from, to, area: (to[0] - from[0]) * (to[1] - from[1]) })
 }
 

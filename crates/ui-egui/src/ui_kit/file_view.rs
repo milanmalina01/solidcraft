@@ -19,6 +19,8 @@ pub(crate) struct RecentRow<'a> {
     /// The design's picture could not be made (empty or unreadable). Draws a dimmed placeholder,
     /// so it reads as "no preview" rather than as one still loading.
     pub thumbnail_failed: bool,
+    /// The icon in place of a picture: the document's kind ("box" for a 3D design).
+    pub icon: &'a str,
 }
 
 #[derive(Clone, Copy)]
@@ -283,7 +285,7 @@ impl FileView {
             crate::icons::paint_accented(
                 ui.painter(),
                 Rect::from_center_size(preview.center(), Vec2::splat(t.space_24.min(preview.height()))),
-                "box",
+                row.icon,
                 None,
                 opacity,
             );

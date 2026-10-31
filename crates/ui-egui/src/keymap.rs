@@ -21,6 +21,7 @@ pub const RESERVED: &[&str] = &[
     "Delete",
     "Backspace",
     "Ctrl+Z",
+    "Ctrl+Shift+Z",
     "Ctrl+Y",
     "Ctrl+S",
     "Ctrl+Shift+S",
@@ -31,6 +32,9 @@ pub const RESERVED: &[&str] = &[
     "Ctrl+C",
     "Ctrl+X",
     "Ctrl+V",
+    // Turn and flip anyway on the electronics board (`toolbar::key_down`).
+    "Ctrl+R",
+    "Ctrl+F",
     // View keys (`navigation::view_key`).
     "Left",
     "Right",

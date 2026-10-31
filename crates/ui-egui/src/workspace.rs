@@ -9,8 +9,9 @@ pub const RENDER_TABS: &[&str] = &["RENDER"];
 pub fn render_tab(tab: &str) -> bool {
     RENDER_TABS.contains(&tab)
 }
+/// The name a tab shows: Render's and the board's tabs drop their prefix.
 pub fn tab_label(tab: &str) -> &str {
-    tab.strip_prefix("RENDER ").unwrap_or(tab)
+    tab.strip_prefix("RENDER ").or_else(|| tab.strip_prefix("BOARD ")).unwrap_or(tab)
 }
 
 pub const TABS: &[&str] = &["MODEL", "SURFACE", "ASSEMBLE", "INSERT", "INSPECT", "MANAGE", "VIEW"];
@@ -79,6 +80,91 @@ const CONFIGURE: &[&str] = &["parameters.change", "config.table", "config.config
 pub const AGENT_ONLY: &[&str] = &["sketch.solve"];
 
 pub const SECTIONS: &[Section] = &[
+    // An electronics library (`electronics_library::start`, `electronics_editor::start_interactive`):
+    // LIBRARY always, beside it the open item's editor tab. Their tools arm on the page.
+    Section {
+        tab: "LIBRARY",
+        panel: "NEW",
+        promoted: 4,
+        ids: &["ecad.component.create", "ecad.symbol.create", "ecad.footprint.create", "ecad.package.create"],
+    },
+    Section { tab: "LIBRARY", panel: "GENERATE", promoted: 2, ids: &["ecad.footprint.generate", "ecad.symbol.generate"] },
+    // Pins, then the symbol's body drawn (four at most on a panel, like every tab's).
+    Section { tab: "SYMBOL", panel: "PLACE", promoted: 1, ids: &["ecad.pin.add"] },
+    Section { tab: "SYMBOL", panel: "DRAW", promoted: 4, ids: &["ecad.draw.line", "ecad.draw.rect", "ecad.draw.circle", "ecad.draw.text"] },
+    Section { tab: "SYMBOL", panel: "MODIFY", promoted: 1, ids: &["ecad.pin.delete"] },
+    Section {
+        tab: "FOOTPRINT",
+        panel: "PLACE",
+        promoted: 4,
+        ids: &["ecad.pad.add", "ecad.pad.add.through_hole", "ecad.pad.add.hole", "ecad.footprint.courtyard"],
+    },
+    Section { tab: "FOOTPRINT", panel: "DRAW", promoted: 4, ids: &["ecad.draw.line", "ecad.draw.rect", "ecad.draw.circle", "ecad.draw.text"] },
+    Section { tab: "FOOTPRINT", panel: "MODIFY", promoted: 1, ids: &["ecad.pad.delete"] },
+    Section { tab: "COMPONENT", panel: "COMPONENT", promoted: 2, ids: &["ecad.component.edit", "ecad.component.variant.add"] },
+    Section { tab: "COMPONENT", panel: "CONNECT", promoted: 1, ids: &["ecad.component.map_pins"] },
+    Section { tab: "COMPONENT", panel: "PACKAGE", promoted: 1, ids: &["ecad.package.create"] },
+    Section { tab: "COMPONENT", panel: "CHECK", promoted: 1, ids: &["ecad.component.inspect"] },
+    // An electronics design (`electronics_schematic::start`, `electronics_design::start`): its
+    // views, then the schematic's tools; Move, Rotate and Mirror are a drag, R and X on the sheet.
+    Section { tab: "DESIGN", panel: "SWITCH", promoted: 3, ids: &["ecad.view.schematic", "ecad.view.board", "ecad.view.board_3d"] },
+    // Fit frames the page (F6 and Home too).
+    Section { tab: "DESIGN", panel: "VIEW", promoted: 1, ids: &["view.fit"] },
+    // Frame draws a named section frame round a group of parts (a page of its own in Export Pages).
+    Section {
+        tab: "DESIGN",
+        panel: "PLACE",
+        promoted: 4,
+        ids: &["ecad.schematic.place", "ecad.schematic.power", "ecad.schematic.marker.power_flag", "ecad.schematic.frame"],
+    },
+    Section {
+        tab: "DESIGN",
+        panel: "CONNECT",
+        promoted: 4,
+        ids: &["ecad.schematic.wire", "ecad.schematic.label", "ecad.schematic.marker", "ecad.schematic.net.rename"],
+    },
+    Section { tab: "DESIGN", panel: "MODIFY", promoted: 3, ids: &["ecad.schematic.duplicate", "ecad.schematic.delete", "ecad.schematic.annotate"] },
+    // Net classes (track widths from a current, clearances), the design intent and the board's
+    // check are reached from the schematic too; the windows are the board RULES tab's.
+    Section { tab: "DESIGN", panel: "RULES", promoted: 3, ids: &["ecad.board.netclass", "ecad.intent.inspect", "ecad.board.check"] },
+    // Export Pages: the print pages (schematic sections, block diagram, parts list, board) as PDF,
+    // SVG, PNG or CSV; the board's DOCUMENT tab has it too.
+    Section { tab: "DESIGN", panel: "OUTPUT", promoted: 1, ids: &["ecad.export.pages"] },
+    Section { tab: "CHECK", panel: "ELECTRICAL", promoted: 1, ids: &["ecad.erc.inspect"] },
+    Section { tab: "CHECK", panel: "NETLIST", promoted: 2, ids: &["ecad.netlist.inspect", "ecad.netlist.export"] },
+    // The board's DESIGN tab (`electronics_board::start`): the same views, then the board's tools;
+    // Move is a drag (a drag on a track reshapes it), R turns and F flips on the board.
+    Section { tab: "BOARD DESIGN", panel: "SWITCH", promoted: 3, ids: &["ecad.view.schematic", "ecad.view.board", "ecad.view.board_3d"] },
+    Section { tab: "BOARD DESIGN", panel: "VIEW", promoted: 1, ids: &["view.fit"] },
+    Section { tab: "BOARD DESIGN", panel: "LAYERS", promoted: 1, ids: &["ecad.board.stack"] },
+    Section { tab: "BOARD DESIGN", panel: "BOARD SHAPE", promoted: 1, ids: &["ecad.board.outline"] },
+    Section { tab: "BOARD DESIGN", panel: "PLACE", promoted: 4, ids: &["ecad.board.sync", "ecad.board.via", "ecad.board.stitch", "ecad.board.hole"] },
+    Section { tab: "BOARD DESIGN", panel: "ROUTE", promoted: 1, ids: &["ecad.board.track"] },
+    Section { tab: "BOARD DESIGN", panel: "POLYGON", promoted: 1, ids: &["ecad.board.pour"] },
+    Section { tab: "BOARD DESIGN", panel: "UNROUTE", promoted: 1, ids: &["ecad.board.unroute"] },
+    Section { tab: "BOARD DESIGN", panel: "REWORK", promoted: 2, ids: &["ecad.board.track.miter", "ecad.board.track.split"] },
+    Section { tab: "BOARD DESIGN", panel: "MODIFY", promoted: 3, ids: &["ecad.board.rotate", "ecad.board.flip", "ecad.board.delete"] },
+    // The board's DOCUMENT tab: the layer stack, and drawing on the silkscreen, the documentation
+    // layer and copper.
+    Section { tab: "BOARD DOCUMENT", panel: "LAYERS", promoted: 1, ids: &["ecad.board.stack"] },
+    Section {
+        tab: "BOARD DOCUMENT",
+        panel: "DRAW",
+        promoted: 4,
+        ids: &["ecad.board.draw.text", "ecad.board.draw.line", "ecad.board.draw.rect", "ecad.board.draw.circle"],
+    },
+    Section { tab: "BOARD DOCUMENT", panel: "OUTPUT", promoted: 1, ids: &["ecad.export.pages"] },
+    // The board's RULES tab: the design rules (with the fab profile), net classes, the design
+    // intent and the design rule check; the design-quality checks and the board's check (its
+    // gate); and keepouts.
+    Section {
+        tab: "BOARD RULES",
+        panel: "RULES",
+        promoted: 4,
+        ids: &["ecad.board.rules", "ecad.board.netclass", "ecad.intent.inspect", "ecad.drc.inspect"],
+    },
+    Section { tab: "BOARD RULES", panel: "CHECK", promoted: 2, ids: &["ecad.quality.inspect", "ecad.board.check"] },
+    Section { tab: "BOARD RULES", panel: "KEEPOUT", promoted: 1, ids: &["ecad.board.keepout"] },
     Section {
         tab: "MODEL",
         panel: "SKETCH",
@@ -349,6 +435,7 @@ const LEGACY_RENDER_SECTIONS: &[Section] = &[
 /// Compact source labels for painted big buttons only. Menus, search and tooltips
 /// retain the engine label. Route these through `tr_label`, like other UI labels.
 pub const RIBBON_LABELS: &[(&str, &str)] = &[
+    ("ecad.board.netclass", "Net Classes"),
     ("view.shots_strip", "Strip"),
     ("appearance.paint", "Paint"),
     ("appearance.pick_up", "Pick Up"),
@@ -386,6 +473,24 @@ pub const RIBBON_LABELS: &[(&str, &str)] = &[
     ("contact.enable_sets", "Contact Sets"),
     ("document.inspect", "Inspect"),
     ("document.units", "Units"),
+    ("ecad.component.create", "Component"),
+    ("ecad.component.edit", "Symbol"),
+    ("ecad.component.inspect", "Check"),
+    ("ecad.footprint.create", "Footprint"),
+    ("ecad.board.sync", "Sync"),
+    ("ecad.erc.inspect", "Check"),
+    ("ecad.footprint.generate", "Footprint"),
+    ("ecad.intent.inspect", "Intent"),
+    ("ecad.netlist.export", "Export"),
+    ("ecad.netlist.inspect", "Netlist"),
+    ("ecad.quality.inspect", "Quality"),
+    ("ecad.pad.add", "SMD Pad"),
+    ("ecad.pad.add.through_hole", "Through-hole"),
+    ("ecad.pad.delete", "Delete"),
+    ("ecad.pin.delete", "Delete"),
+    ("ecad.schematic.duplicate", "Duplicate"),
+    ("ecad.symbol.create", "Symbol"),
+    ("ecad.symbol.generate", "Symbol"),
     ("inspect.accessibility", "Access"),
     ("inspect.center_of_mass", "Mass Center"),
     ("inspect.curvature_comb", "Curv. Comb"),
@@ -577,8 +682,12 @@ pub fn frame_body(app: &crate::SolveApp) -> Option<String> {
 }
 
 pub fn visible_tabs(app: &crate::SolveApp) -> Vec<&'static str> {
-    if crate::render_workspace::active(app) || crate::electronics_workspace::active(app) {
+    if crate::render_workspace::active(app) {
         return Vec::new();
+    }
+    // An electronics document has its own tabs, unless a sketch, tool or dialog needs Design's.
+    if app.session.doc.kind.is_electronics() && !crate::electronics_workspace::modelling(app) {
+        return crate::electronics_workspace::tabs(app);
     }
     let mut tabs = TABS.to_vec();
     if app.session.active_sketch.is_some() {
@@ -599,12 +708,15 @@ pub fn sync_context(app: &mut crate::SolveApp) {
     if crate::render_workspace::active(app) {
         return;
     }
-    if crate::electronics_workspace::active(app) {
+    if app.session.doc.kind.is_electronics() {
         if !crate::electronics_workspace::modelling(app) {
+            crate::electronics_workspace::sync_tab(app);
             return;
         }
         // A sketch, tool or dialog started here (a shortcut, an agent) works in Design's view.
-        app.ui.tab = "MODEL".into();
+        if crate::electronics_workspace::active(app) {
+            app.ui.tab = "MODEL".into();
+        }
     }
     let context = app
         .session
@@ -649,7 +761,7 @@ pub fn sync_context(app: &mut crate::SolveApp) {
 pub fn current(app: &crate::SolveApp) -> &'static str {
     if crate::render_workspace::active(app) {
         "render"
-    } else if crate::electronics_workspace::active(app) {
+    } else if app.session.doc.kind.is_electronics() {
         "electronics"
     } else {
         "design"
@@ -657,15 +769,17 @@ pub fn current(app: &crate::SolveApp) -> &'static str {
 }
 
 /// Open the workspace named `design`, `render` or `electronics` (anything else is Design),
-/// leaving the one that is open.
+/// leaving the one that is open. Electronics is an electronics document's own workspace, and a
+/// 3D design's are Design and Render: the other kind's is refused (New Electronics Design and
+/// New Electronics Library open a document in a new tab).
 pub fn switch(app: &mut crate::SolveApp, workspace: &str) -> Result<(), String> {
+    let electronics = app.session.doc.kind.is_electronics();
     match workspace {
+        "electronics" if electronics => Ok(()),
+        "electronics" => Err(crate::i18n::tr("electronics.own_document").to_string()),
+        _ if electronics => Err(crate::i18n::tr("electronics.not_in_electronics").to_string()),
         "render" => crate::render_workspace::enter(app, true),
-        "electronics" => crate::electronics_workspace::enter(app, true),
-        _ => {
-            crate::electronics_workspace::enter(app, false)?;
-            crate::render_workspace::enter(app, false)
-        }
+        _ => crate::render_workspace::enter(app, false),
     }
 }
 
