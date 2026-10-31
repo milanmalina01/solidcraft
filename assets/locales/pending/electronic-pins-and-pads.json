@@ -1,9 +1,9 @@
 {
   "en": {
-    "cmd.ecad_pin_add": "Add Symbol Pins",
+    "cmd.ecad_pin_add": "Pin",
     "cmd.ecad_pin_edit": "Edit Symbol Pin",
     "cmd.ecad_pin_delete": "Delete Symbol Pins",
-    "cmd.ecad_pad_add": "Add Footprint Pads",
+    "cmd.ecad_pad_add": "Pad",
     "cmd.ecad_pad_edit": "Edit Footprint Pad",
     "cmd.ecad_pad_delete": "Delete Footprint Pads"
   },

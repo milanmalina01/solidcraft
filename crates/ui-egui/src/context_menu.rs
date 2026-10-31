@@ -71,6 +71,8 @@ pub enum Target {
     Toolbar,
     /// The workspace switcher.
     Workspace,
+    /// The workspace switcher's Electronics: a new electronics design or library, in a new tab.
+    NewElectronics,
     /// The Named Views folder, and one view (saved or standard) in it.
     NamedViews,
     NamedView {
@@ -379,19 +381,22 @@ pub fn items(app: &SolveApp, target: &Target) -> Vec<Item> {
             let current = crate::workspace::current(app);
             let key = |name: &str| if current == name { "current" } else { "" };
             let free = app.session.active_sketch.is_none() && app.tool.is_none() && app.dialog.is_none() && !app.file_load.busy();
+            // Design and Render are a 3D design's; Electronics opens an electronics document.
+            let design = app.session.doc.kind.is_design();
             let mut v = vec![
-                act("ui.workspace.design", "Design", "ws_design").with(json!({"workspace":"design"})).key(key("design")),
-                act("ui.workspace.render", "Render", "ws_render").with(json!({"workspace":"render"})).key(key("render")).on(free),
-                act("ui.workspace.electronics", "Electronics", "ws_electronics")
-                    .with(json!({"workspace":"electronics"}))
-                    .key(key("electronics"))
-                    .on(free),
+                act("ui.workspace.design", "Design", "ws_design").with(json!({"workspace":"design"})).key(key("design")).on(design),
+                act("ui.workspace.render", "Render", "ws_render").with(json!({"workspace":"render"})).key(key("render")).on(free && design),
+                act("ui.workspace.electronics", "Electronics", "ws_electronics").key(key("electronics")).on(free),
             ];
             for (w, icon) in [("Animation", "ws_animate"), ("Simulation", ""), ("Manufacture", ""), ("Drawing", "ws_drawing")] {
                 v.push(act("ui.workspace", w, icon).key("coming later").on(false));
             }
             v
         }
+        Target::NewElectronics => vec![
+            act("ui.newElectronicsDesign", "New Electronics Design", "ws_electronics"),
+            act("ui.newElectronicsLibrary", "New Electronics Library", "library"),
+        ],
         Target::Units => crate::prefs::UNITS
             .iter()
             .map(|u| {
@@ -1422,7 +1427,11 @@ pub fn run_item(app: &mut SolveApp, item: &Item, at: Pos2) {
         "ui.toolbarPin" | "ui.toolbarRemove" | "ui.toolbarReset" | "ui.toolbarCustomize" | "ui.shortcutPin" => {
             crate::toolbar_custom::run(app, &item.id, &p)
         }
-        "ui.workspace" | "ui.workspace.design" | "ui.workspace.render" | "ui.workspace.electronics" => {
+        // Electronics is a document of its own: a small menu offers a new one.
+        "ui.workspace.electronics" => open_for(app, at, Target::NewElectronics),
+        "ui.newElectronicsDesign" => crate::documents::new_electronics(app, solidcraft_engine::doc::DocumentKind::ElectronicsDesign),
+        "ui.newElectronicsLibrary" => crate::documents::new_electronics(app, solidcraft_engine::doc::DocumentKind::ElectronicsLibrary),
+        "ui.workspace" | "ui.workspace.design" | "ui.workspace.render" => {
             if let Some(workspace) = p.get("workspace").and_then(Value::as_str)
                 && let Err(e) = crate::workspace::switch(app, workspace)
             {
@@ -2667,12 +2676,22 @@ mod workspace_menu_tests {
         h.step(&json!({"click":{"handle":"ribbon:workspace"}})).unwrap();
         h.step(&json!({"click":{"handle":"workspace:menu:design"}})).unwrap();
         assert!(!crate::render_workspace::active(&h.app));
+        // Electronics is a document of its own: its row offers a new one, in a new tab.
+        h.app.run("solid.box", json!({"length":10,"width":10,"height":10})).unwrap();
         h.step(&json!({"click":{"handle":"ribbon:workspace"}})).unwrap();
         h.step(&json!({"click":{"handle":"workspace:menu:electronics"}})).unwrap();
+        assert!(!crate::electronics_workspace::active(&h.app));
+        assert_eq!(h.app.menu.target, Target::NewElectronics);
+        h.step(&json!({"click":{"handle":"menu:ui.newElectronicsDesign"}})).unwrap();
         assert!(crate::electronics_workspace::active(&h.app));
+        assert_eq!(h.app.docs.count(), 2, "the 3D design keeps its tab");
         h.step(&json!({"click":{"handle":"ribbon:workspace"}})).unwrap();
-        assert_eq!(items(&h.app, &Target::Workspace).iter().find(|i| i.id == "ui.workspace.electronics").unwrap().shortcut, "current");
-        h.step(&json!({"click":{"handle":"workspace:menu:design"}})).unwrap();
+        let rows = items(&h.app, &Target::Workspace);
+        assert_eq!(rows.iter().find(|i| i.id == "ui.workspace.electronics").unwrap().shortcut, "current");
+        assert!(rows.iter().filter(|i| i.id == "ui.workspace.design" || i.id == "ui.workspace.render").all(|i| !i.enabled), "a 3D design's");
+        h.call("ui.menu", json!({"close":true}));
+        crate::documents::switch(&mut h.app, 0);
+        h.frames(2);
         assert!(!crate::electronics_workspace::active(&h.app));
         h.app.run("sketch.create", json!({"plane":"XY"})).unwrap();
         h.frames(2);

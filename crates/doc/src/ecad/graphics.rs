@@ -5,7 +5,7 @@
 use serde::{Deserialize, Serialize};
 
 use super::footprint::Side;
-use super::{MAX_COORD, check_point, check_text};
+use super::{MAX_COORD, check_text};
 
 /// The most graphics a symbol, or a footprint, has.
 pub const MAX_GRAPHICS: usize = 4096;
@@ -107,6 +107,12 @@ fn default_width() -> f64 {
 impl Graphic {
     /// The fields its type needs and only those, finite and within the page.
     pub fn validate(&self) -> Result<(), String> {
+        self.validate_within(MAX_COORD)
+    }
+
+    /// As [`Graphic::validate`], its points and radius within `reach` millimetres of the origin
+    /// (a board drawing reaches as far as the board).
+    pub fn validate_within(&self, reach: f64) -> Result<(), String> {
         let what = format!("{:?} graphic", self.kind).to_lowercase();
         let has = |set: bool, name: &str| if set { Ok(()) } else { Err(format!("a {what} needs `{name}`")) };
         let extra = |set: bool, name: &str| if set { Err(format!("a {what} has no `{name}`")) } else { Ok(()) };
@@ -136,12 +142,14 @@ impl Graphic {
             return Err(format!("a {what} has at most {MAX_POINTS} points"));
         }
         for p in self.points.iter().chain(&self.from).chain(&self.to).chain(&self.center).chain(&self.at) {
-            check_point(&what, *p)?;
+            if !(p[0].is_finite() && p[1].is_finite() && p[0].abs() <= reach && p[1].abs() <= reach) {
+                return Err(format!("{what} must be within {reach} mm of the origin"));
+            }
         }
         if let Some(r) = self.radius
-            && !(r.is_finite() && r > 0.0 && r <= MAX_COORD)
+            && !(r.is_finite() && r > 0.0 && r <= reach)
         {
-            return Err(format!("a {what}'s `radius` must be more than 0 and at most {MAX_COORD} mm"));
+            return Err(format!("a {what}'s `radius` must be more than 0 and at most {reach} mm"));
         }
         for (name, v) in [("start", self.start), ("sweep", self.sweep)] {
             if let Some(v) = v
@@ -183,10 +191,10 @@ impl Graphic {
     }
 
     /// The text's box corners, counter-clockwise from `at` (its lower left before rotation), taking a
-    /// character as 0.6 of the height wide.
+    /// character as 0.6 of the height wide (a bar's markup, `~{…}`, as none).
     pub fn text_box(&self) -> Vec<[f64; 2]> {
         let (Some([x, y]), Some(h)) = (self.at, self.height) else { return Vec::new() };
-        let w = h * 0.6 * self.text.chars().count() as f64;
+        let w = h * 0.6 * super::overbar::plain(&self.text).chars().count() as f64;
         let (s, c) = self.rotation.to_radians().sin_cos();
         [[0.0, 0.0], [w, 0.0], [w, h], [0.0, h]].iter().map(|[u, v]| [x + u * c - v * s, y + u * s + v * c]).collect()
     }

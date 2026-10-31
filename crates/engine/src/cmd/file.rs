@@ -22,7 +22,11 @@ use crate::params::{bad, bool_, num, str_, string_list};
 use crate::{EngineError, Result, Session};
 
 pub static COMMANDS: &[CommandSpec] = &[
-    CommandSpec::new("file.new", "New Design", new_doc).icon("new").key("Ctrl+N").noundo().params("name?"),
+    CommandSpec::new("file.new", "New Design", new_doc)
+        .icon("new")
+        .key("Ctrl+N")
+        .noundo()
+        .params("name? (left out: Untitled, Electronics Library or Electronics Design by its kind; a design saved under such a name takes its file's name); kind?: design|electronics_library|electronics_design (default design: a 3D design; an electronics library holds symbols, footprints, 3D packages and electronic components, an electronics design the schematic and the components it uses) → {name, kind}"),
     CommandSpec::new("doc.open", "Open", open)
         .icon("open")
         .key("Ctrl+O")
@@ -78,9 +82,18 @@ pub static COMMANDS: &[CommandSpec] = &[
 ];
 
 fn new_doc(s: &mut Session, p: &Value) -> Result<Value> {
-    let name = str_(p, "name").unwrap_or("Untitled");
-    s.replace_design(Session::new(Document::new(name)));
-    Ok(json!({"name": name}))
+    let kind = match p.get("kind") {
+        None | Some(Value::Null) => solidcraft_doc::DocumentKind::Design,
+        Some(v) => v
+            .as_str()
+            .and_then(solidcraft_doc::DocumentKind::parse)
+            .ok_or_else(|| bad("file.new", "`kind` must be \"design\", \"electronics_library\" or \"electronics_design\""))?,
+    };
+    let name = str_(p, "name").unwrap_or(kind.default_name());
+    let mut doc = Document::new(name);
+    doc.kind = kind;
+    s.replace_design(Session::new(doc));
+    Ok(json!({"name": name, "kind": kind.name()}))
 }
 
 fn path_arg<'a>(p: &'a Value, cmd: &str) -> Result<&'a str> {
@@ -337,14 +350,12 @@ fn open(s: &mut Session, p: &Value) -> Result<Value> {
     Ok(out)
 }
 
-/// The name a design never given one by its user is shown under.
-const DEFAULT_NAME: &str = "Untitled";
-
-/// A design still under the default name takes its file's name (`bracket.sc` →
-/// "bracket"); a name the user chose is kept. `None` when nothing changes.
+/// A design still under a default name (a new document's, of any kind: "Untitled", "Electronics
+/// Design"…) takes its file's name (`bracket.sc` → "bracket"); a name the user chose is kept.
+/// `None` when nothing changes.
 fn default_name_for(name: &str, path: &str) -> Option<String> {
     let name = name.trim();
-    if !name.is_empty() && name != DEFAULT_NAME {
+    if !name.is_empty() && !solidcraft_doc::DocumentKind::ALL.iter().any(|(k, _)| k.default_name() == name) {
         return None;
     }
     let stem = std::path::Path::new(path).file_stem()?.to_string_lossy().trim().to_string();

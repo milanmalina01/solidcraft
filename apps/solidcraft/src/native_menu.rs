@@ -6,6 +6,7 @@ use muda::{
     AboutMetadata, Menu, MenuEvent, MenuItem, PredefinedMenuItem, Submenu,
     accelerator::{Accelerator, Code, Modifiers},
 };
+use solidcraft_engine::doc::DocumentKind;
 use solidcraft_ui_egui::{SolveApp, toolbar::FileAction};
 
 pub struct NativeMenu {
@@ -15,6 +16,22 @@ pub struct NativeMenu {
     events: Receiver<MenuEvent>,
     recent: Submenu,
     recent_paths: Vec<String>,
+    file: Submenu,
+    /// Where the File menu's exports start in it, and the kind of design they are for (an
+    /// electronics design's pages and parts list, a 3D design's 3D exports, none for a library).
+    exports_at: usize,
+    exports_for: Option<DocumentKind>,
+}
+
+/// Whether `action` is one of the exports the File menu swaps with the kind of design shown
+/// (Export Design as JSON stays for both).
+fn swapped_export(action: &FileAction) -> bool {
+    match action {
+        FileAction::ExportPages | FileAction::ExportPartsList | FileAction::ExportMesh(_) => true,
+        FileAction::Export(extension) => *extension != "json",
+        FileAction::Command(command) => *command == "file.export_view_dxf",
+        _ => false,
+    }
 }
 
 impl NativeMenu {
@@ -57,6 +74,8 @@ impl NativeMenu {
         ])?;
         add(&application, &format!("{} SolidCraft", app.tr("ui.quit")), FileAction::Quit, Some(Accelerator::new(Modifiers::META, Code::KeyQ)))?;
         add(&file, app.tr("ui.new_design"), FileAction::New, Some(Accelerator::new(Modifiers::META, Code::KeyN)))?;
+        add(&file, app.tr("ui.new_electronics_design"), FileAction::NewElectronics(DocumentKind::ElectronicsDesign), None)?;
+        add(&file, app.tr("ui.new_electronics_library"), FileAction::NewElectronics(DocumentKind::ElectronicsLibrary), None)?;
         add(&file, &format!("{}\u{2026}", app.tr("ui.open")), FileAction::Open, Some(Accelerator::new(Modifiers::META, Code::KeyO)))?;
         file.append(&recent)?;
         file.append(&PredefinedMenuItem::separator())?;
@@ -75,17 +94,9 @@ impl NativeMenu {
         )?;
         add(&file, app.tr_label("Save As JSON\u{2026}"), FileAction::SaveJson, None)?;
         file.append(&PredefinedMenuItem::separator())?;
-        for (label, action) in [
-            ("Export STL\u{2026}", FileAction::ExportMesh("stl")),
-            ("Export 3MF\u{2026}", FileAction::ExportMesh("3mf")),
-            ("Export STEP\u{2026}", FileAction::Export("step")),
-            ("Export Current View as DXF\u{2026}", FileAction::Command("file.export_view_dxf")),
-            ("Export OBJ\u{2026}", FileAction::Export("obj")),
-            ("Export URDF\u{2026}", FileAction::Export("urdf")),
-            ("Export Design as JSON\u{2026}", FileAction::Export("json")),
-        ] {
-            add(&file, app.tr_label(label), action, None)?;
-        }
+        // The design's own exports go here (see `update_exports`), then the JSON one for both.
+        let exports_at = file.items().len();
+        add(&file, app.tr_label("Export Design as JSON\u{2026}"), FileAction::Export("json"), None)?;
         file.append(&PredefinedMenuItem::separator())?;
         add(&file, app.tr_label("Design Properties"), FileAction::Command("document.metadata"), None)?;
         add(&edit, app.tr("ui.undo"), FileAction::Undo, Some(Accelerator::new(Modifiers::META, Code::KeyZ)))?;
@@ -113,14 +124,15 @@ impl NativeMenu {
         }
         menu.append_items(&[&application, &file, &edit, &window, &help])?;
         let (sender, events) = sync_channel(64);
-        let ctx = ctx.clone();
+        let repaint = ctx.clone();
         MenuEvent::set_event_handler(Some(move |event| {
             let _ = sender.try_send(event);
-            ctx.request_repaint();
+            repaint.request_repaint();
         }));
         menu.init_for_nsapp();
-        let mut native = Self { menu, actions, help_actions, events, recent, recent_paths: Vec::new() };
+        let mut native = Self { menu, actions, help_actions, events, recent, recent_paths: Vec::new(), file, exports_at, exports_for: None };
         native.update_recent(app)?;
+        native.update_exports(app, ctx)?;
         Ok(native)
     }
 
@@ -167,6 +179,51 @@ impl NativeMenu {
         {
             app.set_status(format!("Recent designs menu: {error}"), true);
         }
+        if let Err(error) = self.update_exports(app, ctx) {
+            app.set_status(solidcraft_ui_egui::i18n::format("electronics.export_menu_failed", &[("error", &error.to_string())]), true);
+        }
+    }
+
+    /// The File menu's exports for the kind of design shown: an electronics design's pages and
+    /// parts list, a 3D design's 3D exports, an electronics library's none (Export Design as JSON
+    /// stays for all); swapped when another kind is shown.
+    fn update_exports(&mut self, app: &SolveApp, ctx: &egui::Context) -> muda::Result<()> {
+        let kind = app.session.doc.kind;
+        if self.exports_for == Some(kind) {
+            return Ok(());
+        }
+        // Once, whatever happens below: a menu that fails to change is not tried every frame.
+        self.exports_for = Some(kind);
+        for (item, _) in self.actions.iter().filter(|(_, action)| swapped_export(action)) {
+            self.file.remove(item)?;
+        }
+        self.actions.retain(|(_, action)| !swapped_export(action));
+        let list: Vec<(String, FileAction)> = if kind == DocumentKind::ElectronicsDesign {
+            vec![
+                (format!("{}\u{2026}", app.tr("electronics.export_title")), FileAction::ExportPages),
+                (format!("{}\u{2026}", app.tr("electronics.export_parts_menu")), FileAction::ExportPartsList),
+            ]
+        } else if kind.is_electronics() {
+            Vec::new()
+        } else {
+            [
+                ("Export STL\u{2026}", FileAction::ExportMesh("stl")),
+                ("Export 3MF\u{2026}", FileAction::ExportMesh("3mf")),
+                ("Export STEP\u{2026}", FileAction::Export("step")),
+                ("Export Current View as DXF\u{2026}", FileAction::Command("file.export_view_dxf")),
+                ("Export OBJ\u{2026}", FileAction::Export("obj")),
+                ("Export URDF\u{2026}", FileAction::Export("urdf")),
+            ]
+            .into_iter()
+            .map(|(label, action)| (app.tr_label(label).to_string(), action))
+            .collect()
+        };
+        for (k, (label, action)) in list.into_iter().enumerate() {
+            let item = MenuItem::new(label, Self::action_enabled(&action, app, ctx), None);
+            self.file.insert(&item, self.exports_at.saturating_add(k))?;
+            self.actions.push((item, action));
+        }
+        Ok(())
     }
 
     fn update_recent(&mut self, app: &SolveApp) -> muda::Result<()> {

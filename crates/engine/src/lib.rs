@@ -366,6 +366,13 @@ pub struct Session {
     /// How calls that break a command's parameter contract are treated (off by default). It
     /// belongs to the session, not the design, so it survives opening and starting designs.
     pub param_check: schema::ParamCheck,
+    /// Who the calls come from, for what records it (approvals, the design's intent): an agent
+    /// (a script, the control channel, MCP, the assistant) unless the app's own windows say the
+    /// user, around their own calls. It belongs to the session, not the design.
+    pub actor: solidcraft_doc::ecad::Actor,
+    /// The scorecard `ecad.board.check` gave each caller last (the user's checks in the app and
+    /// an agent's kept apart), for the document with this uid, so the next names what got worse.
+    pub(crate) last_board_check: std::collections::BTreeMap<solidcraft_doc::ecad::Actor, (u64, std::collections::BTreeMap<&'static str, f64>)>,
     /// How the host uploads a model to EasyPrint (`file.open_in_easyprint`); `None`: it can't. It
     /// belongs to the session like `param_check`, so it survives opening and starting designs.
     pub easyprint_upload: Option<EasyPrintUpload>,
@@ -387,6 +394,23 @@ pub struct Session {
     removed_later_cache: std::sync::Mutex<Option<occurrences::RemovedLaterCache>>,
     occurrence_bodies_cache: std::sync::Mutex<Option<occurrences::OccurrenceBodiesCache>>,
     placement_index_cache: std::sync::Mutex<Option<occurrences::PlacementIndex>>,
+    /// The board's connections (pours filled) worked out last, with the design they are for,
+    /// held so its address is no other design's (see [`Session::board_nets`]); let go before an
+    /// in-place edit, as the placement index is.
+    board_nets_cache: std::sync::Mutex<Option<(Arc<Document>, Arc<solidcraft_doc::ecad::BoardNets>)>>,
+    /// Whether a mutating `ecad.board.*` command reports what it changed in the findings
+    /// (`findings_delta`) when its call doesn't say (its `findings_delta: bool`): on for
+    /// programs, and the app turns it off around its own windows' edits. It belongs to the
+    /// session, like `actor`.
+    pub board_delta: bool,
+    /// The open findings worked out last after a board edit, with the design they are for (see
+    /// `cmd::ecad_quality::open_findings`), so the next edit's comparison starts from them; let
+    /// go before an in-place edit, as the board's connections are.
+    findings_cache: std::sync::Mutex<Option<(Arc<Document>, Arc<cmd::ecad_quality::Open>)>>,
+    /// The board's design-quality checks (every code) worked out last, with the design they are
+    /// for, so the board check and the app's Quality window share one run; let go before an
+    /// in-place edit, as the board's connections are.
+    quality_cache: std::sync::Mutex<Option<(Arc<Document>, Arc<solidcraft_doc::ecad::quality::QualityReport>)>>,
     /// Pairs `inspect.clearance` measured, by the bodies' geometry where they stood (shared with
     /// scratch copies): a body that did not change or move is not measured again.
     clearance_cache: std::sync::Arc<std::sync::Mutex<cmd::clearance::PairCache>>,
@@ -577,6 +601,12 @@ impl Session {
             removed_later_cache: Default::default(),
             occurrence_bodies_cache: Default::default(),
             placement_index_cache: Default::default(),
+            board_nets_cache: Default::default(),
+            board_delta: true,
+            findings_cache: Default::default(),
+            quality_cache: Default::default(),
+            actor: Default::default(),
+            last_board_check: Default::default(),
             clearance_cache: Default::default(),
             body_renames: Vec::new(),
             contact_meshes: Default::default(),
@@ -729,7 +759,50 @@ impl Session {
         if let Ok(mut index) = self.placement_index_cache.lock() {
             *index = None;
         }
+        if let Ok(mut nets) = self.board_nets_cache.lock() {
+            *nets = None;
+        }
+        if let Ok(mut open) = self.findings_cache.lock() {
+            *open = None;
+        }
+        if let Ok(mut q) = self.quality_cache.lock() {
+            *q = None;
+        }
         Arc::make_mut(&mut self.doc)
+    }
+
+    /// The board's connections, its pours filled (see `solidcraft_doc::ecad::airwires`), worked
+    /// out once for each design: the commands before and after a change, and the views, share
+    /// them.
+    pub fn board_nets(&self) -> Arc<solidcraft_doc::ecad::BoardNets> {
+        if let Ok(cache) = self.board_nets_cache.lock()
+            && let Some((doc, nets)) = cache.as_ref()
+            && Arc::ptr_eq(doc, &self.doc)
+        {
+            return nets.clone();
+        }
+        let nets = Arc::new(self.doc.ecad.board_nets());
+        if let Ok(mut cache) = self.board_nets_cache.lock() {
+            *cache = Some((self.doc.clone(), nets.clone()));
+        }
+        nets
+    }
+
+    /// The board's design-quality checks, every code (see `solidcraft_doc::ecad::quality`),
+    /// worked out once for each design: the board check, ecad.quality.inspect and the app's
+    /// windows share them.
+    pub fn quality_report(&self) -> Arc<solidcraft_doc::ecad::quality::QualityReport> {
+        if let Ok(cache) = self.quality_cache.lock()
+            && let Some((doc, q)) = cache.as_ref()
+            && Arc::ptr_eq(doc, &self.doc)
+        {
+            return q.clone();
+        }
+        let q = Arc::new(solidcraft_doc::ecad::quality::check(&self.doc.ecad, &self.board_nets(), None));
+        if let Ok(mut cache) = self.quality_cache.lock() {
+            *cache = Some((self.doc.clone(), q.clone()));
+        }
+        q
     }
 
     /// Prepared placements only: optional save caches must not compute a cold world.
@@ -1118,6 +1191,15 @@ impl Session {
             if let Ok(mut index) = self.placement_index_cache.lock() {
                 *index = None;
             }
+            if let Ok(mut nets) = self.board_nets_cache.lock() {
+                *nets = None;
+            }
+            if let Ok(mut open) = self.findings_cache.lock() {
+                *open = None;
+            }
+            if let Ok(mut q) = self.quality_cache.lock() {
+                *q = None;
+            }
             self.model.adopt_solved_sketches(Arc::make_mut(&mut self.doc));
         }
         Ok(())
@@ -1158,6 +1240,22 @@ impl Session {
         let null = Value::Object(Default::default());
         let params = if params.is_null() { &null } else { params };
         let given = params;
+        // A board edit's `findings_delta` says whether it reports what it changed in the
+        // findings; it is taken off before the command reads its parameters (no command's own
+        // contract has the name: `check` is the clearance guard some edits take).
+        let board_edit = cmd::ecad_quality::board_edit(spec) && live.is_none();
+        let mut wants_delta = board_edit && self.board_delta;
+        let unchecked = match params.get(cmd::ecad_quality::DELTA_PARAM).filter(|_| board_edit) {
+            Some(Value::Bool(b)) => {
+                wants_delta = *b;
+                let mut o = params.as_object().cloned().unwrap_or_default();
+                o.remove(cmd::ecad_quality::DELTA_PARAM);
+                Some(Value::Object(o))
+            }
+            Some(_) => return Err(crate::params::bad(spec.id, "`findings_delta` is true or false (whether the reply gives findings_delta)")),
+            None => None,
+        };
+        let params = unchecked.as_ref().unwrap_or(params);
         // Picks in the world go into their component's frame (once: commands run by commands
         // already have them there).
         let (_nested, outermost) = frames::Nested::enter(spec.id);
@@ -1166,6 +1264,7 @@ impl Session {
         if outermost {
             crash::command_begin(self, spec.id, given);
         }
+        let open_before = if wants_delta && outermost { self.open_findings() } else { None };
         let scope = crash::Scope::enter();
         let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| match live {
             Some(run) => run(self, params),
@@ -1208,6 +1307,10 @@ impl Session {
         let result = match r {
             Ok((v, live_edit)) => {
                 let v = if changed { self.with_created(spec.id, params, &before, v) } else { v };
+                let v = match open_before {
+                    Some(was) if changed => self.with_findings_delta(&was, v),
+                    _ => v,
+                };
                 if changed || hidden {
                     // Another design opened, started or recovered is refreshed in full, however
                     // little it differs from the one before: the shortcut proves a session's own
@@ -1257,6 +1360,35 @@ impl Session {
             crash::command_done(self.crash_journal, changed, &before, &self.doc, spec.id, given, failed.map_or(Ok(()), Err));
         }
         result
+    }
+
+    /// The open findings of the design as it is (see `cmd::ecad_quality::open_findings`): the
+    /// last board edit's when the design is still the one they were worked out for. `None` if
+    /// the checks fail (a check never stops an edit).
+    fn open_findings(&self) -> Option<Arc<cmd::ecad_quality::Open>> {
+        if let Ok(cache) = self.findings_cache.lock()
+            && let Some((doc, open)) = cache.as_ref()
+            && Arc::ptr_eq(doc, &self.doc)
+        {
+            return Some(open.clone());
+        }
+        let open = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| cmd::ecad_quality::open_findings(self))).ok().map(Arc::new)?;
+        if let Ok(mut cache) = self.findings_cache.lock() {
+            *cache = Some((self.doc.clone(), open.clone()));
+        }
+        Some(open)
+    }
+
+    /// A board edit's result gets `findings_delta`: the design rule and quality errors and
+    /// warnings it brought (by key, code and message) and how many it settled, against `was`,
+    /// the open findings before it.
+    fn with_findings_delta(&self, was: &cmd::ecad_quality::Open, mut v: Value) -> Value {
+        let Some(now) = self.open_findings() else { return v };
+        let delta = cmd::ecad_quality::findings_delta(was, &now);
+        if let (Some(out), Ok(d)) = (v.as_object_mut(), serde_json::to_value(delta)) {
+            out.insert("findings_delta".into(), d);
+        }
+        v
     }
 
     /// A sketch command's result gets `created`: the ids of the points, curves, constraints and
@@ -1370,6 +1502,12 @@ impl Session {
             removed_later_cache: Default::default(),
             occurrence_bodies_cache: Default::default(),
             placement_index_cache: Default::default(),
+            board_nets_cache: Default::default(),
+            board_delta: self.board_delta,
+            findings_cache: Default::default(),
+            quality_cache: Default::default(),
+            actor: self.actor,
+            last_board_check: Default::default(),
             clearance_cache: self.clearance_cache.clone(),
             body_renames: self.body_renames.clone(),
             contact_meshes: self.contact_meshes.clone(),
@@ -1794,6 +1932,7 @@ fn same_but_features(a: &Document, b: &Document) -> bool {
         format,
         format_pending,
         name,
+        kind,
         units,
         metadata,
         params,
@@ -1830,6 +1969,7 @@ fn same_but_features(a: &Document, b: &Document) -> bool {
         && *format == b.format
         && *format_pending == b.format_pending
         && *name == b.name
+        && *kind == b.kind
         && *units == b.units
         && *metadata == b.metadata
         && *params == b.params

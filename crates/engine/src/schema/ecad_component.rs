@@ -4,7 +4,8 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-/// An electronic component, by its id (as a reply gave it) or by its name.
+/// An electronic component or a library item (a symbol, a footprint, a 3D package), by its id (as
+/// a reply gave it) or by its name.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, JsonSchema)]
 #[serde(untagged)]
 pub enum ComponentRef {
@@ -18,7 +19,7 @@ impl<'de> Deserialize<'de> for ComponentRef {
     fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
         match Value::deserialize(d)? {
             Value::String(s) => Ok(ComponentRef::Name(s)),
-            v => v.as_u64().map(ComponentRef::Id).ok_or_else(|| serde::de::Error::custom("must be an electronic component's id or name")),
+            v => v.as_u64().map(ComponentRef::Id).ok_or_else(|| serde::de::Error::custom("must be an id or a name")),
         }
     }
 }
@@ -225,9 +226,11 @@ pub struct LayerGraphicOut {
     pub graphic: GraphicSpec,
 }
 
-/// A 3D package and what it measures in the footprint's frame.
+/// A library 3D package and what it measures in the footprint's frame.
 #[derive(Debug, Serialize, JsonSchema)]
 pub struct PackageOut {
+    pub id: u64,
+    pub name: String,
     /// The SolidCraft component; its `name` is null when it is gone.
     pub model: PackageModel,
     pub translate: [f64; 3],
@@ -255,7 +258,8 @@ pub struct CourtyardOut {
     pub area: f64,
 }
 
-/// `ecad.component.create`: a new electronic component, with no symbol or footprint yet.
+/// `ecad.component.create`: a new electronic component, using library items that are already
+/// there (or none yet).
 #[derive(Debug, Deserialize, JsonSchema)]
 #[schemars(deny_unknown_fields)]
 pub struct CreateParams {
@@ -270,10 +274,16 @@ pub struct CreateParams {
     pub manufacturer: Option<String>,
     /// Up to 256 characters.
     pub description: Option<String>,
+    /// The library symbol it shows.
+    pub symbol: Option<ComponentRef>,
+    /// A library footprint: the first variant, named after it.
+    pub footprint: Option<ComponentRef>,
+    /// A library 3D package for that variant.
+    pub package: Option<ComponentRef>,
 }
 
 /// `ecad.component.edit`: change the fields given; an empty text clears `value`, `mpn`,
-/// `manufacturer` or `description`.
+/// `manufacturer` or `description`, and `symbol: null` the symbol.
 #[derive(Debug, Deserialize, JsonSchema)]
 #[schemars(deny_unknown_fields)]
 pub struct EditParams {
@@ -286,9 +296,15 @@ pub struct EditParams {
     pub mpn: Option<String>,
     pub manufacturer: Option<String>,
     pub description: Option<String>,
+    /// Another library symbol (`null`: none). A placed component keeps what is on pins the new
+    /// symbol numbers alike; the others let go where they were.
+    #[serde(default, deserialize_with = "super::ecad_schematic::nullable")]
+    #[schemars(with = "Option<ComponentRef>")]
+    pub symbol: Option<Option<ComponentRef>>,
 }
 
-/// `ecad.component.copy`: a new electronic component with the same fields and a new name.
+/// `ecad.component.copy`: a new electronic component with the same fields and a new name, using
+/// the same library items.
 #[derive(Debug, Deserialize, JsonSchema)]
 #[schemars(deny_unknown_fields)]
 pub struct CopyParams {
@@ -304,13 +320,18 @@ pub struct CopyParams {
 pub struct DeleteParams {
     /// At least one, by id or name.
     pub components: Vec<ComponentRef>,
+    /// Delete their parts on the schematic too (wires and labels on them stay, at the points
+    /// where the pins were); without it, a component placed on the schematic is refused.
+    pub with_parts: Option<bool>,
 }
 
-/// `ecad.component.map_pins`: which pads each pin connects to.
+/// `ecad.component.map_pins`: which pads each pin of the symbol connects to, in one variant.
 #[derive(Debug, Deserialize, JsonSchema)]
 #[schemars(deny_unknown_fields)]
 pub struct MapPinsParams {
     pub component: ComponentRef,
+    /// The variant, by name; the first when left out.
+    pub variant: Option<String>,
     /// Pin number to the pad numbers it connects to, such as `{"2": ["2", "4"]}` for a tab; it
     /// replaces any map there was, and a pin left out connects to no pad.
     pub map: Option<std::collections::BTreeMap<String, Vec<Number>>>,
@@ -322,6 +343,7 @@ pub struct MapPinsParams {
 #[derive(Debug, Serialize, JsonSchema)]
 pub struct MapPinsResult {
     pub component: ComponentId,
+    pub variant: String,
     pub connections: Vec<Connection>,
     pub unconnected_pins: Vec<String>,
     pub unconnected_pads: Vec<String>,
@@ -342,7 +364,7 @@ pub enum Severity {
 #[derive(Debug, Serialize, JsonSchema)]
 pub struct ProblemOut {
     /// Stable: `pads_overlap`, `pin_unconnected`, `pad_outside_courtyard`, `package_missing`, `courtyard_missing`,
-    /// `pad_unconnected`, `no_pins`, `no_pads`.
+    /// `pad_unconnected`, `no_pins`, `no_pads`, `no_symbol`, `no_footprint`.
     pub code: String,
     pub severity: Severity,
     /// The pins or pads it is about, by number.
@@ -366,8 +388,8 @@ pub struct InspectParams {
     pub component: ComponentRef,
 }
 
-/// An electronic component as replies name it.
-#[derive(Debug, Serialize, JsonSchema)]
+/// An electronic component or a library item as replies name it.
+#[derive(Clone, Debug, Serialize, JsonSchema)]
 pub struct ComponentId {
     pub id: u64,
     pub name: String,
@@ -390,6 +412,18 @@ pub struct EditResult {
     /// The fields that changed, by key; empty when the call changed nothing (then there is no
     /// undo step).
     pub changed: Vec<String>,
+    /// With another `symbol`: wire ends, labels and markers on the schematic that let go of a pin
+    /// it doesn't have, at the point where the pin was (left out when there are none).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub detached: Vec<super::ecad_schematic::DetachedOut>,
+    /// The nets whose pins the edit changed on the schematic: pins that moved within their parts
+    /// can land on other wires or leave their own (left out when none did).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub netlist_changed: Vec<super::ecad_schematic::NetChangeOut>,
+    /// The parts whose moved designator or value went back to where the newly drawn symbol puts
+    /// it, by designator (left out when none did).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub texts_reset: Vec<String>,
     /// In the warn parameter-check mode: what the call's parameters got wrong.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub param_warnings: Vec<String>,
@@ -399,13 +433,20 @@ pub struct EditResult {
 #[derive(Debug, Serialize, JsonSchema)]
 pub struct DeleteResult {
     pub deleted: Vec<ComponentId>,
+    /// With `with_parts`: the parts deleted from the schematic.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub parts: Vec<super::ecad_schematic::ItemOut>,
+    /// Wire ends, labels and markers on the schematic that let go of a pin that is gone, at the
+    /// point where it was (left out when there are none).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub detached: Vec<super::ecad_schematic::DetachedOut>,
     /// In the warn parameter-check mode: what the call's parameters got wrong.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub param_warnings: Vec<String>,
 }
 
-/// An electronic component's saved fields, then what is measured from them; empty texts are `""`.
-/// `pins` and `pads` have the shape `ecad.pin.add` and `ecad.pad.add` take.
+/// An electronic component's saved fields, then what follows from the library items it uses;
+/// empty texts are `""`.
 #[derive(Debug, Serialize, JsonSchema)]
 pub struct ComponentRecord {
     pub id: u64,
@@ -415,28 +456,39 @@ pub struct ComponentRecord {
     pub mpn: String,
     pub manufacturer: String,
     pub description: String,
-    /// The symbol's pins.
+    /// The library symbol; null without one (`ecad.symbol.inspect` has the rest).
+    pub symbol: Option<ComponentId>,
+    /// The symbol's pins, as `ecad.pin.add` takes them.
     pub pins: Vec<PinOut>,
-    /// The footprint's pads.
-    pub pads: Vec<PadOut>,
-    pub measured: Measured,
-    /// Each pin with the pads it connects to (those with its number).
+    /// The ways it can be built, the first one by default.
+    pub variants: Vec<VariantRecord>,
+    /// The component's own: no symbol, or one with no pins (each variant has its own).
+    pub problems: Vec<ProblemOut>,
+    /// A symbol with pins, at least one variant, and every variant ready.
+    pub ready: bool,
+}
+
+/// One variant of an electronic component and what connects in it.
+#[derive(Debug, Serialize, JsonSchema)]
+pub struct VariantRecord {
+    pub name: String,
+    /// The library footprint; null without one (`ecad.footprint.inspect` has the rest).
+    pub footprint: Option<ComponentId>,
+    /// How many pads the footprint has.
+    pub pads: usize,
+    /// The library 3D package; null without one.
+    pub package: Option<PackageOut>,
+    /// Pin number to pad numbers; null when each pin connects to the pad with its number.
+    pub pin_map: Option<std::collections::BTreeMap<String, Vec<String>>>,
+    /// Each pin with the pads it connects to.
     pub connections: Vec<Connection>,
     /// Pins with no pad, by number.
     pub unconnected_pins: Vec<String>,
     /// Pads no pin connects to, by number.
     pub unconnected_pads: Vec<String>,
-    /// Pin number to pad numbers; null when each pin connects to the pad with its number.
-    pub pin_map: Option<std::collections::BTreeMap<String, Vec<String>>>,
-    /// The symbol's body, as `ecad.symbol.set_graphics` takes it.
-    pub symbol_graphics: Vec<GraphicSpec>,
-    /// The footprint's silkscreen, fabrication and courtyard graphics.
-    pub footprint_graphics: Vec<LayerGraphicOut>,
-    /// The 3D package; null without one.
-    pub package: Option<PackageOut>,
-    /// Errors first.
+    /// The footprint's own problems, then what connects; errors first.
     pub problems: Vec<ProblemOut>,
-    /// Pins, pads and no errors: ready to place.
+    /// The symbol's pins, the footprint's pads, and no errors: ready to place with this variant.
     pub ready: bool,
 }
 
@@ -445,6 +497,9 @@ pub struct ComponentRecord {
 pub struct PinOut {
     pub number: String,
     pub name: String,
+    /// The name is kept but not drawn (the body's shape says it).
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub name_hidden: bool,
     pub electrical: Electrical,
     /// Where a wire connects, in millimetres.
     pub at: [f64; 2],
@@ -469,22 +524,6 @@ pub struct PadOut {
     pub kind: Kind,
     /// `[w, h]` in millimetres (equal for a round hole); null for a surface-mount pad.
     pub drill: Option<[f64; 2]>,
-}
-
-/// What follows from the saved fields, for checking a component without looking at it.
-#[derive(Debug, Serialize, JsonSchema)]
-pub struct Measured {
-    /// Where each pin meets the body.
-    pub pins: Vec<PinMeasure>,
-    pub pads: Vec<PadMeasure>,
-    /// The box around every pin, `[[x0, y0], [x1, y1]]`; null with no pins.
-    pub symbol_bbox: Option<[[f64; 2]; 2]>,
-    /// The box around all the copper; null with no pads.
-    pub copper_bbox: Option<[[f64; 2]; 2]>,
-    /// The two pads closest together on a shared copper layer; null with fewer than two.
-    pub min_pad_gap: Option<GapOut>,
-    /// The top courtyard's box; null without one.
-    pub courtyard: Option<CourtyardOut>,
 }
 
 #[derive(Debug, Serialize, JsonSchema)]

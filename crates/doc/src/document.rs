@@ -2631,6 +2631,61 @@ pub fn is_counted_body_name(name: &str) -> bool {
     name.strip_prefix("Body").is_some_and(|n| !n.is_empty() && n.bytes().all(|b| b.is_ascii_digit()) && n.parse::<usize>().is_ok())
 }
 
+/// What a document is: a 3D design, or one of the electronics documents. Each opens straight
+/// into its own workspace; an electronics document keeps its items in `ecad`.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum DocumentKind {
+    /// A 3D design: bodies, sketches and components. Not saved, so designs saved before kinds
+    /// existed are 3D designs.
+    #[default]
+    Design,
+    /// An electronics library: symbols, footprints, 3D packages and the electronic components
+    /// that use them. It can hold bodies too, for its 3D packages' models.
+    ElectronicsLibrary,
+    /// An electronics design: the schematic (the board later) and the electronic components it
+    /// uses.
+    ElectronicsDesign,
+}
+
+impl DocumentKind {
+    /// Every kind, by the name `file.new` and the design file use.
+    pub const ALL: [(DocumentKind, &'static str); 3] = [
+        (DocumentKind::Design, "design"),
+        (DocumentKind::ElectronicsLibrary, "electronics_library"),
+        (DocumentKind::ElectronicsDesign, "electronics_design"),
+    ];
+
+    /// The kind named `name` (`design`, `electronics_library` or `electronics_design`).
+    pub fn parse(name: &str) -> Option<DocumentKind> {
+        Self::ALL.iter().find(|(_, n)| *n == name).map(|(k, _)| *k)
+    }
+
+    /// The name `file.new` and the design file use.
+    pub fn name(self) -> &'static str {
+        Self::ALL.iter().find(|(k, _)| *k == self).map_or("design", |(_, n)| *n)
+    }
+
+    /// The name a new document of this kind has until it is named or saved (the app shows it
+    /// translated); saving it takes the file's name.
+    pub fn default_name(self) -> &'static str {
+        match self {
+            DocumentKind::Design => "Untitled",
+            DocumentKind::ElectronicsLibrary => "Electronics Library",
+            DocumentKind::ElectronicsDesign => "Electronics Design",
+        }
+    }
+
+    pub fn is_design(&self) -> bool {
+        *self == DocumentKind::Design
+    }
+
+    /// An electronics library or an electronics design.
+    pub fn is_electronics(self) -> bool {
+        !self.is_design()
+    }
+}
+
 /// The document.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Document {
@@ -2644,6 +2699,9 @@ pub struct Document {
     #[serde(default = "crate::format::pending_names", skip_serializing_if = "Vec::is_empty")]
     pub format_pending: Vec<String>,
     pub name: String,
+    /// A 3D design (not saved), an electronics library or an electronics design.
+    #[serde(default, skip_serializing_if = "DocumentKind::is_design")]
+    pub kind: DocumentKind,
     #[serde(default = "default_units")]
     pub units: String,
     /// Design properties (project, author…) and other tools' data, kept as they are (#1015).
@@ -2929,6 +2987,7 @@ impl Document {
             format: default_format(),
             format_pending: crate::format::pending_names(),
             name: name.into(),
+            kind: DocumentKind::Design,
             units: default_units(),
             metadata: Default::default(),
             params: Vec::new(),

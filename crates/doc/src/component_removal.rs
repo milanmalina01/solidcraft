@@ -66,12 +66,8 @@ impl Document {
         self.components.retain(|c| !inside.contains(&c.id));
         self.parts.retain(|c, _| !inside.contains(c));
         self.links.retain(|c, _| !inside.contains(c));
-        // An electronic component's 3D package goes with its model.
-        for c in &mut self.ecad.components {
-            if c.package.as_ref().is_some_and(|p| inside.contains(&p.model)) {
-                c.package = None;
-            }
-        }
+        // A 3D package goes with its model.
+        self.ecad.repoint_packages(|m| inside.contains(&m), None);
         self.remove_configuration_components(&components);
         Ok(RemovedTree { components, features, deleted, occurrences: occurrences.into_iter().collect(), joints: joints.into_iter().collect() })
     }

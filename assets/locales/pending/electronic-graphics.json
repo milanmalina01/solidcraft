@@ -2,7 +2,7 @@
   "en": {
     "cmd.ecad_symbol_set_graphics": "Set Symbol Graphics",
     "cmd.ecad_footprint_set_graphics": "Set Footprint Graphics",
-    "cmd.ecad_footprint_courtyard": "Make Courtyard"
+    "cmd.ecad_footprint_courtyard": "Courtyard"
   },
   "ar": {
     "cmd.ecad_symbol_set_graphics": "تعيين رسومات الرمز",

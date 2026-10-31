@@ -30,6 +30,8 @@ pub struct DocSlot {
     view: DocView,
     occurrence_move: Option<crate::browser::OccMove>,
     agent_chat: crate::agent_chat::AgentChat,
+    /// An electronics document's page, open item and tools.
+    electronics: crate::electronics_workspace::State,
 }
 
 /// The per-design part of the UI state the session doesn't keep (what is hidden, shown or locked
@@ -58,6 +60,7 @@ impl DocSlot {
             view: DocView::default(),
             occurrence_move: None,
             agent_chat: Default::default(),
+            electronics: Default::default(),
         }
     }
 }
@@ -151,6 +154,7 @@ fn swap_in(app: &mut SolveApp, mut slot: DocSlot) -> DocSlot {
         view: take_view(app),
         occurrence_move: std::mem::replace(&mut app.tree.occurrence_move, slot.occurrence_move),
         agent_chat: slot.agent_chat,
+        electronics: std::mem::replace(&mut app.electronics, slot.electronics),
     };
     // Only the displayed design owns the process-wide crash replay journal.
     app.session.crash_journal = out.session.crash_journal;
@@ -273,10 +277,30 @@ pub fn open_tab(app: &mut SolveApp, session: Session) -> Result<(), String> {
     Ok(())
 }
 
-/// Is the active design an untouched new one (it can be replaced instead of opening a tab)?
+/// Is the active design an untouched new 3D design (it can be replaced instead of opening a tab)?
 pub fn active_is_blank(app: &SolveApp) -> bool {
     let s = &app.session;
-    s.path.is_none() && s.doc.features.is_empty() && s.doc.params.is_empty() && s.doc.components.is_empty() && !s.is_dirty()
+    s.path.is_none()
+        && s.doc.kind.is_design()
+        && s.doc.features.is_empty()
+        && s.doc.params.is_empty()
+        && s.doc.components.is_empty()
+        && s.doc.ecad.is_empty()
+        && !s.is_dirty()
+}
+
+/// A new electronics library or electronics design (`kind`), in its own tab, in place of an
+/// untouched new 3D design. It opens straight into its own workspace.
+pub fn new_electronics(app: &mut SolveApp, kind: solidcraft_engine::doc::DocumentKind) {
+    if app.file_picker_busy() || !kind.is_electronics() {
+        return;
+    }
+    app.home.open = false;
+    // Shown translated; saving takes the file's name, as a new 3D design's "Untitled" does.
+    let mut doc = solidcraft_engine::doc::Document::new(kind.default_name());
+    doc.kind = kind;
+    adopt(app, Session::new(doc));
+    crate::workspace::sync_context(app);
 }
 
 /// Show `session` (a design built or read elsewhere): in place of a blank active design,
@@ -291,7 +315,7 @@ pub fn adopt(app: &mut SolveApp, session: Session) {
         crate::sketch_attachment_ui::clear(app);
         app.session.replace_design(session);
         crate::render_workspace::reset_document(app);
-        let _ = crate::electronics_workspace::enter(app, false);
+        crate::electronics_workspace::reset(app);
         app.session.invalidate_view(rev);
         app.cam = Camera::default();
         app.fit_view();
@@ -380,7 +404,7 @@ pub fn close(app: &mut SolveApp, i: usize, force: bool) {
         app.session.replace_design(Session::default());
         app.session.revision = rev + 1;
         crate::prefs::apply_new_design(app);
-        let _ = crate::electronics_workspace::enter(app, false);
+        crate::electronics_workspace::reset(app);
         app.cam = Camera::default();
         app.fit_view();
         put_view(app, DocView::default());
@@ -523,6 +547,19 @@ pub fn tabs_info(app: &SolveApp) -> Vec<(String, bool)> {
         .collect()
 }
 
+/// What each tab's document is, in `tabs_info`'s order.
+fn tab_kinds(app: &SolveApp) -> Vec<solidcraft_engine::doc::DocumentKind> {
+    if app.docs.slots.is_empty() {
+        return vec![app.session.doc.kind];
+    }
+    app.docs.slots.iter().map(|s| s.as_ref().map_or(&app.session, |d| &d.session).doc.kind).collect()
+}
+
+/// A tab's icon: a 3D design's, or the electronics workspace's for both electronics documents.
+fn tab_icon(kind: solidcraft_engine::doc::DocumentKind) -> &'static str {
+    if kind.is_electronics() { "ws_electronics" } else { "ws_design" }
+}
+
 /// Where each tab's design is saved, in `tabs_info`'s order (`None`: not saved yet).
 fn tab_paths(app: &SolveApp) -> Vec<Option<String>> {
     if app.docs.slots.is_empty() {
@@ -621,19 +658,22 @@ pub fn tabs(app: &mut SolveApp, ui: &mut egui::Ui, r: Rect, x0: f32, x1: f32) {
     let t = Tokens::get();
     let info = tabs_info(app);
     let paths = tab_paths(app);
+    let kinds = tab_kinds(app);
     let n = info.len();
     let (first, shown, w) = layout(n, app.docs.active, x1 - x0);
     let mut pick: Option<usize> = None;
     let mut shut: Option<usize> = None;
-    // Each tab fits its name (up to MAX_FIT) while all of them fit; otherwise they share the room.
+    // Each tab fits its icon and name (up to MAX_FIT) while all of them fit; otherwise they share
+    // the room.
     const MAX_FIT: f32 = 200.0;
+    const TAB_ICON: f32 = 14.0;
     let natural: Vec<f32> = info
         .iter()
         .map(|(name, dirty)| {
             let shown_name = crate::i18n::Locale::for_language(&app.preferences.language).given_name(name);
             let label = format!("{shown_name}{}", if *dirty { " •" } else { "" });
             let text = ui.painter().layout_no_wrap(label, crate::fonts::semibold(crate::theme::Tokens::get().font_button), t.app_bar_text).size().x;
-            (text + 40.0).clamp(72.0, MAX_FIT)
+            (text + 40.0 + TAB_ICON + 6.0).clamp(72.0, MAX_FIT)
         })
         .collect();
     let fit_all = shown == n && natural.iter().sum::<f32>() <= x1 - x0 - 34.0;
@@ -716,10 +756,15 @@ pub fn tabs(app: &mut SolveApp, ui: &mut egui::Ui, r: Rect, x0: f32, x1: f32) {
             FontId::proportional(crate::theme::Tokens::get().font_button)
         };
         let g = ui.painter().layout_no_wrap(label, font, ink);
-        let text_w = (tr.width() - 30.0).max(10.0);
+        // The document's kind, before its name.
+        let kind = kinds.get(i).copied().unwrap_or_default();
+        let icon = Rect::from_min_size(pos2(tr.left() + 8.0, tr.center().y - TAB_ICON / 2.0), vec2(TAB_ICON, TAB_ICON));
+        crate::icons::paint_icon(ui.painter(), icon, tab_icon(kind), if active || lit { 1.0 } else { 0.7 });
+        let text_left = icon.right() + 6.0;
+        let text_w = (tr.right() - 20.0 - text_left).max(10.0);
         let tip = tab_tooltip(&name_display, paths.get(i).cloned().flatten().as_deref(), g.size().x > text_w);
-        let clip = Rect::from_min_size(tr.min, vec2(text_w + 10.0, tr.height()));
-        ui.painter().with_clip_rect(clip).galley(pos2(tr.left() + 10.0, tr.center().y - g.size().y / 2.0), g, ink);
+        let clip = Rect::from_min_max(tr.min, pos2(text_left + text_w, tr.bottom()));
+        ui.painter().with_clip_rect(clip).galley(pos2(text_left, tr.center().y - g.size().y / 2.0), g, ink);
         // ×
         let xr = Rect::from_center_size(pos2(tr.right() - 13.0, tr.center().y), vec2(16.0, 16.0));
         let show_close = active || resp.hovered() || ui.rect_contains_pointer(tr);

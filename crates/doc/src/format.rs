@@ -1200,12 +1200,14 @@ mod tests {
     #[test]
     fn every_change_file_is_listed_in_name_order() {
         let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src/format");
+        // By the whole file name, as the build sorts them: `electronics-documents.rs` comes
+        // before `electronics.rs`.
         let names = |dir: &str| -> Vec<String> {
-            let mut names: Vec<String> = std::fs::read_dir(root.join(dir))
-                .map(|d| d.filter_map(|e| e.ok()?.file_name().to_str()?.strip_suffix(".rs").map(str::to_string)).collect())
+            let mut files: Vec<String> = std::fs::read_dir(root.join(dir))
+                .map(|d| d.filter_map(|e| e.ok()?.file_name().to_str().map(str::to_string)).collect())
                 .unwrap_or_default();
-            names.sort();
-            names
+            files.sort();
+            files.iter().filter_map(|f| f.strip_suffix(".rs").map(str::to_string)).collect()
         };
         assert_eq!(names("pending"), pending_names());
         for (version, parts) in FOLDED {

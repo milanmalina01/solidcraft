@@ -38,6 +38,21 @@ const SKILLS: &[Skill] = &[
             ("reference.md", include_str!("../../../skills/solidcraft-modeling/reference.md")),
         ],
     },
+    Skill {
+        name: "solidcraft-pcb",
+        files: &[
+            ("SKILL.md", include_str!("../../../skills/solidcraft-pcb/SKILL.md")),
+            ("reference/workflow.md", include_str!("../../../skills/solidcraft-pcb/reference/workflow.md")),
+            ("reference/placement.md", include_str!("../../../skills/solidcraft-pcb/reference/placement.md")),
+            ("reference/routing-dfm.md", include_str!("../../../skills/solidcraft-pcb/reference/routing-dfm.md")),
+            ("reference/power-ground.md", include_str!("../../../skills/solidcraft-pcb/reference/power-ground.md")),
+            ("reference/signal-integrity.md", include_str!("../../../skills/solidcraft-pcb/reference/signal-integrity.md")),
+            ("reference/rf-emc.md", include_str!("../../../skills/solidcraft-pcb/reference/rf-emc.md")),
+            ("reference/silkscreen-assembly.md", include_str!("../../../skills/solidcraft-pcb/reference/silkscreen-assembly.md")),
+            ("reference/manufacturing.md", include_str!("../../../skills/solidcraft-pcb/reference/manufacturing.md")),
+            ("reference/review.md", include_str!("../../../skills/solidcraft-pcb/reference/review.md")),
+        ],
+    },
 ];
 
 pub(crate) fn read(args: &Map<String, Value>) -> Result<Value, String> {

@@ -51,16 +51,36 @@ mod types;
 #[cfg(test)]
 mod coverage_tests;
 #[cfg(test)]
-mod tests;
+pub(crate) mod tests;
 
 // The contracts, by command file.
 pub mod ecad;
+pub mod ecad_board;
+pub mod ecad_board_check;
+pub mod ecad_board_edit;
+pub mod ecad_board_metrics;
+pub mod ecad_board_pour;
+pub mod ecad_board_rules;
+pub mod ecad_board_stitch;
 pub mod ecad_component;
+pub mod ecad_draw;
+pub mod ecad_drc;
+pub mod ecad_erc;
+pub mod ecad_export;
 pub mod ecad_footprint;
+pub mod ecad_frame;
 pub mod ecad_generate;
 pub mod ecad_graphics;
+pub mod ecad_import;
+pub mod ecad_intent;
+pub mod ecad_library;
+pub mod ecad_netlist;
 pub mod ecad_package;
+pub mod ecad_quality;
+pub mod ecad_schematic;
 pub mod ecad_symbol;
+pub mod ecad_variant;
+pub mod ecad_wire;
 pub mod edit;
 pub mod features;
 pub mod inspect;

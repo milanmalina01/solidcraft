@@ -46,3 +46,4 @@ Work: ROADMAP.md, "Where help is wanted most" in CONTRIBUTING.md, issues labelle
 | Checking, porting, designs in git | `skills/solidcraft-checking/SKILL.md` |
 | Assemblies, joints, motion | `skills/solidcraft-mechanisms/SKILL.md` |
 | Electronic components over MCP | `skills/solidcraft-electronics/SKILL.md` |
+| PCB layout, checks and fixes over MCP | `skills/solidcraft-pcb/SKILL.md` |

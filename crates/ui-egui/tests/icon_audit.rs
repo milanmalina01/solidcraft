@@ -191,12 +191,19 @@ fn requested_menu_icons_have_artwork_and_match_manifest() {
     ribbon(&mut h, &mut requested);
     solidcraft_ui_egui::render_workspace::enter(&mut h.app, false).unwrap();
     h.frames(3);
-    solidcraft_ui_egui::electronics_workspace::enter(&mut h.app, true).unwrap();
-    h.frames(3);
-    // No tabs yet: the switcher card is what the workspace draws.
-    collect(&mut h, "Electronics workspace", &mut requested);
-    solidcraft_ui_egui::electronics_workspace::enter(&mut h.app, false).unwrap();
-    h.frames(3);
+    // The electronics documents' own workspace, in tabs of their own beside the design.
+    let design = h.app.docs.active;
+    for (kind, surface) in [
+        (solidcraft_engine::doc::DocumentKind::ElectronicsLibrary, "Electronics library"),
+        (solidcraft_engine::doc::DocumentKind::ElectronicsDesign, "Electronics design"),
+    ] {
+        solidcraft_ui_egui::documents::new_electronics(&mut h.app, kind);
+        h.frames(3);
+        collect(&mut h, surface, &mut requested);
+        ribbon(&mut h, &mut requested);
+        solidcraft_ui_egui::documents::switch(&mut h.app, design);
+        h.frames(3);
+    }
 
     let body = h.app.session.model.state().bodies.first().unwrap().name.clone();
     let sketch = h.app.session.world_state().sketches.first().unwrap().feature;

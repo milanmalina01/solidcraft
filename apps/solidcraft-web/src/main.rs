@@ -193,6 +193,20 @@ mod web {
         on_key.forget();
     }
 
+    /// On the electronics board, Cmd/Ctrl+R and Cmd/Ctrl+F turn and flip the pick anyway: the
+    /// browser would reload the page and open its Find bar on them. Their default stops here; the
+    /// app still gets them.
+    fn keep_board_keys_from_browser(window: &web_sys::Window) {
+        let on_key = wasm_bindgen::closure::Closure::<dyn FnMut(web_sys::KeyboardEvent)>::new(|e: web_sys::KeyboardEvent| {
+            if solidcraft_ui_egui::toolbar::board_takes_key(&e.key(), e.ctrl_key() || e.meta_key(), e.shift_key(), e.alt_key()) {
+                e.prevent_default();
+            }
+        });
+        let _ = window.add_event_listener_with_callback_and_bool("keydown", on_key.as_ref().unchecked_ref(), true);
+        // The listener lives as long as the page.
+        on_key.forget();
+    }
+
     const JAPANESE_FONT_PATH: &str = "./fonts/BIZUDPGothic-Regular.ttf";
 
     type FontLoadResult = Rc<std::cell::RefCell<Option<Result<Vec<u8>, String>>>>;
@@ -722,6 +736,7 @@ mod web {
                 ask_before_unload(&window);
             }
             leave_tab_switching_to_browser(&window);
+            keep_board_keys_from_browser(&window);
             let Some(document) = window.document() else { return };
             let Some(canvas) = document.get_element_by_id(CANVAS_ID).and_then(|e| e.dyn_into::<web_sys::HtmlCanvasElement>().ok()) else {
                 log::error!("missing <canvas id=\"{CANVAS_ID}\">");

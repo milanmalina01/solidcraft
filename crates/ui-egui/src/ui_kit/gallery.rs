@@ -331,6 +331,7 @@ const ELEMENTS: &[Element] = &[
                         workspace: "Design",
                         thumbnail: None,
                         thumbnail_failed: false,
+                        icon: "box",
                     },
                 );
             }
@@ -347,6 +348,7 @@ const ELEMENTS: &[Element] = &[
                 workspace: "Design",
                 thumbnail: None,
                 thumbnail_failed: false,
+                icon: "box",
             },
         );
     }),
@@ -831,6 +833,11 @@ const ELEMENTS: &[Element] = &[
     }),
     element!("expr_row", "dialog:row:Gallery", Some("dialog:Gallery"), |ui, s| {
         expr_row(ui, "Gallery", &mut s.value);
+    }),
+    element!("wrapped_row", "dialog:row:Gallery", Some("dialog:list:gallery"), |ui, _| {
+        wrapped_row(ui, "Gallery", |ui| {
+            choice_chip(ui, "gallery", "Shot 1", true);
+        });
     }),
     element!("count_row", "dialog:row:Gallery", Some("dialog:Gallery up"), |ui, _| {
         let mut count = "6".to_owned();

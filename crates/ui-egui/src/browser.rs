@@ -1130,7 +1130,7 @@ fn browser_contents(app: &mut SolveApp, ui: &mut egui::Ui, acts: &mut Actions, c
     {
         return;
     }
-    if crate::render_workspace::browser_mode(app, ui) || crate::electronics_components::browser_mode(app, ui) {
+    if crate::render_workspace::browser_mode(app, ui) || crate::electronics_library::browser(app, ui) {
         return;
     }
     t.secondary_hline(ui.painter(), ui.max_rect().x_range(), ui.cursor().top() + 1.0, t.toolbar.lerp_to_gamma(t.border, 0.5));

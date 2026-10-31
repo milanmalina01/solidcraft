@@ -423,8 +423,8 @@ fn describe(_s: &mut Session, p: &Value) -> Result<Value> {
         id: spec.id.to_string(),
         label: spec.label.to_string(),
         params: spec.params.to_string(),
-        input: spec.contract.map(|c| c.input_schema().to_value()),
-        output: spec.output.map(|f| f().to_value()),
+        input: spec.contract.map(|c| super::ecad_quality::with_check(spec, c.input_schema().to_value())),
+        output: spec.output.map(|f| super::ecad_quality::with_delta(spec, f().to_value())),
         param_warnings: Vec::new(),
     };
     serde_json::to_value(reply).map_err(|e| crate::EngineError::Other(e.to_string()))

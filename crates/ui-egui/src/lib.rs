@@ -61,8 +61,25 @@ pub mod drag_extrude;
 pub mod drag_snap;
 pub mod easyprint_ui;
 pub mod edit_clipboard;
+pub mod electronics_board;
+pub mod electronics_board_check;
+pub mod electronics_board_draw;
+pub mod electronics_board_layers;
+pub mod electronics_board_outline;
+pub mod electronics_board_pour;
+pub mod electronics_board_quality;
+pub mod electronics_board_route;
+pub mod electronics_board_rules;
+pub mod electronics_board_stack;
+pub mod electronics_board_stitch;
 pub mod electronics_components;
+pub mod electronics_design;
+pub mod electronics_drawing;
 pub mod electronics_editor;
+pub mod electronics_export;
+pub mod electronics_intent;
+pub mod electronics_library;
+pub mod electronics_schematic;
 pub mod electronics_workspace;
 mod feature_edit;
 #[cfg(test)]
@@ -386,6 +403,9 @@ pub struct Services {
     pub pick_file: Option<Box<dyn Fn(&str, &[&str]) -> FilePickerFuture>>,
     /// Open a dialog asking for a program (a slicer); `None` when the host has no such dialog.
     pub pick_program: Option<Box<dyn Fn() -> FilePickerFuture>>,
+    /// Open a dialog asking for a folder to write files into (an export's pages); `None` when the
+    /// host has no such dialog, and a save dialog asks for a name to start the files with instead.
+    pub pick_folder: Option<Box<dyn Fn() -> FilePickerFuture>>,
     pub show_in_folder: Option<Box<dyn Fn(&str)>>,
     /// Where the host reads the anti-aliasing preference at start (a small JSON file).
     pub graphics_path: Option<String>,
@@ -586,6 +606,10 @@ pub struct SolveApp {
     pub synthetic: Vec<egui::Event>,
     /// The modifiers of the synthetic press in progress (a Ctrl-drag keeps Ctrl while it moves).
     pub synthetic_mods: egui::Modifiers,
+    /// This frame's input holds synthetic events (the control channel's clicks, keys and
+    /// typing): what the app's windows do with it is an agent's, not the user's (see
+    /// [`SolveApp::run_as_user`]).
+    pub agent_input: bool,
     control_rx: Option<Receiver<ControlRequest>>,
     /// Control requests that change the design, held while a file loads or an agent's design
     /// change computes.
@@ -739,6 +763,7 @@ impl SolveApp {
             frame_rate: frame_rate::FrameRate::default(),
             synthetic: Vec::new(),
             synthetic_mods: egui::Modifiers::default(),
+            agent_input: false,
             control_rx: None,
             agent_chat: Default::default(),
             ai_connect: Default::default(),
@@ -975,8 +1000,19 @@ impl SolveApp {
         self
     }
 
-    /// Run a command programmatically (JSON parameters, no dialogs).
+    /// Run a command programmatically (JSON parameters, no dialogs), as the app's own windows
+    /// do: a board edit doesn't work out what it changed in the findings (its windows check when
+    /// they are open).
     pub fn run(&mut self, id: &str, params: Value) -> Result<Value, String> {
+        let delta = std::mem::replace(&mut self.session.board_delta, false);
+        let r = self.run_program(id, params);
+        self.session.board_delta = delta;
+        r
+    }
+
+    /// Run a command a program sent (the control channel, and through it MCP): a board edit's
+    /// reply gives `findings_delta` unless the call says otherwise.
+    pub fn run_program(&mut self, id: &str, params: Value) -> Result<Value, String> {
         if self.file_load.busy() || self.file_picker.is_some() || self.saving.is_some() {
             return Err("a file operation is in progress".into());
         }
@@ -990,11 +1026,32 @@ impl SolveApp {
         self.command_completed(id, r)
     }
 
+    /// Run a command the user made in one of the app's own windows (an approval): the engine
+    /// records it as the user's, where a programmatic call is an agent's. A click or key the
+    /// control channel sent into the window (`ui.click`, `ui.key`) is an agent's still, so an
+    /// agent can't confirm its own approvals by clicking the user's buttons.
+    pub fn run_as_user(&mut self, id: &str, params: Value) -> Result<Value, String> {
+        use solidcraft_engine::doc::ecad::Actor;
+        let who = if self.agent_input { Actor::Agent } else { Actor::User };
+        let was = std::mem::replace(&mut self.session.actor, who);
+        let r = self.run(id, params);
+        self.session.actor = was;
+        r
+    }
+
     /// Host effects shared by directly executed and already evaluated commands.
     pub(crate) fn command_completed(&mut self, id: &str, r: Result<Value, String>) -> Result<Value, String> {
         if let Ok(v) = &r {
             match id {
                 "view.fit" | "view.home" => self.frame_view(id == "view.home"),
+                // An electronics design's SWITCH group: its page shows the view the command named.
+                "ecad.view.schematic" | "ecad.view.board" => {
+                    if let Some(view) = v.get("view").and_then(Value::as_str) {
+                        electronics_design::set_view(self, view);
+                    }
+                }
+                // A check run from anywhere (an agent too) brings the board's DRC summary up to date.
+                "ecad.drc.inspect" | "ecad.board.check" => electronics_board_rules::checked_now(self),
                 "view.tool" => {
                     self.viewport.nav = match v.get("tool").and_then(Value::as_str) {
                         Some("orbit") => Some(viewport::NavMode::Orbit),
@@ -1102,7 +1159,8 @@ impl SolveApp {
         let id = solidcraft_engine::find_command(id).map_or(id, |spec| spec.id);
         match r {
             Ok(v) => {
-                electronics_components::follow(self, id, v);
+                electronics_library::follow(self, id, v);
+                electronics_workspace::finished(self, id, v);
                 // Programmatic callers (the control channel, scripts) run outside a render
                 // language scope, so resolve the echo from the saved preference instead of the
                 // thread-local scope. The command's own label is translated too, so the echo
@@ -1121,7 +1179,7 @@ impl SolveApp {
                 if matches!(id, "file.new" | "doc.open" | "doc.recover") {
                     documents::reset_chat(self);
                     render_workspace::reset_document(self);
-                    let _ = electronics_workspace::enter(self, false);
+                    electronics_workspace::reset(self);
                     dim_view::cancel();
                     self.menu.props = None;
                     sketch_attachment_ui::clear(self);
@@ -1228,7 +1286,7 @@ impl SolveApp {
             self.set_status(format!("{label}: {why}"), true);
             return;
         }
-        if render_workspace::start_interactive(self, id) {
+        if render_workspace::start_interactive(self, id) || electronics_editor::start_interactive(self, id) {
             return;
         }
         workspace::select_command_tab(self, id);
@@ -1518,6 +1576,10 @@ impl SolveApp {
                 let _ = self.session.execute("select.clear", &json!({}));
             }
             self.dialog = Some(d);
+            return;
+        }
+        // Undo while a board route is started takes back its last click.
+        if id == "edit.undo" && crate::electronics_board_route::undo_step(self) {
             return;
         }
         // Undo and redo can recompute much of the history: off the window thread when slow.
@@ -2095,6 +2157,8 @@ impl SolveApp {
 
     /// Inject synthetic events (one pointer event per frame).
     fn synthetic_input(&mut self, raw: &mut egui::RawInput) {
+        // What this frame's input makes the windows do is an agent's while any of it is synthetic.
+        self.agent_input = !self.synthetic.is_empty();
         if self.synthetic.is_empty() {
             return;
         }

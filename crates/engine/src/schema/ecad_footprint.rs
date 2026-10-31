@@ -32,11 +32,11 @@ pub struct PadSpec {
     pub row: Option<RowSpec>,
 }
 
-/// `ecad.pad.add`: add pads to an electronic component's footprint, all or none.
+/// `ecad.pad.add`: add pads to a library footprint, all or none.
 #[derive(Debug, Deserialize, JsonSchema)]
 #[schemars(deny_unknown_fields)]
 pub struct AddParams {
-    pub component: ComponentRef,
+    pub footprint: ComponentRef,
     pub pads: Vec<PadSpec>,
     /// Replace every pad the footprint has with these.
     pub replace: Option<bool>,
@@ -46,7 +46,7 @@ pub struct AddParams {
 #[derive(Debug, Deserialize, JsonSchema)]
 #[schemars(deny_unknown_fields)]
 pub struct EditParams {
-    pub component: ComponentRef,
+    pub footprint: ComponentRef,
     /// The pad to change, by number.
     pub pad: Number,
     /// A new number, unique in the footprint.
@@ -66,19 +66,20 @@ pub struct EditParams {
 #[derive(Debug, Deserialize, JsonSchema)]
 #[schemars(deny_unknown_fields)]
 pub struct DeleteParams {
-    pub component: ComponentRef,
+    pub footprint: ComponentRef,
     pub pads: Vec<Number>,
 }
 
 /// What `ecad.pad.add` returns.
 #[derive(Debug, Serialize, JsonSchema)]
 pub struct AddResult {
-    pub component: ComponentId,
+    pub footprint: ComponentId,
     /// How many pads the call added.
     pub added: usize,
     /// How many pads the footprint has now.
     pub pads: usize,
-    /// With `replace`: whether a pin-to-pad map that named pads no longer there was dropped.
+    /// With `replace`: whether a variant's pin-to-pad map that named pads no longer there was
+    /// dropped (in any component built on the footprint).
     pub pin_map_cleared: bool,
     /// In the warn parameter-check mode: what the call's parameters got wrong.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -88,7 +89,7 @@ pub struct AddResult {
 /// What `ecad.pad.edit` returns.
 #[derive(Debug, Serialize, JsonSchema)]
 pub struct EditResult {
-    pub component: ComponentId,
+    pub footprint: ComponentId,
     /// The pad's number after the edit.
     pub pad: String,
     /// The fields that changed; empty when nothing did (then there is no undo step).
@@ -101,7 +102,7 @@ pub struct EditResult {
 /// What `ecad.pad.delete` returns.
 #[derive(Debug, Serialize, JsonSchema)]
 pub struct DeleteResult {
-    pub component: ComponentId,
+    pub footprint: ComponentId,
     pub deleted: Vec<String>,
     /// In the warn parameter-check mode: what the call's parameters got wrong.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -116,11 +117,11 @@ mod tests {
 
     #[test]
     fn schemas_and_the_key_check_agree() {
-        assert_keys(input_schema_for::<AddParams>(), &["component", "pads", "replace"]);
+        assert_keys(input_schema_for::<AddParams>(), &["footprint", "pads", "replace"]);
         assert_keys(
             input_schema_for::<EditParams>(),
-            &["at", "component", "corner", "drill", "kind", "number", "pad", "rotation", "shape", "side", "size"],
+            &["at", "corner", "drill", "footprint", "kind", "number", "pad", "rotation", "shape", "side", "size"],
         );
-        assert_keys(input_schema_for::<DeleteParams>(), &["component", "pads"]);
+        assert_keys(input_schema_for::<DeleteParams>(), &["footprint", "pads"]);
     }
 }

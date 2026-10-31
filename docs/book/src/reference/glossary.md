@@ -46,6 +46,18 @@ An appearance sets colour and surface finish only. It has no effect on mass or s
 - **Elsewhere:** appearance, visual material, colour.
 - **For translators:** not the physical material.
 
+### board check
+
+The check that says whether a circuit board is done for a stage (plan, place, route or release),
+as gates in a fixed order: completeness first, then shorts, what the fab can build, the other
+critical findings, the design intent, and the practical and cosmetic findings.
+
+- **In SolidCraft:** `ecad.board.check` (Check Board, the Board Check window), its `stage` and
+  `gates`.
+- **Don't use:** sign-off, gate (alone, for the whole check).
+- **Elsewhere:** design review checklist, release check.
+- **For translators:** not the design rule check, which is one of its gates.
+
 ### body
 
 One connected solid or surface shape that features create and change.
@@ -157,6 +169,32 @@ A file in which SolidCraft saves one design, with the `.sc` extension (`.solidcr
 - **For translators:** "file" is only for what is on disk: opening, saving, importing and
   exporting.
 
+### design intent
+
+What the nets and parts of a design are for, which the netlist alone doesn't say: supplies,
+ground, clocks, RF lines and buses, the capacitors that decouple each supply pin, crystals,
+protection, connectors that take a cable, and facts about the whole board such as its radio bands.
+
+- **In SolidCraft:** `ecad.intent.inspect`, `ecad.intent.set` (Design Intent); the design-file key
+  `ecad.intent`, with each record's `role`, `source` and `by`.
+- **Don't use:** constraints (for intent), annotations.
+- **Elsewhere:** design constraints, net roles, net attributes.
+- **For translators:** what the designer means the circuit to do, not a rule the checks set.
+
+### designator
+
+The name a part on the schematic goes by, such as R1 or U3: its electronic component's designator
+prefix and a number.
+
+A new part gets one more than the highest number its prefix has on the sheet; designators are
+unique ignoring case.
+
+- **In SolidCraft:** the `designator` of `ecad.schematic.place` and `ecad.schematic.edit`;
+  `ecad.schematic.annotate` ("Renumber Schematic Parts") numbers them again.
+- **Don't use:** reference, ref des, part name.
+- **Elsewhere:** designator, reference designator, reference.
+- **For translators:** not a name of the electronic component (R0603) and not a part number.
+
 ### dimension
 
 A constraint that sets a size, such as a length, a distance, an angle or a radius, by its value.
@@ -199,6 +237,17 @@ The Electronics workspace edits it. A design without electronics saves nothing f
 - **Elsewhere:** ECAD, EDA, electronics design, PCB design.
 - **For translators:** the design's circuit, not the computer's hardware; an electronic component
   is not a SolidCraft component.
+
+### fab profile
+
+The figures a board house can build (narrowest track, least gap, smallest drill, least annular
+ring and how it is measured), as a preset each board picks, every figure with its source.
+
+- **In SolidCraft:** `ecad.board.profile`, `ecad.board.profile.inspect` (Fab Profile in Design
+  Rules); the board's `fab_profile` in the design file.
+- **Don't use:** fab rules, DFM rules, manufacturer settings.
+- **Elsewhere:** fabrication capabilities, design rules of the board house.
+- **For translators:** "fab" is the board house that makes the bare board, not assembly.
 
 ### feature
 
@@ -331,6 +380,20 @@ are kept, not deleted.
 - **For translators:** "history" is the undo history, not the timeline. French had three names
   for this marker while English did.
 
+### schematic
+
+The drawing of an electric circuit: parts (placed copies of electronic components' symbols), the
+wires between their pins, net labels and power ports.
+
+Each part refers to its electronic component and shows its current symbol. Nets are worked out
+from the sheet, never saved.
+
+- **In SolidCraft:** the `ecad.schematic.*` commands; `ecad.schematic` in the design file, with
+  `parts`, `wires`, `labels` and `markers`.
+- **Don't use:** diagram, circuit (for the drawing), drawing (a sheet with views of a model).
+- **Elsewhere:** schematic, circuit diagram, schematic sheet.
+- **For translators:** a circuit drawing, not a technical drawing of a model.
+
 ### sketch
 
 A set of points and curves, with their constraints, on one plane, that features use as profiles,
@@ -412,6 +475,7 @@ share a catalogue entry. Each meaning below gets its own term and, in time, its 
 | Part | a standard part | *standard part* | `parts.*` |
 | | a body, an occurrence or the design | *body*, *occurrence*, *design* | catalogue texts that say "part" |
 | | a design property | *part number* | Design Properties |
+| | an electronic component placed on the schematic | *schematic part* | `ecad.schematic.*` |
 | Gap | the space a hem leaves | hem gap | the Hem dialog's Gap row |
 | | an open end in the sketch continuity legend | open end | the sketch continuity legend |
 | Clearance | the Clearance command | clearance check | `inspect.clearance` |

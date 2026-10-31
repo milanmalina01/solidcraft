@@ -1,14 +1,15 @@
-//! An electronic component's footprint: the copper pads it is soldered to, as seen from the top of
-//! the board. A pad is a rectangle, a circle, an oval or a rounded rectangle; a surface-mount pad
+//! A footprint in the design's library: the copper pads a part is soldered to, as seen from the top
+//! of the board, and its silkscreen, fabrication and courtyard graphics. Electronic components use
+//! a footprint by id, so one footprint (SOT-23) serves many components. A pad is a rectangle, a circle, an oval or a rounded rectangle; a surface-mount pad
 //! is on one side, a plated through-hole pad has a drill and copper on both sides, and an unplated
-//! hole is a drill with no copper. The other board layers come with a later change.
+//! hole is a drill with no copper.
 //!
 //! Every pad shape is a convex core (a point, a line or a rectangle) grown by a radius, so areas,
 //! boxes and the gaps between pads are exact.
 
 use serde::{Deserialize, Serialize};
 
-use super::{check_number, check_point};
+use super::{MAX_DESCRIPTION, MAX_ID, check_item_name, check_number, check_point, check_text};
 
 /// The most pads a footprint has.
 pub const MAX_PADS: usize = 4096;
@@ -19,10 +20,16 @@ pub const MAX_PAD_SIZE: f64 = 100.0;
 /// The smallest drill, in millimetres.
 pub const MIN_DRILL: f64 = 0.05;
 
-/// The footprint.
+/// A footprint.
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub struct Footprint {
+pub struct FootprintItem {
+    /// Never 0; symbols, footprints, 3D packages and electronic components share one id space.
+    pub id: u64,
+    /// Unique among the footprints, such as `SOT-23` or `R0603`.
+    pub name: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub description: String,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub pads: Vec<Pad>,
     /// Silkscreen, fabrication and courtyard graphics, each with its `layer` and `side`.
@@ -288,7 +295,12 @@ impl Pad {
     }
 }
 
-impl Footprint {
+/// What a variant without a footprint has: nothing.
+pub static NO_FOOTPRINT: FootprintItem =
+    FootprintItem { id: 0, name: String::new(), description: String::new(), pads: Vec::new(), graphics: Vec::new() };
+
+impl FootprintItem {
+    /// Whether it has nothing to draw: no pads and no graphics.
     pub fn is_empty(&self) -> bool {
         self.pads.is_empty() && self.graphics.is_empty()
     }
@@ -302,8 +314,19 @@ impl Footprint {
         self.pads.iter().find(|p| p.number == number)
     }
 
-    /// The caps, each pad's rules, and unique numbers.
+    /// The record's own rules (an id, a name, a description within its length), the caps, each
+    /// pad's rules, and unique numbers.
     pub fn validate(&self) -> Result<(), String> {
+        if self.id == 0 || self.id >= MAX_ID {
+            return Err(format!("footprint `{}` has the id {}, which is out of range", self.name, self.id));
+        }
+        check_item_name("footprint", &self.name)?;
+        check_text("description", &self.description, MAX_DESCRIPTION)?;
+        self.validate_drawing().map_err(|e| format!("footprint `{}`: {e}", self.name))
+    }
+
+    /// The pads and graphics alone: the caps, each pad's rules, and unique numbers.
+    pub fn validate_drawing(&self) -> Result<(), String> {
         if self.pads.len() > MAX_PADS {
             return Err(format!("a footprint has at most {MAX_PADS} pads"));
         }

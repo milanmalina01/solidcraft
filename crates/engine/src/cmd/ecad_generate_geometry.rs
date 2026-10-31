@@ -39,7 +39,7 @@ pub(super) fn pad(number: impl ToString, at: [f64; 2], size: [f64; 2]) -> Pad {
     Pad { number: number.to_string(), at, size, rotation: 0.0, side: Side::Top, shape: PadShape::Rect, corner: 0.0, kind: PadKind::Smd, drill: None }
 }
 
-fn graphic(kind: GraphicType, layer: Option<BoardLayer>, width: f64) -> Graphic {
+pub(super) fn graphic(kind: GraphicType, layer: Option<BoardLayer>, width: f64) -> Graphic {
     Graphic {
         kind,
         layer,
@@ -66,6 +66,19 @@ pub(super) fn rect(layer: Option<BoardLayer>, from: [f64; 2], to: [f64; 2], widt
 
 pub(super) fn line(layer: Option<BoardLayer>, points: Vec<[f64; 2]>, width: f64) -> Graphic {
     Graphic { points, ..graphic(GraphicType::Line, layer, width) }
+}
+
+/// The height of a generated symbol's designator and value text, in millimetres.
+pub(super) const NAME_HEIGHT: f64 = 1.27;
+
+/// A placed part's designator (`{designator}`) or value (`{value}`) from `at`, its lower left.
+pub(super) fn name_text(text: &str, at: [f64; 2]) -> Graphic {
+    Graphic { at: Some(at), text: text.into(), height: Some(NAME_HEIGHT), ..graphic(GraphicType::Text, None, NAME_HEIGHT / 10.0) }
+}
+
+/// The designator over the symbol's box and the value under it, from its left edge.
+pub(super) fn names(left: f64, top: f64, bottom: f64) -> [Graphic; 2] {
+    [name_text("{designator}", [left, top + 0.5]), name_text("{value}", [left, bottom - 0.5 - NAME_HEIGHT])]
 }
 
 pub(super) fn dot(layer: Option<BoardLayer>, center: [f64; 2], radius: f64) -> Graphic {
@@ -251,8 +264,11 @@ pub(super) fn box_symbol(pins: &[(String, String, PinType, PinSide)]) -> (Vec<Pi
     let xs: Vec<f64> = [&top, &bottom].iter().flat_map(|side| (0..side.len()).map(|i| -place(side.len(), i))).collect();
     let y_top = ys.iter().copied().fold(0.0, f64::max) + GRID;
     let y_bottom = ys.iter().copied().fold(0.0, f64::min) - GRID;
-    // Room for the longest name each side, at 1.27 mm text (0.6 of the height per character).
-    let name = |side: &[&(String, String, PinType, PinSide)]| side.iter().map(|p| p.1.chars().count()).max().unwrap_or(0) as f64 * 1.27 * 0.6;
+    // Room for the longest name each side, at 1.27 mm text (0.6 of the height per character; a
+    // bar's markup takes none).
+    let name = |side: &[&(String, String, PinType, PinSide)]| {
+        side.iter().map(|p| solidcraft_doc::ecad::overbar::plain(&p.1).chars().count()).max().unwrap_or(0) as f64 * 1.27 * 0.6
+    };
     let reach = xs.iter().map(|x| x.abs()).fold(0.0, f64::max) + GRID;
     let half_w = (((name(&left) + name(&right) + GRID) / 2.0).max(reach).max(2.0 * GRID) / GRID).ceil() * GRID;
     let mut out = Vec::new();
@@ -265,28 +281,41 @@ pub(super) fn box_symbol(pins: &[(String, String, PinType, PinSide)]) -> (Vec<Pi
                 PinSide::Top => ([-t, y_top + GRID], PinDirection::Down),
                 PinSide::Bottom => ([-t, y_bottom - GRID], PinDirection::Up),
             };
-            out.push(Pin { number: number.clone(), name: name.clone(), electrical: *electrical, at, direction, length: GRID });
+            out.push(Pin { number: number.clone(), name: name.clone(), name_hidden: false, electrical: *electrical, at, direction, length: GRID });
         }
     }
     // Listed in the order they were given, whichever side each is on.
     out.sort_by_key(|p| pins.iter().position(|q| q.0 == p.number));
-    (out, vec![rect(None, [-half_w, y_bottom], [half_w, y_top], 0.254)])
+    let mut body = vec![rect(None, [-half_w, y_bottom], [half_w, y_top], 0.254)];
+    body.extend(names(-half_w, y_top, y_bottom));
+    (out, body)
 }
 
 /// A two-terminal symbol (a resistor's box, or a capacitor's two plates): pin 1 left, pin 2 right.
 pub(super) fn two_terminal(capacitor: bool) -> (Vec<Pin>, Vec<Graphic>) {
-    let pin =
-        |n: &str, at: [f64; 2], direction| Pin { number: n.into(), name: String::new(), electrical: PinType::Passive, at, direction, length: GRID };
-    let pins = vec![pin("1", [-2.0 * GRID, 0.0], PinDirection::Right), pin("2", [2.0 * GRID, 0.0], PinDirection::Left)];
-    let body = if capacitor {
-        vec![
-            line(None, vec![[-GRID, 0.0], [-0.508, 0.0]], 0.254),
-            line(None, vec![[-0.508, -1.524], [-0.508, 1.524]], 0.4064),
-            line(None, vec![[0.508, -1.524], [0.508, 1.524]], 0.4064),
-            line(None, vec![[0.508, 0.0], [GRID, 0.0]], 0.254),
-        ]
-    } else {
-        vec![rect(None, [-GRID, -1.016], [GRID, 1.016], 0.254)]
+    let pin = |n: &str, at: [f64; 2], direction| Pin {
+        number: n.into(),
+        name: String::new(),
+        name_hidden: false,
+        electrical: PinType::Passive,
+        at,
+        direction,
+        length: GRID,
     };
+    let pins = vec![pin("1", [-2.0 * GRID, 0.0], PinDirection::Right), pin("2", [2.0 * GRID, 0.0], PinDirection::Left)];
+    let (mut body, half) = if capacitor {
+        (
+            vec![
+                line(None, vec![[-GRID, 0.0], [-0.508, 0.0]], 0.254),
+                line(None, vec![[-0.508, -1.524], [-0.508, 1.524]], 0.4064),
+                line(None, vec![[0.508, -1.524], [0.508, 1.524]], 0.4064),
+                line(None, vec![[0.508, 0.0], [GRID, 0.0]], 0.254),
+            ],
+            1.524,
+        )
+    } else {
+        (vec![rect(None, [-GRID, -1.016], [GRID, 1.016], 0.254)], 1.016)
+    };
+    body.extend(names(-GRID, half, -half));
     (pins, body)
 }

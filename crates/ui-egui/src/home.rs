@@ -59,14 +59,22 @@ pub struct HomeState {
     /// Whether each recent file is there, found off the window thread (a stat of a slow or
     /// disconnected drive must not hold up the page); unknown counts as there.
     present: HashMap<String, bool>,
+    /// What kind of document each recent file holds (an electronics library or design shows as
+    /// one), read with the check above; unknown counts as a 3D design.
+    kinds: HashMap<String, solidcraft_engine::doc::DocumentKind>,
     /// Autosaves whose file was written after them, with when: Recover lists them after
     /// `recoverable`; the launch prompt leaves them out (`recovery_ui::scan`).
     pub(crate) saved_later: Vec<(solidcraft_engine::recovery::Entry, u64)>,
     #[cfg(not(target_arch = "wasm32"))]
     present_asked: std::collections::HashSet<String>,
     #[cfg(not(target_arch = "wasm32"))]
-    present_rx: Vec<std::sync::mpsc::Receiver<(String, bool)>>,
+    present_rx: Vec<std::sync::mpsc::Receiver<Present>>,
 }
+
+/// A recent file found to be there or not, and what kind of document it holds when that could be
+/// read.
+#[cfg(not(target_arch = "wasm32"))]
+type Present = (String, bool, Option<solidcraft_engine::doc::DocumentKind>);
 
 impl HomeState {
     /// Wait for the background check of the recent files to answer (tests only).
@@ -75,7 +83,7 @@ impl HomeState {
         let deadline = std::time::Instant::now() + std::time::Duration::from_secs(30);
         while self.recent.iter().any(|p| !self.present.contains_key(p)) && std::time::Instant::now() < deadline {
             for rx in &self.present_rx {
-                while let Ok((p, there)) = rx.try_recv() {
+                while let Ok((p, there, _)) = rx.try_recv() {
                     self.present.insert(p, there);
                 }
             }
@@ -542,7 +550,8 @@ fn ask_present(h: &mut HomeState, ctx: &egui::Context, recent: &[String]) {
             let spawned = std::thread::Builder::new().name("recent-files".into()).spawn(move || {
                 for p in new {
                     let there = solidcraft_engine::io::vfs::exists(&p);
-                    if tx.send((p, there)).is_err() {
+                    let kind = there.then(|| solidcraft_engine::io::read_design_kind_file(&p)).flatten();
+                    if tx.send((p, there, kind)).is_err() {
                         return;
                     }
                     ctx.request_repaint();
@@ -553,15 +562,42 @@ fn ask_present(h: &mut HomeState, ctx: &egui::Context, recent: &[String]) {
             }
         }
         for rx in &h.present_rx {
-            while let Ok((p, there)) = rx.try_recv() {
+            while let Ok((p, there, kind)) = rx.try_recv() {
+                if let Some(kind) = kind {
+                    h.kinds.insert(p.clone(), kind);
+                }
                 h.present.insert(p, there);
             }
         }
     }
     #[cfg(target_arch = "wasm32")]
-    for p in recent {
-        h.present.insert(p.clone(), solidcraft_engine::io::vfs::exists(p));
+    {
+        // A file's kind is read from it (its document parsed): one file a frame, so the page
+        // doesn't wait on them all at once.
+        let mut read = false;
+        for p in recent {
+            let there = solidcraft_engine::io::vfs::exists(p);
+            h.present.insert(p.clone(), there);
+            if there && !h.kinds.contains_key(p) {
+                if read {
+                    ctx.request_repaint();
+                    continue;
+                }
+                read = true;
+                h.kinds.insert(p.clone(), solidcraft_engine::io::read_design_kind_file(p).unwrap_or_default());
+            }
+        }
     }
+}
+
+/// What kind of document the recent file `path` holds: an open tab's own, else what its file said.
+fn recent_kind(app: &SolveApp, path: &str) -> solidcraft_engine::doc::DocumentKind {
+    std::iter::once(&app.session)
+        .chain(app.docs.background())
+        .find(|s| s.path.as_deref() == Some(path))
+        .map(|s| s.doc.kind)
+        .or_else(|| app.home.kinds.get(path).copied())
+        .unwrap_or_default()
 }
 
 #[derive(Clone, Copy, Default, PartialEq)]
@@ -572,10 +608,13 @@ enum Section {
     Export,
 }
 
+#[derive(Clone)]
 enum FileAction {
     Back,
     Section(Section),
     New(&'static str),
+    /// An electronics library or an electronics design, in its own tab.
+    NewElectronics(solidcraft_engine::doc::DocumentKind),
     Open,
     Import,
     Save,
@@ -802,24 +841,36 @@ fn start_content(app: &mut SolveApp, ui: &mut egui::Ui, action: &mut Option<File
     }
     let shortcut = if cfg!(target_os = "macos") { "⌘O" } else { "Ctrl+O" };
     let open_hint = crate::i18n::format("home.open_hint", &[("shortcut", shortcut)]);
+    use solidcraft_engine::doc::DocumentKind;
     let tiles = [
-        ("home:new_mm", "new", app.tr("home.new_mm"), app.tr("home.new_mm_hint"), true),
-        ("home:new_inches", "new", app.tr("home.new_inches"), app.tr("home.new_inches_hint"), false),
-        ("home:open_tile", "open", app.tr("home.open"), open_hint.as_str(), false),
-        ("home:import", "import", app.tr("home.import"), app.tr("home.import_hint"), false),
+        ("home:new_mm", "new", app.tr("home.new_mm"), app.tr("home.new_mm_hint"), true, FileAction::New("mm")),
+        ("home:new_inches", "new", app.tr("home.new_inches"), app.tr("home.new_inches_hint"), false, FileAction::New("in")),
+        (
+            "home:new_electronics_design",
+            "ws_electronics",
+            app.tr("home.new_electronics_design"),
+            app.tr("home.new_electronics_design_hint"),
+            false,
+            FileAction::NewElectronics(DocumentKind::ElectronicsDesign),
+        ),
+        (
+            "home:new_electronics_library",
+            "library",
+            app.tr("home.new_electronics_library"),
+            app.tr("home.new_electronics_library_hint"),
+            false,
+            FileAction::NewElectronics(DocumentKind::ElectronicsLibrary),
+        ),
+        ("home:open_tile", "open", app.tr("home.open"), open_hint.as_str(), false, FileAction::Open),
+        ("home:import", "import", app.tr("home.import"), app.tr("home.import_hint"), false, FileAction::Import),
     ];
     FileView::section(ui, app.tr_label("New"), t.space_12, |ui| {
         FileView::grid(ui, "home_new", FileView::tile_min_width(), tiles.len(), |ui, index, width| {
-            let Some((id, icon, title, hint, primary)) = tiles.get(index) else { return };
+            let Some((id, icon, title, hint, primary, then)) = tiles.get(index) else { return };
             let response = FileView::action_tile(ui, id, width, icon, title, hint, *primary);
             publish(id, &response);
             if response.clicked() {
-                *action = Some(match index {
-                    0 => FileAction::New("mm"),
-                    1 => FileAction::New("in"),
-                    2 => FileAction::Open,
-                    _ => FileAction::Import,
-                });
+                *action = Some(then.clone());
             }
         });
     });
@@ -843,6 +894,13 @@ fn start_content(app: &mut SolveApp, ui: &mut egui::Ui, action: &mut Option<File
                     } else {
                         friendly_path(path)
                     };
+                    // An electronics library or design shows its kind and icon, not a picture
+                    // of the 3D models it keeps.
+                    let (workspace, icon, picture) = match recent_kind(app, path) {
+                        DocumentKind::Design => ("home.design_workspace", "box", true),
+                        DocumentKind::ElectronicsDesign => ("home.new_electronics_design", "ws_electronics", false),
+                        DocumentKind::ElectronicsLibrary => ("home.new_electronics_library", "library", false),
+                    };
                     let response = FileView::recent_row(
                         ui,
                         &format!("home:recent:{index}"),
@@ -850,11 +908,12 @@ fn start_content(app: &mut SolveApp, ui: &mut egui::Ui, action: &mut Option<File
                             title: &name,
                             path: &shown_path,
                             when: &when,
-                            workspace: app.tr("home.design_workspace"),
-                            thumbnail: texture(app.home.thumbs.get(path).and_then(Option::as_ref)),
+                            workspace: app.tr(workspace),
+                            thumbnail: picture.then(|| texture(app.home.thumbs.get(path).and_then(Option::as_ref))).flatten(),
                             // A design whose picture could not be made shows a dimmed placeholder,
                             // distinct from the one shown while a picture is still loading (#4655).
-                            thumbnail_failed: app.home.thumb_failed(path),
+                            thumbnail_failed: picture && app.home.thumb_failed(path),
+                            icon,
                         },
                     );
                     publish(&format!("home:recent:{index}"), &response);
@@ -1033,6 +1092,7 @@ fn dispatch(app: &mut SolveApp, ctx: &egui::Context, action: FileAction) {
                 crate::prefs::apply_new_design_units(app, units);
             }
         }
+        FileAction::NewElectronics(kind) => crate::documents::new_electronics(app, kind),
         FileAction::Open => app.pick_open(|app, path| {
             if let Some(path) = path {
                 app.open_path_async(&path);
@@ -1527,11 +1587,18 @@ mod tests {
         h.app.home.show(0);
         h.frames(5);
         let page = crate::scenario::rect_of("home:page").unwrap();
-        let first = crate::scenario::rect_of("home:new_mm").unwrap();
-        for id in ["home:new_mm", "home:new_inches", "home:open_tile", "home:import"] {
-            let rect = crate::scenario::rect_of(id).unwrap();
-            assert!((rect.top() - first.top()).abs() < 0.5, "{id}: action tiles must share a row");
-            assert!(page.contains_rect(rect), "{id}: card is off screen");
+        // Six action tiles (a 3D design in mm or inches, an electronics design or library, Open,
+        // Import), in rows of at least three, in order.
+        let ids = ["home:new_mm", "home:new_inches", "home:new_electronics_design", "home:new_electronics_library", "home:open_tile", "home:import"];
+        let rects: Vec<egui::Rect> = ids.iter().map(|id| crate::scenario::rect_of(id).unwrap()).collect();
+        let columns = rects.iter().filter(|r| (r.top() - rects[0].top()).abs() < 0.5).count();
+        assert!(columns >= 3, "{columns} action tiles a row");
+        for (k, (id, rect)) in ids.iter().zip(&rects).enumerate() {
+            let first = rects[k / columns * columns];
+            assert!((rect.top() - first.top()).abs() < 0.5, "{id}: action tiles must share their row");
+            assert!(k % columns == 0 || rect.left() > rects[k - 1].right(), "{id}: tiles run left to right");
+            assert!(k < columns || rect.top() > rects[k - columns].bottom(), "{id}: a new row under the last");
+            assert!(page.contains_rect(*rect), "{id}: card is off screen");
         }
         let first = crate::scenario::rect_of("home:sample:0").unwrap();
         for i in 0..6 {

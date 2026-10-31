@@ -212,8 +212,9 @@ fn key_from(name: &str) -> Option<egui::Key> {
     })
 }
 
-/// Run one command as `engine.execute` does: through `app.run`, then the first-body fit and the
-/// camera the command asked for.
+/// Run one command as `engine.execute` does: through `app.run_program` (a board edit's reply
+/// gives `findings_delta`, as for any program), then the first-body fit and the camera the
+/// command asked for.
 fn execute(app: &mut SolveApp, id: &str, params: Value) -> Result<Value, String> {
     // `view.pick` is answered by the viewport, not the engine: pixels and rays need the
     // window's camera and pick index, and the command must not touch the document, the
@@ -222,7 +223,7 @@ fn execute(app: &mut SolveApp, id: &str, params: Value) -> Result<Value, String>
     if id == "view.pick" {
         return crate::view_pick::pick_command(app, &params);
     }
-    let r = app.run(id, params);
+    let r = app.run_program(id, params);
     if r.is_ok()
         && !matches!(
             id,
@@ -497,6 +498,8 @@ fn dispatch(app: &mut SolveApp, ctx: &egui::Context, method: &str, p: &Value) ->
             "visibility": app.session.visibility,
             "viewport": app.viewport.rect.map(|r| json!([r.left(), r.top(), r.width(), r.height()])),
             "camera": app.cam,
+            // An electronics page's own camera (it pans by itself while routing near an edge).
+            "electronics_camera": app.session.doc.kind.is_electronics().then_some(&app.electronics.page.cam),
             "tool": app.tool.as_ref().map(|t| t.cmd),
             "dialog": app.dialog.as_ref().map(|d| format!("{d:?}")),
             "status": app.status.as_ref().map(|(text, _, error)| json!({"text": text, "error": error})),
@@ -591,11 +594,10 @@ fn dispatch(app: &mut SolveApp, ctx: &egui::Context, method: &str, p: &Value) ->
                     {
                         return err(e);
                     }
-                    let electronics = u.tab == crate::electronics_workspace::TAB;
-                    if electronics != crate::electronics_workspace::active(app)
-                        && let Err(e) = crate::electronics_workspace::enter(app, electronics)
-                    {
-                        return err(e);
+                    // The electronics tabs are an electronics document's own (in one, the next frame
+                    // takes a 3D design's tab back to one of its own while nothing needs it).
+                    if crate::electronics_workspace::TABS.contains(&u.tab.as_str()) && !app.session.doc.kind.is_electronics() {
+                        return err(format!("`{}` is a tab of electronics documents only", u.tab));
                     }
                     u.ribbon_context = app.ui.ribbon_context.clone();
                     app.ui = u;
@@ -692,7 +694,8 @@ fn dispatch(app: &mut SolveApp, ctx: &egui::Context, method: &str, p: &Value) ->
                     Some("middle") => egui::PointerButton::Middle,
                     _ => egui::PointerButton::Primary,
                 };
-                let modifiers = egui::Modifiers { shift: b("shift"), ctrl: b("ctrl"), command: b("ctrl"), alt: b("alt"), ..Default::default() };
+                let modifiers =
+                    egui::Modifiers { shift: b("shift"), ctrl: b("ctrl"), command: b("ctrl") || b("cmd"), alt: b("alt"), mac_cmd: b("cmd") };
                 // `double: true` sends two clicks in one frame, which egui reads as a double-click.
                 for _ in 0..if b("double") { 2 } else { 1 } {
                     app.synthetic.push(egui::Event::PointerButton { pos, button, pressed: true, modifiers });
@@ -708,7 +711,7 @@ fn dispatch(app: &mut SolveApp, ctx: &egui::Context, method: &str, p: &Value) ->
                 Some("middle") => egui::PointerButton::Middle,
                 _ => egui::PointerButton::Primary,
             };
-            let modifiers = egui::Modifiers { shift: b("shift"), ctrl: b("ctrl"), command: b("ctrl"), alt: b("alt"), ..Default::default() };
+            let modifiers = egui::Modifiers { shift: b("shift"), ctrl: b("ctrl"), command: b("ctrl") || b("cmd"), alt: b("alt"), mac_cmd: b("cmd") };
             let (a, z) = (egui::pos2(x0 as f32, y0 as f32), egui::pos2(x1 as f32, y1 as f32));
             // Positioning precedes the press by a frame: it is not a modifier-only gesture.
             app.synthetic.push(egui::Event::ModifiersChanged(egui::Modifiers::NONE));
@@ -750,6 +753,8 @@ fn dispatch(app: &mut SolveApp, ctx: &egui::Context, method: &str, p: &Value) ->
                 .collect::<Vec<_>>(),
             "dimension_selected": crate::dim_view::selected(app),
             "dimension_editing": crate::dim_view::editing(),
+            // The Electronics workspace's own pick (its sheet, board or library item).
+            "ecad": crate::electronics_design::selection(app),
         })),
         "ui.triad" => {
             // Screen points of the 3D move triad's handles (x, y, z arrows and the plane square).
@@ -999,6 +1004,8 @@ fn dispatch(app: &mut SolveApp, ctx: &egui::Context, method: &str, p: &Value) ->
                 json!({"diagnostics": crate::help::diagnostics(app), "version": crate::help::VERSION, "commit": crate::help::COMMIT, "built": crate::help::BUILD_DATE}),
             ),
         },
+        // On an electronics board, the board's objects under the point.
+        "ui.selectOther" if crate::electronics_workspace::board(app) => wrap(crate::electronics_board::select_other(app, p)),
         "ui.selectOther" => wrap(crate::select_other::control(app, p)),
         "ui.menuPick" => {
             let Some(key) = s("item") else { return err("missing `item` (id or label)") };
