@@ -84,11 +84,48 @@ pub fn tick(app: &mut SolveApp) {
     }
 }
 
+/// Bring every open design's autosave up to date now, waiting for the writes (the scenario
+/// harness, before it lets the app crash).
+pub(crate) fn catch_up(app: &mut SolveApp) {
+    let Some(a) = app.autosave.as_mut() else { return };
+    for slot in app.docs.background_mut() {
+        let _ = save_slot(&a.dir, &mut slot.autosave, &slot.session, true, true);
+    }
+    let _ = save_slot(&a.dir, &mut a.active, &app.session, true, true);
+}
+
+/// The autosaves crashed (or closed) apps left in `dir`: those to offer at launch, and those whose
+/// file was written after them, with when (seconds since 1970). The launch prompt leaves the second
+/// kind out, but they may hold work the file has not (a design saved here drops its autosave, so
+/// another app, machine or tool wrote that file): File view's Recover lists them last, with a note.
+pub(crate) fn scan(dir: &Path) -> (Vec<Entry>, Vec<(Entry, u64)>) {
+    let (mut offered, mut later) = (Vec::new(), Vec::new());
+    for e in recovery::orphans(dir) {
+        match written_at(&e).filter(|&at| at > e.saved_at) {
+            Some(at) => later.push((e, at)),
+            None => offered.push(e),
+        }
+    }
+    (offered, later)
+}
+
+/// The autosaves to offer at launch (see [`scan`]).
+pub(crate) fn offered(dir: &Path) -> Vec<Entry> {
+    scan(dir).0
+}
+
+/// When the file an autosave belongs to was last written (to the second). A file elsewhere on the
+/// network is not asked.
+fn written_at(e: &Entry) -> Option<u64> {
+    let path = e.path.as_deref().filter(|p| solidcraft_engine::io::vfs::remote(p).is_none())?;
+    std::fs::metadata(path).and_then(|m| m.modified()).ok().and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok()).map(|d| d.as_secs())
+}
+
 /// Start autosaving into `dir` and queue the designs that crashed apps left there.
 pub fn start(app: &mut SolveApp, dir: &std::path::Path, interval: std::time::Duration) {
     match Autosaver::new(dir, SHARED_CADENCE) {
         Ok(a) => {
-            app.recoverable = recovery::orphans(dir);
+            app.recoverable = offered(dir);
             app.autosave = Some(Autosaves { dir: dir.to_path_buf(), interval, active: Some(a), last_at: Instant::now() });
         }
         Err(e) => app.set_status(format!("autosave is off: {e}"), true),
@@ -164,13 +201,18 @@ pub fn show(app: &mut SolveApp, ctx: &egui::Context) {
 /// Shared recovery action for the launch prompt and File view; dirty work is never replaced.
 pub(crate) fn apply(app: &mut SolveApp, entry: Entry, recover: bool) {
     let dir_s = app.autosave.as_ref().map(|a| a.dir.clone()).or_else(recovery::default_dir).map(|d| d.to_string_lossy().to_string());
+    let saved_later = app.home.saved_later.iter().any(|(x, _)| x.id == entry.id);
     app.recoverable.retain(|x| x.id != entry.id);
-    if recover {
-        if app.session.is_dirty() {
-            app.set_status("save or discard the open design's changes before recovering another", true);
+    if recover && app.session.is_dirty() {
+        app.set_status("save or discard the open design's changes before recovering another", true);
+        // One the file was saved after stays in its own list.
+        if !saved_later {
             app.recoverable.insert(0, entry);
-            return;
         }
+        return;
+    }
+    app.home.saved_later.retain(|(x, _)| x.id != entry.id);
+    if recover {
         // Rebuilt off the window thread like any other file; once it is in, it is
         // autosaved under this app's entry before the old entry goes.
         let kind = crate::file_load::Kind::Recover { id: entry.id.clone(), dir: dir_s };
@@ -456,6 +498,75 @@ mod tests {
 
     fn entry(id: &str, name: &str) -> Entry {
         Entry { id: id.into(), path: None, name: name.into(), saved_at: 0, features: 3 }
+    }
+
+    /// An autosave whose design file was written after it (a save here drops the autosave, so
+    /// another app, computer or tool wrote that file) is not offered at launch. File view's
+    /// Recover still lists it, after the others and saying when the file was saved; a refused
+    /// recovery keeps it there, and discarding it removes it.
+    #[test]
+    fn an_autosave_older_than_its_file_is_not_offered_at_launch_but_file_view_lists_it_last() {
+        let (mut app, dir) = app("saved-later", Duration::ZERO);
+        let designs = std::env::temp_dir().join(format!("solidcraft-recovery-saved-later-designs-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&designs);
+        fs::create_dir_all(&designs).unwrap();
+        let (kept, overwritten) = (designs.join("kept.solidcraft"), designs.join("overwritten.solidcraft"));
+        for (i, path) in [&kept, &overwritten].into_iter().enumerate() {
+            if i > 0 {
+                documents::new_tab(&mut app);
+            }
+            app.run("file.save_as", json!({"path": path})).unwrap();
+            edit(&mut app);
+        }
+        tick_and_wait(&mut app);
+        let saved = entries(&dir);
+        assert_eq!(saved.len(), 2);
+        drop(app); // A crash: both autosaves stay.
+        let of = |path: &Path| saved.iter().find(|e| e.path.as_deref() == Some(path.to_str().unwrap())).unwrap().clone();
+        let (older, newer) = (of(&kept), of(&overwritten));
+        // One file untouched since its autosave; the other written a minute after its autosave.
+        let stamp = |path: &Path, at: u64| {
+            let when = std::time::UNIX_EPOCH + Duration::from_secs(at);
+            fs::File::options().write(true).open(path).unwrap().set_modified(when).unwrap();
+        };
+        stamp(&kept, older.saved_at - 60);
+        stamp(&overwritten, newer.saved_at + 60);
+        let (offered, later) = scan(&dir);
+        assert_eq!(offered, vec![older.clone()]);
+        assert_eq!(later, vec![(newer.clone(), newer.saved_at + 60)]);
+        // The launch prompt offers only the first.
+        let restarted = restart(&dir);
+        assert_eq!(restarted.recoverable, vec![older.clone()]);
+        drop(restarted);
+
+        let mut h = crate::scenario::Harness::new();
+        start(&mut h.app, &dir, Duration::from_secs(3600));
+        h.app.home.open = true;
+        h.frames(2);
+        h.step(&json!({"click": {"handle": "home:recover"}})).unwrap();
+        h.frames(2);
+        assert_eq!(h.app.home.saved_later, vec![(newer.clone(), newer.saved_at + 60)]);
+        assert_eq!(h.app.recoverable, vec![older.clone()]);
+        for row in ["home:recovery:0:recover", "home:recovery:1:recover", "home:recovery:1:discard"] {
+            assert!(crate::scenario::handle_at(row).is_some(), "{row}");
+        }
+        assert!(crate::scenario::handle_at("home:recovery:2:recover").is_none());
+        // Refused while the open design has changes: it stays in its own list.
+        h.app.run("solid.box", json!({"length": 10, "width": 10, "height": 10})).unwrap();
+        apply(&mut h.app, newer.clone(), true);
+        assert!(h.app.status.as_ref().is_some_and(|(m, _, error)| *error && m.contains("before recovering another")));
+        assert_eq!(h.app.home.saved_later.len(), 1);
+        assert_eq!(h.app.recoverable, vec![older.clone()], "not moved into the launch list");
+        h.frames(2);
+        // Discarded from File view: gone from the list and the folder.
+        h.step(&json!({"click": {"handle": "home:recovery:1:discard"}})).unwrap();
+        h.frames(2);
+        assert!(h.app.home.saved_later.is_empty(), "{:?} {:?}", h.app.home.saved_later, h.app.status);
+        assert_eq!(h.app.recoverable, vec![older.clone()]);
+        assert!(entries(&dir).iter().all(|e| e.id != newer.id), "the overwritten design's autosave is deleted");
+        drop(h);
+        let _ = fs::remove_dir_all(&designs);
+        fs::remove_dir_all(dir).unwrap();
     }
 
     #[test]

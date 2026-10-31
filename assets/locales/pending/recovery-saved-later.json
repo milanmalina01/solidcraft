@@ -1,0 +1,26 @@
+{
+  "en": {
+    "recovery.saved_later": "The file was saved after this autosave ({when}), maybe without this work."
+  },
+  "ar": {
+    "recovery.saved_later": "حُفظ الملف بعد هذا الحفظ التلقائي ({when})، وربما بدون هذا العمل."
+  },
+  "de": {
+    "recovery.saved_later": "Die Datei wurde nach dieser automatischen Sicherung gespeichert ({when}), vielleicht ohne diese Arbeit."
+  },
+  "he": {
+    "recovery.saved_later": "הקובץ נשמר אחרי השמירה האוטומטית הזו ({when}), אולי בלי העבודה הזו."
+  },
+  "ja": {
+    "recovery.saved_later": "ファイルはこの自動保存の後に保存されました（{when}）。この作業が含まれていない可能性があります。"
+  },
+  "ko": {
+    "recovery.saved_later": "이 자동 저장 후에 파일이 저장되었습니다({when}). 이 작업이 포함되지 않았을 수 있습니다."
+  },
+  "vi": {
+    "recovery.saved_later": "Tệp đã được lưu sau lần tự động lưu này ({when}), có thể không có phần việc này."
+  },
+  "zh": {
+    "recovery.saved_later": "文件在此自动保存之后被保存过（{when}），可能不包含这些工作。"
+  }
+}

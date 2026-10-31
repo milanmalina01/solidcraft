@@ -59,6 +59,9 @@ pub struct HomeState {
     /// Whether each recent file is there, found off the window thread (a stat of a slow or
     /// disconnected drive must not hold up the page); unknown counts as there.
     present: HashMap<String, bool>,
+    /// Autosaves whose file was written after them, with when: Recover lists them after
+    /// `recoverable`; the launch prompt leaves them out (`recovery_ui::scan`).
+    pub(crate) saved_later: Vec<(solidcraft_engine::recovery::Entry, u64)>,
     #[cfg(not(target_arch = "wasm32"))]
     present_asked: std::collections::HashSet<String>,
     #[cfg(not(target_arch = "wasm32"))]
@@ -945,11 +948,13 @@ fn recent_time_at(app: &SolveApp, time: u64, now: u64) -> String {
 }
 
 fn recovery_content(app: &SolveApp, ui: &mut egui::Ui, action: &mut Option<FileAction>) {
-    if app.recoverable.is_empty() {
+    if app.recoverable.is_empty() && app.home.saved_later.is_empty() {
         ui_kit::text(ui, app.tr("home.recovery_empty"), ui_kit::Text::Inline);
     }
-    for (index, entry) in app.recoverable.iter().take(20).enumerate() {
-        let detail = crate::i18n::format(
+    // Those whose file was saved after them come last, saying when.
+    let saved_later = app.home.saved_later.iter().map(|(entry, at)| (entry, Some(*at)));
+    for (index, (entry, saved_at)) in app.recoverable.iter().map(|entry| (entry, None)).chain(saved_later).take(20).enumerate() {
+        let mut detail = crate::i18n::format(
             "recovery.detail",
             &[
                 ("file", entry.path.as_deref().unwrap_or(app.tr("recovery.never_saved"))),
@@ -957,6 +962,10 @@ fn recovery_content(app: &SolveApp, ui: &mut egui::Ui, action: &mut Option<FileA
                 ("when", &crate::recovery_ui::ago(entry.saved_at)),
             ],
         );
+        if let Some(at) = saved_at {
+            detail.push('\n');
+            detail.push_str(&crate::i18n::format("recovery.saved_later", &[("when", &crate::recovery_ui::ago(at))]));
+        }
         let (recover, discard) =
             FileView::recovery_review(ui, &format!("home:recovery:{index}"), &entry.name, &detail, app.tr_label("Recover"), app.tr_label("Discard"));
         for (id, response, recover) in [("recover", Some(recover), true), ("discard", discard, false)] {
@@ -1007,10 +1016,14 @@ fn dispatch(app: &mut SolveApp, ctx: &egui::Context, action: FileAction) {
         FileAction::Back => app.home.open = false,
         FileAction::Section(section) => {
             app.home.section = section;
-            if section == Section::Recovery && app.recoverable.is_empty() {
+            if section == Section::Recovery {
                 let dir = app.autosave.as_ref().map(|autosave| autosave.dir.clone()).or_else(solidcraft_engine::recovery::default_dir);
                 if let Some(dir) = dir {
-                    app.recoverable = solidcraft_engine::recovery::orphans(&dir);
+                    let (offered, saved_later) = crate::recovery_ui::scan(&dir);
+                    if app.recoverable.is_empty() {
+                        app.recoverable = offered;
+                    }
+                    app.home.saved_later = saved_later;
                 }
             }
         }

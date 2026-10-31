@@ -555,6 +555,12 @@ impl Harness {
             } else if let Some(how) = s.get("restart").and_then(Value::as_str) {
                 // "crash": the app dies (its autosave lock goes with it, the entry stays);
                 // "close": it closes normally. Then a new app starts on the same folders.
+                if how == "crash" {
+                    // An autosave is written on a worker thread and a tick skips while one runs,
+                    // so the last edits may not be written yet: crash once the autosave has
+                    // caught up, as it has after the moments before a real crash.
+                    crate::recovery_ui::catch_up(&mut self.app);
+                }
                 let mut old = std::mem::replace(&mut self.app, SolveApp::new(Session::default(), Services::default()));
                 if how == "close" {
                     crate::recovery_ui::close(&mut old);
