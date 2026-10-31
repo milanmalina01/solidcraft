@@ -182,6 +182,34 @@ fn a_swapped_component_keeps_what_is_on_pins_numbered_alike() {
     assert_eq!(wires[1]["from"], json!({"at": [5.08, 0.0]}));
 }
 
+/// A part swapped for a component whose symbol has the same pins in other places: no wire, label
+/// or marker lets go, and every net keeps its pins.
+#[test]
+fn a_swap_to_a_symbol_with_the_same_pins_keeps_every_wire_on_its_pin() {
+    let mut s = resistor();
+    run(&mut s, "ecad.component.create", json!({"name": "RBOX", "prefix": "R"}));
+    run(&mut s, "ecad.symbol.generate", json!({"symbol": "RBOX", "component": "RBOX", "style": "box", "pins": [{"number": 1}, {"number": 2}]}));
+    for at in [[0.0, 0.0], [20.32, 0.0]] {
+        place(&mut s, at);
+    }
+    run(&mut s, "ecad.schematic.wire", json!({"wires": [{"from": "R1.2", "to": "R2.1"}]}));
+    run(&mut s, "ecad.schematic.label", json!({"labels": [{"name": "VIN", "at": "R1.1"}]}));
+    let nets = |s: &mut Session| -> Vec<Vec<String>> {
+        let n = run(s, "ecad.netlist.inspect", json!({}))["nets"].clone();
+        n.as_array().unwrap().iter().map(|n| n["pins"].as_array().unwrap().iter().map(|p| p["ref"].as_str().unwrap().to_string()).collect()).collect()
+    };
+    let before = nets(&mut s);
+    let pins_before = inspect(&mut s)["parts"][0]["pins"].clone();
+    let r = run(&mut s, "ecad.schematic.edit", json!({"parts": [{"part": "R1", "component": "RBOX"}]}));
+    assert_eq!(r["parts"][0]["component"]["name"], "RBOX");
+    assert!(r.get("detached").is_none(), "nothing lets go of a pin: {r}");
+    assert_ne!(inspect(&mut s)["parts"][0]["pins"], pins_before, "the new symbol has its pins elsewhere");
+    assert_eq!(nets(&mut s), before, "the same pins on the same nets");
+    let sheet = inspect(&mut s);
+    assert_eq!(sheet["wires"][0]["from"]["pin"], "2", "still on R1's pin 2: {sheet}");
+    assert_eq!(sheet["labels"][0]["at"]["pin"], "1", "VIN still on R1's pin 1: {sheet}");
+}
+
 #[test]
 fn moves_shift_turn_and_mirror() {
     let mut s = resistor();
