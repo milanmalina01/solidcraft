@@ -496,6 +496,8 @@ fn run(e: &mut Electronics, commands: Value) {
                     via: ViaSpec { diameter, drill, from: span.0, to: span.1 },
                     clearance: None,
                     under_parts: p.get("under_parts").and_then(Value::as_bool).unwrap_or(false),
+                    target: None,
+                    budget: None,
                 };
                 let plan = stitch::plan(e, &e.board_nets(), &ask).unwrap();
                 assert!(!plan.spots.is_empty(), "{:?}", plan.skipped);
@@ -1337,6 +1339,8 @@ fn ask(net: &str, pattern: Pattern) -> Ask {
         via: ViaSpec { diameter: 0.6, drill: 0.3, from: CopperLayer::Top, to: CopperLayer::Bottom },
         clearance: None,
         under_parts: false,
+        target: None,
+        budget: None,
     }
 }
 
@@ -1384,8 +1388,9 @@ fn a_stitching_grid_is_staggered_inside_the_board_and_breaks_no_rule() {
     assert!(r.findings.iter().all(|f| f.code != "via_stub"), "each joins the two planes");
     let vias: Vec<&Via> = after.board.vias.iter().collect();
     assert!(stitch::under_parts(&after, &after.board.footprints.iter().map(|f| f.id).collect(), &vias).iter().all(|u| !u));
-    // At 5 mm the via-free circles are wider than λg/10 at 2.4 GHz: the check still asks for more.
-    assert_eq!(fails(&quality_of(&after, &["pi.stitching"]), "pi.stitching"), [Severity::Warning]);
+    // pi.stitching measures how weakly the planes are tied (the ground connectivity solve), and a
+    // 5 mm grid ties them within 0.5 mV; the λg/10 via-free circle is only its fallback now.
+    assert_eq!(fails(&quality_of(&after, &["pi.stitching"]), "pi.stitching"), []);
     // The pitch the frequency asks for, under the parts too, stitches the planes.
     let a = Ask { under_parts: true, ..ask("GND", Pattern::Grid) };
     let plan = stitch::plan(&e, &nets, &a).unwrap();
@@ -1393,6 +1398,102 @@ fn a_stitching_grid_is_staggered_inside_the_board_and_breaks_no_rule() {
     let after = with_vias(&e, "GND", &plan.spots);
     assert_eq!(quality_of(&after, &["pi.stitching"]), [], "the planes are stitched");
     assert!(!after.drc().findings.iter().any(|f| f.severity == Severity::Error), "{:?}", after.drc().findings);
+}
+
+// Ground connectivity: a GND plane on inner1 (the largest, so the reference), a 16 by 2 mm GND
+// strip on the bottom tied to it by one via at its left end.
+
+/// The `return` board with that strip; `vias` more GND vias along the strip at these x.
+fn strip(vias: &[f64]) -> Electronics {
+    let mut e = scratch("return");
+    let mut commands = vec![
+        json!(["pour", {"layer": "inner1", "net": "GND", "rect": [30, 20], "remove_islands": false}]),
+        json!(["pour", {"layer": "bottom", "net": "GND", "rect": [16, 2], "center": [0, -4], "remove_islands": false}]),
+        json!(["via", {"at": [-7.5, -4], "net": "GND", "diameter": 0.6, "drill": 0.3}]),
+    ];
+    commands.extend(vias.iter().map(|x| json!(["via", {"at": [x, -4], "net": "GND", "diameter": 0.6, "drill": 0.3}])));
+    run(&mut e, Value::Array(commands));
+    e
+}
+
+#[test]
+fn a_strip_tied_at_one_end_rises_as_worked_out_by_hand() {
+    use super::ground::{Ask as GroundAsk, Model, Reference};
+    let e = strip(&[]);
+    let mut m = Model::build(&e, &e.board_nets(), &GroundAsk::default()).unwrap();
+    assert_eq!(m.net_name, "GND", "the ground named as one");
+    assert!(matches!(m.reference_is, Reference::Plane { layer: CopperLayer::Inner(1), .. }), "{:?}", m.reference_is);
+    let map = m.solve();
+    assert!(map.converged && map.cell == 0.25 && !map.coarse, "{} steps", map.iterations);
+    // 32 mm² draw 0.32 A through the via: two hops of a 0.3 mm barrel, 25 µm thick, 1.6/3 mm long
+    // (ρ 1.72e-5 Ω·mm): 0.778 mΩ, 0.249 mV. Along the strip, 1 oz (0.491 mΩ/sq) carrying
+    // 10 mA/mm² from its far end 15.5 mm off: J·L²·R/2 = 0.590 mV. About 0.84 mV at the far end,
+    // a little more for the current crowding into the via.
+    let worst = map.plane_worst(&[CopperLayer::Bottom]).unwrap();
+    assert!(worst.at[0] > 7.0 && (0.80..0.95).contains(&worst.mv), "{worst:?}");
+    // The reference plane is at 0, and nothing of the planes is isolated.
+    assert!(map.plane_worst(&[CopperLayer::Inner(1)]).is_some_and(|s| s.mv == 0.0));
+    assert!(map.plane_isolated().is_empty());
+    // A second via at the far end: the strip's middle is now the weakest, a quarter as far.
+    let mut both = Model::build(&strip(&[7.5]), &strip(&[7.5]).board_nets(), &GroundAsk::default()).unwrap().solve();
+    let mid = both.plane_worst(&[CopperLayer::Bottom]).unwrap();
+    assert!(mid.mv < worst.mv / 2.0 && mid.at[0].abs() < 1.5, "{mid:?}");
+    // No via at all: the strip is isolated.
+    let mut lone = scratch("return");
+    run(
+        &mut lone,
+        json!([
+            ["pour", {"layer": "inner1", "net": "GND", "rect": [30, 20], "remove_islands": false}],
+            ["pour", {"layer": "bottom", "net": "GND", "rect": [16, 2], "center": [0, -4], "remove_islands": false}],
+        ]),
+    );
+    let alone = Model::build(&lone, &lone.board_nets(), &GroundAsk::default()).unwrap().solve();
+    let iso = alone.plane_isolated();
+    assert!(iso.len() == 1 && iso[0].0 == CopperLayer::Bottom && (28.0..36.0).contains(&iso[0].1), "{iso:?}");
+    // Coverage and the coarse map say the same.
+    let cover = map.coverage(&[CopperLayer::Bottom], 0.5);
+    assert!(cover[0].tied == 1.0 && cover[0].weak > 0.0 && cover[0].isolated == 0.0, "{cover:?}");
+    let (side, rows) = map.coarse_map(3, 32);
+    assert!(side >= 0.25 && rows.len() <= 32 && rows.iter().all(|r| r.len() <= 32));
+    both = map;
+    assert!(both.unknowns > 0);
+    // Hostile asks are refused.
+    assert!(Model::build(&e, &e.board_nets(), &GroundAsk { net: Some("NOPE".into()), cell: None }).is_err());
+    for cell in [0.0, 0.05, 0.3, f64::NAN, f64::INFINITY] {
+        assert!(Model::build(&e, &e.board_nets(), &GroundAsk { net: None, cell: Some(cell) }).is_err(), "{cell}");
+    }
+}
+
+#[test]
+fn needed_stitching_ties_the_planes_where_they_are_weakest() {
+    // Two GND planes tied only at the corners.
+    let mut e = stitched_board();
+    run(&mut e, Value::Array([[-13, -8], [-13, 8], [13, -8], [13, 8]].map(|at| json!(["via", {"at": at, "net": "GND"}])).to_vec()));
+    let nets = e.board_nets();
+    assert_eq!(fails(&quality_of(&e, &["pi.stitching"]), "pi.stitching"), [Severity::Warning], "tied weakly");
+    let a = Ask { budget: Some(40), ..ask("GND", Pattern::Needed) };
+    let plan = stitch::plan(&e, &nets, &a).unwrap();
+    let g = plan.ground.clone().unwrap();
+    assert!(g.before.converged && g.after.converged);
+    let (before, after) = (g.before.worst.unwrap(), g.after.worst.unwrap());
+    assert!(before > 0.5 && after < before, "{before} → {after}");
+    assert!(!plan.spots.is_empty() && plan.spots.len() <= 40, "{:?}", plan.spots);
+    assert!(g.reached && after <= 0.5, "{g:?}");
+    // The vias break no rule, and the check passes.
+    let placed = with_vias(&e, "GND", &plan.spots);
+    let mine: BTreeSet<String> = placed.board.vias.iter().map(|v| format!("v{}", v.id)).collect();
+    let r = placed.drc();
+    assert!(!r.findings.iter().any(|f| f.severity == Severity::Error && f.key.split('|').any(|k| mine.contains(k))), "{:?}", r.findings);
+    let q = quality::check(&placed, &placed.board_nets(), Some(&BTreeSet::from(["pi.stitching"])));
+    assert!(q.findings.iter().all(|x| x.status != Status::Fail), "{:?}", q.findings.iter().map(|x| &x.finding.message).collect::<Vec<_>>());
+    // A budget of one stops at one; a target already met places none.
+    let one = stitch::plan(&e, &nets, &Ask { budget: Some(1), ..ask("GND", Pattern::Needed) }).unwrap();
+    assert!(one.spots.len() == 1 && !one.ground.unwrap().reached);
+    let easy = stitch::plan(&e, &nets, &Ask { target: Some(999.0), ..ask("GND", Pattern::Needed) }).unwrap();
+    assert!(easy.spots.is_empty() && easy.ground.unwrap().reached);
+    for bad in [Ask { budget: Some(0), ..ask("GND", Pattern::Needed) }, Ask { target: Some(-1.0), ..ask("GND", Pattern::Needed) }] {
+        assert!(stitch::plan(&e, &nets, &bad).is_err());
+    }
 }
 
 #[test]

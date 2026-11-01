@@ -253,6 +253,7 @@ fn calls(keys: &[String; 3]) -> Vec<(&'static str, Value)> {
         ("ecad.board.current.inspect", json!({"current": 1})),
         ("ecad.board.stitch", json!({"net": "GND", "pattern": "grid", "under_parts": true})),
         ("ecad.board.stitch.remove", json!({"net": "GND"})),
+        ("ecad.board.ground.inspect", json!({"map": 4})),
         ("ecad.drc.inspect", json!({"limit": 50})),
         ("ecad.drc.approve", json!({"keys": [keys[1]], "note": "a test"})),
         ("ecad.drc.unapprove", json!({"all": true})),

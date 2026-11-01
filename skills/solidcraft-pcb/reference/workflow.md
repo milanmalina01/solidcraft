@@ -40,7 +40,7 @@ Each stage ends with `ecad.board.check {"stage": …}` (`plan`, `place`, `route`
 
 **5. Pour and stitch** (`power-ground.md#pours`, `power-ground.md#stitching`)
 - [ ] Make planes and ground pours with `ecad.board.pour` (priority sets which pour fills first where they overlap). Read the fills with `ecad.board.pour.inspect`.
-- [ ] Stitch with `ecad.board.stitch {"net":"GND","pattern":"grid"}`, fence RF lines with `"pattern":"fence"`, and give fast layer changes a return via with `"pattern":"layer_change"`. Try `"dry_run":true` first.
+- [ ] Stitch with `ecad.board.stitch {"net":"GND","pattern":"grid"}` (or `"pattern":"needed"`, which places vias only where `ecad.board.ground.inspect` finds the planes weakly tied), fence RF lines with `"pattern":"fence"`, and give fast layer changes a return via with `"pattern":"layer_change"`. Try `"dry_run":true` first.
 - [ ] Read the return-path and stitching findings. A pour can cut a return path or leave a floating island.
 
 **6. Check and fix**: see [The fix loop](#the-fix-loop).

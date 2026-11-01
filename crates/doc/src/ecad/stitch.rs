@@ -71,6 +71,18 @@ use super::profiles::FabProfile;
 use super::rules::{Sizes, clearance_between};
 use super::stackup::surroundings;
 
+/// Needed stitching's most vias when no budget is given, and the most it takes.
+pub const DEFAULT_NEEDED_BUDGET: usize = 20;
+pub const MAX_NEEDED_BUDGET: usize = 200;
+/// How many of the weakest spots needed stitching tries for each via, worst first.
+const NEEDED_TRIES: usize = 256;
+/// Spots near these weigh more when needed stitching picks where to go: an RF net's copper, a
+/// switching regulator's parts and switch node, a signal via (a layer change) and a connector.
+const WEIGHT_RF: (f64, f64) = (3.0, 1.0);
+const WEIGHT_SMPS: (f64, f64) = (5.0, 1.0);
+const WEIGHT_CHANGE: (f64, f64) = (2.0, 0.5);
+const WEIGHT_CONNECTOR: (f64, f64) = (3.0, 0.5);
+
 /// The most vias one call places.
 pub const MAX_STITCH: usize = 2000;
 /// The most spots one call looks at.
@@ -142,6 +154,7 @@ pub enum Pattern {
     Grid,
     Fence,
     LayerChange,
+    Needed,
 }
 
 /// Where the vias go: a pour's fill (by the pour's id), a polygon (a rectangle given as one), or
@@ -183,6 +196,11 @@ pub struct Ask {
     /// side the via shows on (left out, they keep out; a module or a part with copper under it
     /// often asks for nothing there).
     pub under_parts: bool,
+    /// Needed stitching: how weakly tied a plane may stay, in millivolts (see
+    /// [`super::ground`]); [`super::ground::DEFAULT_TARGET_MV`] when left out.
+    pub target: Option<f64>,
+    /// Needed stitching: the most vias it places; [`DEFAULT_NEEDED_BUDGET`] when left out.
+    pub budget: Option<usize>,
 }
 
 /// Where the vias go, and what was skipped and why.
@@ -203,6 +221,36 @@ pub struct Plan {
     pub moved: usize,
     /// A fence's tracks that got no via, by id.
     pub unfenced: Vec<u64>,
+    /// Needed stitching: how weakly tied the planes were before and are after.
+    pub ground: Option<Needed>,
+}
+
+/// How weakly tied a ground net's planes are (see [`super::ground`]): the worst tied plane cell in
+/// millivolts (`None` with none), where, the share of the copper isolated and of the planes'
+/// cells past the target, and whether the solve finished.
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct Tie {
+    pub worst: Option<f64>,
+    pub at: Option<[f64; 2]>,
+    pub layer: Option<CopperLayer>,
+    pub isolated: f64,
+    pub weak: f64,
+    pub converged: bool,
+}
+
+/// What needed stitching did: before and after, the target and the budget, whether the target
+/// was reached, and how many solves it took.
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct Needed {
+    pub before: Tie,
+    pub after: Tie,
+    pub target: f64,
+    pub budget: usize,
+    pub reached: bool,
+    pub solves: usize,
+    /// The grid's cell, and whether it had to be coarser than usual.
+    pub cell: f64,
+    pub coarse: bool,
 }
 
 /// What a stitching via at a spot meets in the pours' fills (see [`Site::look`]).
@@ -886,7 +934,7 @@ pub fn plan(ecad: &Electronics, nets: &BoardNets, ask: &Ask) -> Result<Plan, Str
         return Err(format!("`clearance` must be 0 to {MAX_OFFSET} mm"));
     }
     let mut site = Site::new(board, nets, Some(net), ask.via, ask.clearance.unwrap_or(0.0));
-    if !ask.under_parts && matches!(ask.pattern, Pattern::Grid | Pattern::Fence) {
+    if !ask.under_parts && matches!(ask.pattern, Pattern::Grid | Pattern::Fence | Pattern::Needed) {
         site.keep_off_parts(ecad);
     }
     let area = ask.area.as_ref().map(|a| within(board, nets, a, site.span, &ask.net)).transpose()?;
@@ -894,6 +942,7 @@ pub fn plan(ecad: &Electronics, nets: &BoardNets, ask: &Ask) -> Result<Plan, Str
         Pattern::Grid => grid(ecad, nets, ask, net, site, area)?,
         Pattern::Fence => fence(ecad, nets, ask, net, site, area.as_ref())?,
         Pattern::LayerChange => layer_change(ecad, nets, ask, net, site, area.as_ref())?,
+        Pattern::Needed => needed(ecad, nets, ask, site, area.as_ref())?,
     };
     out.spots.iter_mut().for_each(|p| *p = snap_point(*p));
     if out.skipped.contains_key("splits_plane") {
@@ -1978,5 +2027,177 @@ fn layer_change(ecad: &Electronics, nets: &BoardNets, ask: &Ask, net: usize, mut
         ));
     }
     out.why.push(format!("{} vias in all", out.spots.len()));
+    Ok(out)
+}
+
+/// What a map says of the planes, against `target` millivolts.
+fn tie(map: &super::ground::GroundMap, target: f64) -> Tie {
+    let worst = map.plane_worst(&[]);
+    let cover = map.coverage(&[], target);
+    let copper: f64 = cover.iter().map(|c| c.copper_mm2).sum();
+    let share = |f: &dyn Fn(&super::ground::Coverage) -> f64| {
+        if copper > 0.0 { cover.iter().map(|c| f(c) * c.copper_mm2).sum::<f64>() / copper } else { 0.0 }
+    };
+    Tie {
+        worst: worst.as_ref().map(|s| s.mv),
+        at: worst.as_ref().map(|s| s.at),
+        layer: worst.as_ref().map(|s| s.layer),
+        isolated: share(&|c| c.isolated),
+        weak: share(&|c| c.weak),
+        converged: map.converged,
+    }
+}
+
+/// Where spots weigh more (see [`WEIGHT_RF`] and the others): centres with how far they reach and
+/// what they add.
+fn hot_spots(ecad: &Electronics, nets: &BoardNets, net: usize) -> Vec<([f64; 2], f64, f64)> {
+    use super::intent::{NetRole, PartRole};
+    let board = &ecad.board;
+    let mut out = Vec::new();
+    let role_nets = |roles: &[NetRole]| -> BTreeSet<usize> {
+        ecad.intent.nets.iter().filter(|r| roles.contains(&r.role)).filter_map(|r| nets.names.iter().position(|n| *n == r.net)).collect()
+    };
+    let rf = role_nets(&[NetRole::Rf]);
+    let switching = role_nets(&[NetRole::SwNode]);
+    for (t, tn) in board.tracks.iter().zip(&nets.track_nets) {
+        let Some(n) = tn else { continue };
+        let w = if rf.contains(n) {
+            WEIGHT_RF
+        } else if switching.contains(n) {
+            WEIGHT_SMPS
+        } else {
+            continue;
+        };
+        for (a, b) in pieces(&t.points, &t.curves, false) {
+            out.push(([(a[0] + b[0]) / 2.0, (a[1] + b[1]) / 2.0], w.0 + (a[0] - b[0]).hypot(a[1] - b[1]) / 2.0, w.1));
+        }
+    }
+    let parts =
+        |roles: &[PartRole]| -> BTreeSet<&str> { ecad.intent.parts.iter().filter(|p| roles.contains(&p.role)).map(|p| p.part.as_str()).collect() };
+    let smps = parts(&[PartRole::SmpsIc, PartRole::SmpsInductor, PartRole::SmpsDiode, PartRole::SmpsInCap]);
+    let mut connectors = parts(&[PartRole::Connector]);
+    let pads_of = |d: &str| nets.pads.iter().filter(|p| p.designator == d).map(|p| p.at()).collect::<Vec<_>>();
+    for d in &smps {
+        out.extend(pads_of(d).into_iter().map(|at| (at, WEIGHT_SMPS.0, WEIGHT_SMPS.1)));
+    }
+    if connectors.is_empty() {
+        connectors = nets.pads.iter().map(|p| p.designator.as_str()).filter(|d| d.starts_with('J')).collect();
+    }
+    for d in &connectors {
+        out.extend(pads_of(d).into_iter().map(|at| (at, WEIGHT_CONNECTOR.0, WEIGHT_CONNECTOR.1)));
+    }
+    for (v, vn) in board.vias.iter().zip(&nets.via_nets) {
+        if vn.is_some_and(|n| n != net) {
+            out.push((v.at, WEIGHT_CHANGE.0, WEIGHT_CHANGE.1));
+        }
+    }
+    out
+}
+
+/// Needed stitching (see [`super::ground`]): a via at the weakest legal spot of the planes, a
+/// solve again, until the worst is within the target or the budget is spent; a spot near what
+/// [`hot_spots`] lists weighs more when picking.
+fn needed(ecad: &Electronics, nets: &BoardNets, ask: &Ask, mut site: Site, area: Option<&Within>) -> Result<Plan, String> {
+    use super::ground::{self, DEFAULT_TARGET_MV, Model};
+    let target = ask.target.unwrap_or(DEFAULT_TARGET_MV);
+    if !(target.is_finite() && target > 0.0 && target <= 1000.0) {
+        return Err("`target` must be more than 0 and at most 1000 mV".into());
+    }
+    let budget = ask.budget.unwrap_or(DEFAULT_NEEDED_BUDGET);
+    if budget == 0 || budget > MAX_NEEDED_BUDGET {
+        return Err(format!("`budget` must be 1 to {MAX_NEEDED_BUDGET} vias"));
+    }
+    let mut model = Model::build(ecad, nets, &ground::Ask { net: Some(ask.net.clone()), cell: None })?;
+    let mut out = Plan::default();
+    out.why.push(format!(
+        "a via at a time at the most weakly tied legal spot of {}'s planes (millivolts each rises to when every mm² of its copper draws 10 mA into {}), solved again after each, until none is past {} mV or {budget} vias are placed; spots near RF lines, switching regulators, layer changes and connectors weigh more",
+        ask.net,
+        match &model.reference_is {
+            ground::Reference::Entry(d) => format!("the power entry {d}"),
+            ground::Reference::Plane { pour, layer, .. } => format!("its largest plane (pour {pour} on {})", layer.name()),
+        },
+        mm(target)
+    ));
+    let first = model.solve();
+    let before = tie(&first, target);
+    let mut solves = 1;
+    let hot = hot_spots(ecad, nets, model.net);
+    let weight = |p: [f64; 2]| -> f64 {
+        1.0 + hot.iter().filter(|(c, r, _)| (c[0] - p[0]).hypot(c[1] - p[1]) <= *r).map(|(_, _, w)| *w).sum::<f64>().min(3.0)
+    };
+    let n = ecad.board.copper_layers;
+    let span = (ask.via.from.index(n).min(ask.via.to.index(n)), ask.via.from.index(n).max(ask.via.to.index(n)));
+    let mut map = first;
+    let mut reached = false;
+    let mut tried: BTreeSet<(i64, i64)> = BTreeSet::new();
+    while out.spots.len() < budget {
+        if !map.converged {
+            out.why.push("the solve was cut short: the vias placed so far rest on its last answer".into());
+            break;
+        }
+        if map.plane_worst(&[]).is_none_or(|w| w.mv <= target) {
+            reached = true;
+            break;
+        }
+        // The weakest plane spots, weighted, that fail no rule.
+        let mut spots = map.spots(&[], true, NEEDED_TRIES * 4, map.cell);
+        spots.retain(|s| s.mv > target);
+        let mut scored: Vec<(f64, [f64; 2])> = spots.into_iter().map(|s| (s.mv * weight(s.at), snap_point(s.at))).collect();
+        scored.sort_by(|a, b| b.0.total_cmp(&a.0));
+        let key = |p: [f64; 2]| ((p[0] / map.cell).round() as i64, (p[1] / map.cell).round() as i64);
+        // Spots that failed once fail again: a placed via only adds copper and drills near them.
+        scored.retain(|(_, p)| !tried.contains(&key(*p)));
+        scored.truncate(NEEDED_TRIES);
+        let points: Vec<[f64; 2]> = scored.iter().map(|(_, p)| *p).collect();
+        if points.is_empty() {
+            break;
+        }
+        let held = match area {
+            Some(a) => {
+                if !site.charge(a.cost(points.len())) {
+                    return Err(TOO_MUCH.into());
+                }
+                a.holds(&points)
+            }
+            None => vec![true; points.len()],
+        };
+        let looks = site.look(&points);
+        let mut chosen = None;
+        for ((p, h), look) in points.iter().zip(held).zip(looks) {
+            out.looked_at += 1;
+            if !h {
+                out.skip("outside");
+                tried.insert(key(*p));
+                continue;
+            }
+            match try_spot(&mut site, *p, look) {
+                Ok(()) => {
+                    chosen = Some(*p);
+                    break;
+                }
+                Err(reason) => {
+                    out.skip(reason);
+                    tried.insert(key(*p));
+                }
+            }
+            if site.spent() {
+                return Err(TOO_MUCH.into());
+            }
+        }
+        let Some(p) = chosen else {
+            out.why.push("no legal spot is left where the planes are weakly tied".into());
+            break;
+        };
+        site.add(p);
+        model.add_via(p, ask.via.diameter, ask.via.drill, span);
+        out.spots.push(p);
+        map = model.solve();
+        solves += 1;
+    }
+    if !reached && map.converged && map.plane_worst(&[]).is_none_or(|w| w.mv <= target) {
+        reached = true;
+    }
+    let after = tie(&map, target);
+    out.ground = Some(Needed { before, after, target, budget, reached, solves, cell: model.cell, coarse: model.coarse });
     Ok(out)
 }

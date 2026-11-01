@@ -20,6 +20,8 @@ pub enum StitchPattern {
     Fence,
     /// A via beside each signal via that changes reference plane.
     LayerChange,
+    /// A via at a time where the net's planes are most weakly tied, solved again after each.
+    Needed,
 }
 
 /// The word `board`: the whole board.
@@ -108,6 +110,44 @@ pub struct StitchParams {
     /// A grid's or fence's vias may stand under parts (inside the courtyard of a footprint on a
     /// side the via shows on); left out, they keep out.
     pub under_parts: Option<bool>,
+    /// Needed stitching: how far the planes' most weakly tied spot may rise, in millivolts when
+    /// every mm² of the net's copper draws 10 mA (0.5 when left out).
+    pub target: Option<f64>,
+    /// Needed stitching: the most vias it places (20 when left out, at most 200).
+    pub budget: Option<usize>,
+}
+
+/// How weakly a ground net's planes are tied (see `ecad.board.ground.inspect`).
+#[derive(Debug, Serialize, JsonSchema)]
+pub struct TieOut {
+    /// The most weakly tied plane spot, in millivolts; null with no plane.
+    pub worst_mv: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub at: Option<[f64; 2]>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub layer: Option<String>,
+    /// The share of the net's copper joined to the main ground by nothing, and of it past the
+    /// target, in percent.
+    pub isolated_pct: f64,
+    pub weak_pct: f64,
+    /// The solve finished.
+    pub converged: bool,
+}
+
+/// What needed stitching did.
+#[derive(Debug, Serialize, JsonSchema)]
+pub struct NeededOut {
+    pub before: TieOut,
+    pub after: TieOut,
+    pub target_mv: f64,
+    pub budget: usize,
+    /// The worst plane spot is within the target.
+    pub reached: bool,
+    pub solves: usize,
+    /// The grid's cell in millimetres, and whether the board was too large for the usual one.
+    pub cell: f64,
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    pub coarse: bool,
 }
 
 /// The vias' size and span as placed.
@@ -155,6 +195,9 @@ pub struct StitchResult {
     /// A fence's tracks that got no via, by id.
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub unfenced: Vec<u64>,
+    /// Needed stitching: how weakly tied the planes were before, and are after.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ground: Option<NeededOut>,
     #[serde(flatten)]
     pub board: BoardResult,
 }

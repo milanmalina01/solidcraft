@@ -53,6 +53,9 @@ pub struct Preview {
     pub why: Vec<String>,
     /// A fence's tracks that got no via.
     pub unfenced: usize,
+    /// Needed stitching: the planes' weakest spot before and after, in millivolts, and whether
+    /// the target was reached.
+    pub ground: Option<(Option<f64>, Option<f64>, bool)>,
     pub error: Option<String>,
 }
 
@@ -94,6 +97,8 @@ pub struct StitchOptions {
     pub protection: ViaProtection,
     /// A grid's or fence's vias may stand under parts (they keep out of courtyards by default).
     pub under_parts: bool,
+    /// Needed stitching's most vias; the command's own while `None`.
+    pub budget: Option<usize>,
     pub pick: Option<StitchPick>,
     pub search: String,
     pub preview: Option<Preview>,
@@ -113,6 +118,7 @@ impl Default for StitchOptions {
             span: ViaSpan::Through,
             protection: ViaProtection::Tented,
             under_parts: false,
+            budget: None,
             pick: None,
             search: String::new(),
             preview: None,
@@ -176,8 +182,12 @@ fn params(app: &SolveApp) -> Option<Value> {
         Pattern::Grid => "grid",
         Pattern::Fence => "fence",
         Pattern::LayerChange => "layer_change",
+        Pattern::Needed => "needed",
     };
     let mut p = json!({"net": net, "pattern": pattern, "via": via, "protection": o.protection.name()});
+    if let (Pattern::Needed, Some(b)) = (o.pattern, o.budget) {
+        p["budget"] = json!(b);
+    }
     if let Some(pitch) = o.pitch {
         p["pitch"] = json!(pitch);
     }
@@ -215,9 +225,13 @@ fn preview_of(key: (u64, u64), params: Value, reply: Result<Value, String>) -> P
             skipped.sort_by(|a, b| b.1.cmp(&a.1).then(a.0.cmp(&b.0)));
             let why = v.get("why").and_then(Value::as_array).into_iter().flatten().filter_map(Value::as_str).map(str::to_string).collect();
             let unfenced = v.get("unfenced").and_then(Value::as_array).map_or(0, Vec::len);
-            Preview { key, params, spots, skipped, why, unfenced, error: None }
+            let ground = v.get("ground").filter(|g| g.is_object()).map(|g| {
+                let worst = |k: &str| g.get(k).and_then(|t| t.get("worst_mv")).and_then(Value::as_f64);
+                (worst("before"), worst("after"), g.get("reached").and_then(Value::as_bool).unwrap_or(false))
+            });
+            Preview { key, params, spots, skipped, why, unfenced, ground, error: None }
         }
-        Err(e) => Preview { key, params, spots: Vec::new(), skipped: Vec::new(), why: Vec::new(), unfenced: 0, error: Some(e) },
+        Err(e) => Preview { key, params, spots: Vec::new(), skipped: Vec::new(), why: Vec::new(), unfenced: 0, ground: None, error: Some(e) },
     }
 }
 
@@ -412,7 +426,7 @@ pub(crate) fn click(app: &mut SolveApp, map: PageMap, p: Pos2, double: bool, shi
     }
     let pattern = app.electronics.board.stitch.pattern;
     match pattern {
-        Pattern::Grid => {
+        Pattern::Grid | Pattern::Needed => {
             let (x, y) = map.to_page(p);
             let nets = stored_nets(app);
             let want = net(app).and_then(|n| nets.names.iter().position(|m| *m == n));
@@ -641,6 +655,7 @@ pub(crate) fn options(app: &mut SolveApp, ui: &mut Ui) -> &'static str {
         (Pattern::Grid, "electronics.stitch_grid"),
         (Pattern::Fence, "electronics.stitch_fence"),
         (Pattern::LayerChange, "electronics.stitch_layer_change"),
+        (Pattern::Needed, "electronics.stitch_needed"),
     ];
     let names: Vec<String> = patterns.iter().map(|(_, k)| tr(k)).collect();
     let at = patterns.iter().position(|(p, _)| *p == app.electronics.board.stitch.pattern).unwrap_or(0);
@@ -649,7 +664,12 @@ pub(crate) fn options(app: &mut SolveApp, ui: &mut Ui) -> &'static str {
     {
         let s = &mut app.electronics.board.stitch;
         s.pattern = *p;
-        s.pick = (*p == Pattern::LayerChange).then_some(StitchPick::LayerChanges);
+        s.pick = match *p {
+            Pattern::LayerChange => Some(StitchPick::LayerChanges),
+            // Needed stitching works where the planes need it: the whole board unless a pour is picked.
+            Pattern::Needed => Some(StitchPick::Board),
+            _ => None,
+        };
         s.preview = None;
         s.running = None;
     }
@@ -673,7 +693,7 @@ pub(crate) fn options(app: &mut SolveApp, ui: &mut Ui) -> &'static str {
     let own = match pattern {
         Pattern::Grid => Some((stitch::grid_pitch(ecad, diameter), "electronics.stitch_pitch_grid")),
         Pattern::Fence => Some((stitch::fence_pitch(ecad, &fenced, diameter), "electronics.stitch_pitch_fence")),
-        Pattern::LayerChange => None,
+        Pattern::LayerChange | Pattern::Needed => None,
     };
     if let Some((d, key)) = own {
         let pitch = crate::electronics_editor::mm(d.pitch);
@@ -767,6 +787,23 @@ pub(crate) fn options(app: &mut SolveApp, ui: &mut Ui) -> &'static str {
                 pick(app, StitchPick::LayerChanges);
             }
         }
+        Pattern::Needed => {
+            ui_kit::text(ui, crate::i18n::tr("electronics.stitch_needed_help"), ui_kit::Text::Note("electronics.stitch_needed_help"));
+            let hint = crate::i18n::format("electronics.stitch_budget_usual", &[("n", &stitch::DEFAULT_NEEDED_BUDGET.to_string())]);
+            let old = app.electronics.board.stitch.budget.map(|b| b as f64);
+            if let Some(b) =
+                crate::electronics_board_pour::optional_number(app, ui, "stitch:budget", &tr("electronics.field_stitch_budget"), old, &hint)
+            {
+                match b {
+                    Some(v) if !(v.is_finite() && v >= 1.0 && v <= stitch::MAX_NEEDED_BUDGET as f64 && v.fract() == 0.0) => app
+                        .set_status(crate::i18n::format("electronics.stitch_bad_budget", &[("most", &stitch::MAX_NEEDED_BUDGET.to_string())]), true),
+                    b => app.electronics.board.stitch.budget = b.map(|v| v as usize),
+                }
+            }
+            if crate::electronics_editor::button(ui, "stitch-board", &tr("electronics.stitch_whole_board"), true) {
+                pick(app, StitchPick::Board);
+            }
+        }
     }
     refresh(app);
     if working(app) {
@@ -777,6 +814,13 @@ pub(crate) fn options(app: &mut SolveApp, ui: &mut Ui) -> &'static str {
         let failed = app.electronics.board.stitch.preview.as_ref().is_some_and(|x| x.error.is_some());
         let key = if failed { "electronics.stitch_error" } else { "electronics.stitch_preview" };
         ui_kit::text(ui, &text, ui_kit::Text::Note(key));
+        // Needed stitching: how weakly the planes are tied now, and after the vias shown.
+        if let Some((before, after, reached)) = app.electronics.board.stitch.preview.as_ref().and_then(|x| x.ground) {
+            let mv = |v: Option<f64>| v.map_or_else(|| "–".to_string(), crate::electronics_editor::mm);
+            let key = if reached { "electronics.stitch_needed_reached" } else { "electronics.stitch_needed_short" };
+            let line = crate::i18n::format(key, &[("before", &mv(before)), ("after", &mv(after))]);
+            ui_kit::text(ui, &line, ui_kit::Text::Note("electronics.stitch_needed_tie"));
+        }
         let (why, unfenced) = app.electronics.board.stitch.preview.as_ref().map(|x| (x.why.clone(), x.unfenced)).unwrap_or_default();
         if unfenced > 0 {
             let line = crate::i18n::format("electronics.stitch_unfenced", &[("n", &unfenced.to_string())]);
@@ -798,6 +842,7 @@ pub(crate) fn options(app: &mut SolveApp, ui: &mut Ui) -> &'static str {
         Pattern::Grid => "electronics.stitch_kind_grid",
         Pattern::Fence => "electronics.stitch_kind_fence",
         Pattern::LayerChange => "electronics.stitch_kind_layer_change",
+        Pattern::Needed => "electronics.stitch_kind_needed",
     });
     ui_kit::text(ui, crate::i18n::tr("electronics.stitch_parts_help"), ui_kit::Text::Note("electronics.stitch_parts_help"));
     let label = match &app.electronics.board.stitch.pick {

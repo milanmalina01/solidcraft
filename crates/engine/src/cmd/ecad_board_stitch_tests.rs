@@ -73,6 +73,38 @@ fn a_grid_joins_the_planes_until_the_check_passes_and_takes_one_undo_step() {
 }
 
 #[test]
+fn needed_stitching_says_before_and_after_and_takes_one_undo_step() {
+    let mut s = board();
+    run(&mut s, "ecad.board.delete", json!({"items": [12]}));
+    let map = run(&mut s, "ecad.board.ground.inspect", json!({"map": 8}));
+    assert_eq!(map["net"], "GND");
+    assert_eq!(map["reference"]["kind"], "plane");
+    assert!(map["converged"] == true && map["worst"].as_array().is_some_and(|w| !w.is_empty()), "{map}");
+    let worst = map["worst"][0]["mv"].as_f64().unwrap();
+    assert!(map["layers"].as_array().unwrap().iter().all(|l| l["map"].as_array().is_some_and(|r| r.len() <= 8)), "{map}");
+    let before = s.doc.clone();
+    let dry = run(&mut s, "ecad.board.stitch", json!({"net": "GND", "pattern": "needed", "budget": 30, "dry_run": true}));
+    assert!(Arc::ptr_eq(&before, &s.doc), "a dry run changes nothing");
+    let g = &dry["ground"];
+    assert!((g["before"]["worst_mv"].as_f64().unwrap() - worst).abs() < 1e-3, "the inspect's number: {dry}");
+    assert!(g["after"]["worst_mv"].as_f64().unwrap() < worst && dry["count"].as_u64().unwrap() >= 1, "{dry}");
+    let n = dry["count"].as_u64().unwrap();
+    let (errors, undo) = (drc_errors(&mut s), s.undo.len());
+    let r = run(&mut s, "ecad.board.stitch", json!({"net": "GND", "pattern": "needed", "budget": 30}));
+    assert_eq!((r["count"].as_u64(), s.undo.len()), (Some(n), undo + 1), "what the dry run said, in one undo step");
+    assert_eq!(drc_errors(&mut s), errors, "no via breaks a design rule");
+    let placed: Vec<Value> = vias(&mut s).into_iter().filter(|v| v["pattern"] == "needed").collect();
+    assert_eq!(placed.len(), n as usize, "{placed:?}");
+    let after = run(&mut s, "ecad.board.ground.inspect", json!({"map": 0}));
+    assert!((after["worst"][0]["mv"].as_f64().unwrap() - g["after"]["worst_mv"].as_f64().unwrap()).abs() < 1e-3, "{after}");
+    // They come off with their pattern.
+    let gone = run(&mut s, "ecad.board.stitch.remove", json!({"pattern": "needed"}));
+    assert_eq!(gone["count"].as_u64(), Some(n));
+    refused(&mut s, "ecad.board.ground.inspect", json!({"cell": 1.0}));
+    refused(&mut s, "ecad.board.stitch", json!({"net": "GND", "pattern": "needed", "budget": 0}));
+}
+
+#[test]
 fn removing_stitching_takes_only_the_stitching_vias() {
     let mut s = board();
     let r = run(&mut s, "ecad.board.stitch", json!({"net": "GND", "pattern": "grid", "under_parts": true}));

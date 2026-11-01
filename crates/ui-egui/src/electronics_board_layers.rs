@@ -57,6 +57,9 @@ pub enum Layer {
     Keepouts,
     /// The design rule check's marks on the board, while its window is open.
     DrcMarkers,
+    /// How weakly the ground net's copper on the active layer is tied (a heat map); hidden until
+    /// shown, as it is worked out beside the window.
+    Ground,
 }
 
 /// The Layers tab's groups, each with its heading's message key.
@@ -68,7 +71,7 @@ fn groups(app: &SolveApp) -> Vec<(&'static str, Vec<Layer>)> {
         ("electronics.layer_group_mechanical", vec![Layer::Outline, Layer::Holes, Layer::Drills]),
         ("electronics.layer_group_silkscreen", vec![Layer::TopSilkscreen, Layer::BottomSilkscreen]),
         ("electronics.layer_group_documentation", vec![Layer::Names, Layer::Values, Layer::Courtyard, Layer::Fab]),
-        ("electronics.layer_group_rules", vec![Layer::Keepouts, Layer::DrcMarkers]),
+        ("electronics.layer_group_rules", vec![Layer::Keepouts, Layer::DrcMarkers, Layer::Ground]),
     ]
 }
 
@@ -91,6 +94,7 @@ fn name(layer: Layer) -> (String, String) {
         Layer::PourFill => ("pour_fill", "electronics.layer_pour_fill"),
         Layer::Keepouts => ("keepouts", "electronics.layer_keepouts"),
         Layer::DrcMarkers => ("drc_markers", "electronics.layer_drc_markers"),
+        Layer::Ground => ("ground", "electronics.layer_ground"),
     };
     (tr(text), key.to_string())
 }
@@ -110,6 +114,7 @@ fn colour(t: &Tokens, layer: Layer) -> Color32 {
         Layer::PourFill => layer_colour(t, CopperLayer::Top).gamma_multiply(t.pcb_pour_alpha),
         Layer::Keepouts => t.pcb_keepout,
         Layer::DrcMarkers => t.pcb_drc_error,
+        Layer::Ground => t.agent_ok,
     }
 }
 
@@ -126,6 +131,11 @@ pub(crate) fn tab(app: &mut SolveApp, ui: &mut Ui) {
         ui_kit::text(ui, &tr(heading), ui_kit::Text::Heading(heading));
         for layer in layers {
             row(app, ui, layer);
+            if layer == Layer::Ground
+                && let Some(note) = crate::electronics_board_ground::note(app)
+            {
+                ui_kit::text(ui, &note, ui_kit::Text::Note("electronics.ground_map_note"));
+            }
         }
         ui.add_space(t.space_6);
     }

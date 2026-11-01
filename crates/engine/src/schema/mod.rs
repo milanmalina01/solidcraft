@@ -58,6 +58,7 @@ pub mod ecad;
 pub mod ecad_board;
 pub mod ecad_board_check;
 pub mod ecad_board_edit;
+pub mod ecad_board_ground;
 pub mod ecad_board_metrics;
 pub mod ecad_board_pour;
 pub mod ecad_board_rules;

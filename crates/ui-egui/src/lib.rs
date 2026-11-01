@@ -64,6 +64,7 @@ pub mod edit_clipboard;
 pub mod electronics_board;
 pub mod electronics_board_check;
 pub mod electronics_board_draw;
+pub mod electronics_board_ground;
 pub mod electronics_board_layers;
 pub mod electronics_board_outline;
 pub mod electronics_board_pour;

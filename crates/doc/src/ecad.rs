@@ -26,6 +26,7 @@ pub mod footprint;
 pub mod frame;
 pub mod graphics;
 mod grid;
+pub mod ground;
 pub mod impedance;
 pub mod infer;
 pub mod info;

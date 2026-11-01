@@ -208,6 +208,9 @@ pub struct BoardView {
     pub keepout: KeepoutOptions,
     /// The Stitch Vias tool's options, pick and preview.
     pub stitch: StitchOptions,
+    /// The Ground connectivity layer's map, and the revision it last tried to solve.
+    pub ground: crate::electronics_board_ground::GroundView,
+    pub ground_tried: Option<(u64, u64)>,
     /// A box to frame on the next frame (a finding of the design rule check), in millimetres.
     pub frame: Option<[[f64; 2]; 2]>,
     /// The design rule check worked out last, and when the board changed after it.
@@ -248,7 +251,8 @@ impl Default for BoardView {
             route: RouteOptions::default(),
             draw: DrawOptions::default(),
             grid: DEFAULT_GRID,
-            hidden: BTreeSet::new(),
+            // The ground map is worked out only once asked for.
+            hidden: BTreeSet::from([Layer::Ground]),
             layers_tab: false,
             stack_open: false,
             impedance: crate::electronics_board_stack::ImpedanceState::default(),
@@ -258,6 +262,8 @@ impl Default for BoardView {
             pour: PourOptions::default(),
             keepout: KeepoutOptions::default(),
             stitch: StitchOptions::default(),
+            ground: Default::default(),
+            ground_tried: None,
             frame: None,
             drc: rules::DrcState::default(),
             quality: crate::electronics_board_quality::QualityState::default(),
@@ -477,6 +483,7 @@ pub fn show(app: &mut SolveApp, ui: &mut Ui) {
         frame(app, rect, b, rules::FRAME_MM);
     }
     refresh(app);
+    crate::electronics_board_ground::refresh(app, ui.ctx());
     if !input(app, ui, rect, &response) {
         crate::electronics_workspace::with_page_camera(app, |app| {
             crate::navigation::handle(app, ui, rect, &response, crate::navigation::NavCaps { orbit: false, pick: false });
@@ -1762,6 +1769,8 @@ fn paint(app: &SolveApp, ui: &Ui, rect: Rect, bar: Rect) {
             }
         }
     }
+    // How weakly the ground is tied on the active layer, over the copper.
+    crate::electronics_board_ground::paint(app, &painter, map, &t);
     // Keepouts, hatched over the copper.
     pour::paint_keepouts(app, &painter, map, b, &t);
     // Unplated holes: a footprint's bare holes and the mounting holes, as rings.

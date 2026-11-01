@@ -11,11 +11,13 @@
 //!   tracks leave it on layers with different reference planes: a via of the plane's net
 //!   joining both within `reach` (`reach_ghz` above 1 GHz or at T2 and faster) when they are
 //!   one net, a capacitor between the two nets within the same distance when not.
-//! - `pi.stitching`: where a ground net's planes overlap on two or more layers and the board
-//!   has fast or switching nets, the largest circle with no via joining them, against λg/10 at
-//!   the frequency of concern (the intent's, else the top of its highest radio band); keepouts
-//!   are left out. Also, at any frequency, an outer-layer ground island with no via to an inner
-//!   ground plane.
+//! - `pi.stitching`: where a ground net has planes on two or more layers, how weakly they are
+//!   tied to its main ground by the connectivity solve (see [`super::super::ground`]): the worst
+//!   plane spot against `tie_mv`, and plane copper tied by nothing. Where that solve can't be
+//!   made or doesn't finish, and the board has fast or switching nets, the largest circle with
+//!   no via joining the planes where they overlap, against λg/10 at the frequency of concern
+//!   (the intent's, else the top of its highest radio band); keepouts are left out. Also, at any
+//!   frequency, an outer-layer ground island with no via to an inner ground plane.
 //!
 //! Planes are pours' fills (see [`super::geom`]); what is fast comes from the intent's tiers (see
 //! [`super::roles`]): a net with no tier is listed as not applicable, with what it needs.
@@ -125,12 +127,21 @@ const CODES: &[Code] = &[
         worst: None,
         needs: "geometry and planes; intent: the ground net, the board's f_concern_mhz or radio bands",
         section: "power-ground#stitching",
-        about: "where a ground net's planes overlap, a via-free circle wider than λg/10 at the frequency of concern; an outer ground island with no via to an inner plane; stitching along the edge only (info)",
+        about: "a ground net's planes tied weakly to its main ground (the connectivity solve's worst spot past tie_mv), or plane copper tied by nothing; where the solve can't finish, a via-free circle wider than λg/10 at the frequency of concern where the planes overlap; an outer ground island with no via to an inner plane; stitching along the edge only (info)",
         principle: "Planes of one ground tied by vias closer than a tenth of a wavelength stay one conductor at the frequencies of concern instead of a cavity that resonates.",
         params: &[
             param("fraction", 0.1, "λg", 0.01, 1.0, "LearnEMC", "the largest via-free circle across, as a share of λg at the frequency of concern"),
             param("grid", 1.0, "mm", 0.2, 10.0, "judgment", "the lattice the overlap is looked at on"),
             param("island_min", 4.0, "mm²", 0.0, 10000.0, "judgment", "outer ground islands smaller than this are not checked"),
+            param(
+                "tie_mv",
+                0.5,
+                "mV",
+                0.01,
+                1000.0,
+                "judgment",
+                "how far a ground plane's most weakly tied spot may rise when every mm² of the net's copper draws 10 mA into the main ground",
+            ),
             param(
                 "perimeter",
                 2.0,
@@ -968,7 +979,15 @@ fn stitching(cx: &mut Cx) {
         if !inner.is_empty() {
             outer_islands(cx, g, &g_name, &ground_layers, &sites, island_min);
         }
-        if ground_layers.len() < 2 || !fast {
+        if ground_layers.len() < 2 {
+            continue;
+        }
+        // How weakly the planes are tied (see `ground`); the via-free circle below when the
+        // solve can't finish.
+        if tie(cx, g, &g_name, &ground_layers, island_min, p("tie_mv")) {
+            continue;
+        }
+        if !fast {
             continue;
         }
         let Some((f_mhz, why)) = roles.f_concern() else {
@@ -1093,6 +1112,83 @@ fn stitching(cx: &mut Cx) {
             }
         }
     }
+}
+
+/// `pi.stitching` from the ground connectivity solve (see [`super::super::ground`]): the planes'
+/// most weakly tied spot against `tie_mv`, and plane copper joined to the main ground by nothing
+/// (on inner layers only when there are any: an outer island is `outer_islands`'s). False when
+/// the solve can't be made or doesn't finish, so the older measure runs.
+fn tie(cx: &mut Cx, g: usize, g_name: &str, ground_layers: &[CopperLayer], island_min: f64, tie_mv: f64) -> bool {
+    use super::super::ground::{Ask, Model, Reference};
+    let (ecad, nets, board) = (cx.ecad, cx.nets, cx.board);
+    let Ok(mut model) = Model::build(ecad, nets, &Ask { net: Some(g_name.to_string()), cell: None }) else { return false };
+    if !cx.spend(model.cells().saturating_mul(64)) {
+        return false;
+    }
+    let map = model.solve();
+    if !map.converged {
+        return false;
+    }
+    let pours: Vec<String> =
+        board.pours.iter().filter(|z| nets.fills.iter().any(|f| f.pour == z.id && f.net == Some(g))).map(|z| format!("z{}", z.id)).collect();
+    let from = match &map.reference {
+        Reference::Entry(d) => format!("the power entry {d}"),
+        Reference::Plane { pour, layer, .. } => format!("its largest plane (pour {pour}, {})", layer.name()),
+    };
+    let inner = ground_layers.iter().any(|l| l.is_inner());
+    let isolated: Vec<(CopperLayer, f64)> =
+        map.plane_isolated().into_iter().filter(|(l, a)| (!inner || l.is_inner()) && *a > island_min && ground_layers.contains(l)).collect();
+    let on: String = ground_layers.iter().map(|l| l.name()).collect::<Vec<_>>().join(", ");
+    if let Some((layer, area)) = isolated.iter().copied().max_by(|a, b| a.1.total_cmp(&b.1)) {
+        let mut keys = pours.clone();
+        keys.push("isolated".into());
+        let g_name = g_name.to_string();
+        cx.add(STITCHING, &keys, || {
+            Draft::new(
+                [0.0, 0.0],
+                Vec::new(),
+                format!("{} mm² of {g_name}'s plane on {} is joined to {from} by nothing: stitch it with vias", num(area.round()), layer.name()),
+            )
+            .nets(vec![g_name.clone()])
+            .variant("isolated")
+            .arg("layer", layer.name())
+            .arg("area", num(area.round()))
+            .measure(area, 0.0, "mm²", Bound::Max)
+            .param("island_min")
+            .fix(
+                "ecad.board.stitch",
+                json!({"net": g_name, "pattern": "needed"}),
+                "add stitching vias where the planes are weakest, solving again after each",
+            )
+        });
+        return true;
+    }
+    let Some(worst) = map.plane_worst(&[]) else { return true };
+    if worst.mv > tie_mv {
+        let g_name = g_name.to_string();
+        let at = worst.at;
+        cx.add(STITCHING, &pours, || {
+            Draft::new(
+                at,
+                Vec::new(),
+                format!(
+                    "{g_name}'s planes ({on}) are tied to {from} weakly: at ({}, {}) on {} they rise {} mV when every mm² of its copper draws 10 mA, past {} mV",
+                    num((at[0] * 10.0).round() / 10.0),
+                    num((at[1] * 10.0).round() / 10.0),
+                    worst.layer.name(),
+                    num((worst.mv * 100.0).round() / 100.0),
+                    num(tie_mv)
+                ),
+            )
+            .nets(vec![g_name.clone()])
+            .arg("layers", on.clone())
+            .arg("layer", worst.layer.name())
+            .measure(worst.mv, tie_mv, "mV", Bound::Max)
+            .param("tie_mv")
+            .fix("ecad.board.stitch", json!({"net": g_name, "pattern": "needed"}), "add stitching vias where the planes are weakest, solving again after each")
+        });
+    }
+    true
 }
 
 /// How far `p` is from the closed outline `ring`.

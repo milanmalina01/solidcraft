@@ -22,7 +22,7 @@ use super::ecad_board_pour::known_net_in;
 use crate::params::bad;
 use crate::schema::ecad_board::BoardResult;
 use crate::schema::ecad_board_stitch::{
-    RegionArea, RegionParam, StitchParams, StitchPattern, StitchRemoveParams, StitchRemoveResult, StitchResult, StitchViaOut,
+    NeededOut, RegionArea, RegionParam, StitchParams, StitchPattern, StitchRemoveParams, StitchRemoveResult, StitchResult, StitchViaOut, TieOut,
 };
 use crate::schema::{TypedContract, output_schema_for};
 use crate::{Result, Session};
@@ -34,7 +34,7 @@ pub static COMMANDS: &[CommandSpec] = &[
         .contract(&STITCH_CONTRACT)
         .output(output_schema_for::<StitchResult>)
         .params(
-            "net (GND as a rule); pattern: grid|fence|layer_change; region? \"board\"|{pour: id (a pour of the net)}|{rect: [[x0, y0], [x1, y1]]}|{polygon: [[x, y]…]} (the whole board when left out); tracks? [id] and nets? [name] or class? (a fence's tracks: those, and every track of those nets; a layer change's signal nets; at most 4096 each); pitch? (mm between neighbours; grid: by default no via-free circle wider than λg/10 at the intent's highest frequency of concern or radio band, offsets included (λg/10 × 0.678), else 5; fence: λg/20 at the intent's f_concern, else at twice the nets' (else the board's highest band's) frequency, else 2; raised to the via + hole to hole when closer, and why says so); offset? (fence: mm from the centreline; by default half the width + the clearance between the nets + the via's radius where the net's copper runs beside the line, at least 4 dielectric heights on inner layers, at least 2 widths and 3 heights for a line with no ground beside it); via? {diameter?, drill?, from?, to?} (the net class's via, through, by default; the rules' micro via between neighbouring layers; a diameter left out grows to the least ring the fab profile passes); clearance? (mm kept to other nets' copper, never less than the rules'); protection? (tented by default); under_parts? (grid and fence: true lets vias stand inside the courtyard of a footprint on a side the via shows on; left out, they keep out, skipped as under_part); dry_run? → {count, would_create?, skipped: {reason: n}, looked_at, moved? (grid vias placed up to 0.16 pitch off a spot that failed), pitch_used, offset_used?, unfenced? [track id], via, why, created, unrouted}: grid = staggered rows centred in the area, clear of its edge, none within 0.16 pitch of a via of the net that already joins the span; fence = both sides of each segment (arcs too): a via beside every bend, tee, pad of the line and open end (within 1 mm), then the runs between at no more than the pitch; layer_change = for each signal via whose layers reference different planes, one via of the net joining both within 2 mm (1 mm preferred) where none is, two on opposite sides within 1 mm (or λg/20) for an RF net (signal nets: those given, else the intent's RF/clock/fast nets, else all nets with no pour). Each via passes the clearance to other nets on every layer of its span, hole to hole, copper to edge, keepouts, stays out of SMD pads, doesn't cut another net's plane in two, and lands on the net's copper (fill, track, pad, via) on two layers or more; the rest are skipped and counted. A via size whose drill, ring or aspect ratio the design rule check would call an error is refused. At most 2000 vias; one undo step; the vias are marked as stitching vias (role stitch)",
+            "net (GND as a rule); pattern: grid|fence|layer_change|needed; region? \"board\"|{pour: id (a pour of the net)}|{rect: [[x0, y0], [x1, y1]]}|{polygon: [[x, y]…]} (the whole board when left out); tracks? [id] and nets? [name] or class? (a fence's tracks: those, and every track of those nets; a layer change's signal nets; at most 4096 each); pitch? (mm between neighbours; grid: by default no via-free circle wider than λg/10 at the intent's highest frequency of concern or radio band, offsets included (λg/10 × 0.678), else 5; fence: λg/20 at the intent's f_concern, else at twice the nets' (else the board's highest band's) frequency, else 2; raised to the via + hole to hole when closer, and why says so); offset? (fence: mm from the centreline; by default half the width + the clearance between the nets + the via's radius where the net's copper runs beside the line, at least 4 dielectric heights on inner layers, at least 2 widths and 3 heights for a line with no ground beside it); via? {diameter?, drill?, from?, to?} (the net class's via, through, by default; the rules' micro via between neighbouring layers; a diameter left out grows to the least ring the fab profile passes); clearance? (mm kept to other nets' copper, never less than the rules'); protection? (tented by default); target? (needed: mV, 0.5 by default) budget? (needed: the most vias, 20 by default, at most 200); under_parts? (grid, fence and needed: true lets vias stand inside the courtyard of a footprint on a side the via shows on; left out, they keep out, skipped as under_part); dry_run? → {count, would_create?, skipped: {reason: n}, looked_at, moved? (grid vias placed up to 0.16 pitch off a spot that failed), pitch_used, offset_used?, unfenced? [track id], ground? (needed: {before, after: {worst_mv, at?, layer?, isolated_pct, weak_pct, converged}, target_mv, budget, reached, solves, cell, coarse?}), via, why, created, unrouted}: grid = staggered rows centred in the area, clear of its edge, none within 0.16 pitch of a via of the net that already joins the span; fence = both sides of each segment (arcs too): a via beside every bend, tee, pad of the line and open end (within 1 mm), then the runs between at no more than the pitch; layer_change = for each signal via whose layers reference different planes, one via of the net joining both within 2 mm (1 mm preferred) where none is, two on opposite sides within 1 mm (or λg/20) for an RF net (signal nets: those given, else the intent's RF/clock/fast nets, else all nets with no pour); needed = one via at a time at the most weakly tied legal spot of the net's planes (the ground connectivity solve of ecad.board.ground.inspect; spots near RF lines, switching regulators, layer changes and connectors weigh more), solved again after each, until the worst is within target or budget vias are placed. Each via passes the clearance to other nets on every layer of its span, hole to hole, copper to edge, keepouts, stays out of SMD pads, doesn't cut another net's plane in two, and lands on the net's copper (fill, track, pad, via) on two layers or more; the rest are skipped and counted. A via size whose drill, ring or aspect ratio the design rule check would call an error is refused. At most 2000 vias; one undo step; the vias are marked as stitching vias (role stitch)",
         ),
     CommandSpec::new("ecad.board.stitch.remove", "Remove Stitching", crate::checked!("ecad.board.stitch.remove", stitch_remove))
         .icon("delete")
@@ -42,7 +42,7 @@ pub static COMMANDS: &[CommandSpec] = &[
         .contract(&REMOVE_CONTRACT)
         .output(output_schema_for::<StitchRemoveResult>)
         .params(
-            "net? (only its stitching vias); region? \"board\"|{pour}|{rect}|{polygon} (only those in it; a pour the board has, with a fill); ids? [id] (only these, each a stitching via); parts? [designator|id] (only those under these footprints: the via's pad meets the courtyard, else the footprint's box, on a side the via shows on; at most 4096); pattern? grid|fence|layer_change (only those its pattern placed); unrecorded? (with pattern: also those stitched before vias kept their pattern, which have none on record and may be of any) → {count, unrecorded? (such vias a pattern left), removed, unrouted}: the stitching vias (role stitch) that match all that is given, in one undo step; vias placed otherwise stay",
+            "net? (only its stitching vias); region? \"board\"|{pour}|{rect}|{polygon} (only those in it; a pour the board has, with a fill); ids? [id] (only these, each a stitching via); parts? [designator|id] (only those under these footprints: the via's pad meets the courtyard, else the footprint's box, on a side the via shows on; at most 4096); pattern? grid|fence|layer_change|needed (only those its pattern placed); unrecorded? (with pattern: also those stitched before vias kept their pattern, which have none on record and may be of any) → {count, unrecorded? (such vias a pattern left), removed, unrouted}: the stitching vias (role stitch) that match all that is given, in one undo step; vias placed otherwise stay",
         ),
 ];
 
@@ -155,6 +155,7 @@ fn stitch_vias(s: &mut Session, p: &Value) -> Result<Value> {
         StitchPattern::Grid => Pattern::Grid,
         StitchPattern::Fence => Pattern::Fence,
         StitchPattern::LayerChange => Pattern::LayerChange,
+        StitchPattern::Needed => Pattern::Needed,
     };
     let under_parts = p.under_parts.unwrap_or(false);
     let area = p.region.as_ref().map(|r| area_of(r, CMD)).transpose()?;
@@ -169,6 +170,8 @@ fn stitch_vias(s: &mut Session, p: &Value) -> Result<Value> {
         via: ViaSpec { diameter, drill, from: span.0, to: span.1 },
         clearance: p.clearance,
         under_parts,
+        target: p.target,
+        budget: p.budget,
     };
     let nets = s.board_nets();
     let mut plan = stitch::plan(&s.doc.ecad, &nets, &ask).map_err(|e| bad(CMD, e))?;
@@ -186,6 +189,7 @@ fn stitch_vias(s: &mut Session, p: &Value) -> Result<Value> {
         return Err(bad(CMD, format!("{count} vias is past what one call places ({MAX_STITCH}) or the board holds ({MAX_VIAS} vias)")));
     }
     let via = StitchViaOut { diameter, drill, from: span.0.name(), to: span.1.name() };
+    let ground = plan.ground.as_ref().map(needed_out);
     let skipped = plan.skipped.iter().map(|(k, n)| (k.to_string(), *n)).collect();
     if p.dry_run.unwrap_or(false) {
         let board = BoardResult {
@@ -207,6 +211,7 @@ fn stitch_vias(s: &mut Session, p: &Value) -> Result<Value> {
             via,
             why: plan.why,
             unfenced: plan.unfenced,
+            ground,
             board,
         });
     }
@@ -230,8 +235,38 @@ fn stitch_vias(s: &mut Session, p: &Value) -> Result<Value> {
         via,
         why: plan.why,
         unfenced: plan.unfenced,
+        ground,
         board: board_result(s, &old),
     })
+}
+
+fn round3(v: f64) -> f64 {
+    (v * 1000.0).round() / 1000.0 + 0.0
+}
+
+/// A plan's tie as replies give it.
+pub(super) fn tie_out(t: &stitch::Tie) -> TieOut {
+    TieOut {
+        worst_mv: t.worst.filter(|v| v.is_finite()).map(round3),
+        at: t.at.map(|[x, y]| [round3(x), round3(y)]),
+        layer: t.layer.map(|l| l.name()),
+        isolated_pct: round3(t.isolated * 100.0),
+        weak_pct: round3(t.weak * 100.0),
+        converged: t.converged,
+    }
+}
+
+fn needed_out(n: &stitch::Needed) -> NeededOut {
+    NeededOut {
+        before: tie_out(&n.before),
+        after: tie_out(&n.after),
+        target_mv: n.target,
+        budget: n.budget,
+        reached: n.reached,
+        solves: n.solves,
+        cell: n.cell,
+        coarse: n.coarse,
+    }
 }
 
 /// A stitching via's pattern as replies give it.
@@ -240,6 +275,7 @@ pub(super) fn pattern_out(p: Pattern) -> StitchPattern {
         Pattern::Grid => StitchPattern::Grid,
         Pattern::Fence => StitchPattern::Fence,
         Pattern::LayerChange => StitchPattern::LayerChange,
+        Pattern::Needed => StitchPattern::Needed,
     }
 }
 
