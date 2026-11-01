@@ -111,11 +111,7 @@ pub(crate) fn refresh(app: &mut SolveApp, ctx: &egui::Context) {
 
 /// The heat colour of `mv` millivolts (infinity: isolated), from the theme's green, amber and red.
 fn heat(t: &Tokens, mv: f64) -> Color32 {
-    let mix = |a: Color32, b: Color32, s: f32| {
-        let s = s.clamp(0.0, 1.0);
-        let c = |x: u8, y: u8| (f32::from(x) + (f32::from(y) - f32::from(x)) * s).round() as u8;
-        Color32::from_rgb(c(a.r(), b.r()), c(a.g(), b.g()), c(a.b(), b.b()))
-    };
+    let mix = |a: Color32, b: Color32, s: f32| a.lerp_to_gamma(b, s.clamp(0.0, 1.0));
     let x = if mv.is_finite() { (mv / DEFAULT_TARGET_MV) as f32 } else { 2.0 };
     let c = if x <= 1.0 { mix(t.agent_ok, t.warning, x) } else { mix(t.warning, t.error, x - 1.0) };
     c.gamma_multiply(ALPHA)
