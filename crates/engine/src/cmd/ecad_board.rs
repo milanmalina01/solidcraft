@@ -390,6 +390,7 @@ fn sync(s: &mut Session, p: &Value) -> Result<Value> {
             value_at: None,
             show_name: true,
             show_value: false,
+            name_placed: false,
             pour_connect: None,
             pad_connect: BTreeMap::new(),
         });

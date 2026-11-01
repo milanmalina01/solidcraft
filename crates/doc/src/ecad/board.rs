@@ -119,6 +119,10 @@ pub struct Board {
     /// with its footprint (see [`super::names`]), or as its library footprint's spot for it says.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub name_height: Option<f64>,
+    /// The silkscreen names mode the board's names were last laid out by (see
+    /// [`super::labels`]); `None` while they are as each footprint has them.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub names_mode: Option<super::labels::NamesMode>,
     /// Design rule check findings someone accepted, by key (see [`super::drc`]).
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub approvals: Vec<Approval>,
@@ -161,6 +165,7 @@ impl Default for Board {
             stackup: Vec::new(),
             rules: Rules::default(),
             name_height: None,
+            names_mode: None,
             approvals: Vec::new(),
             fab_profile: profiles::find(DEFAULT_PROFILE).map(FabChoice::of),
             drc_levels: BTreeMap::new(),
@@ -232,6 +237,11 @@ pub struct BoardFootprint {
     /// The value shows on the board (it does not unless shown).
     #[serde(default, skip_serializing_if = "is_false")]
     pub show_value: bool,
+    /// The name's spot (`name_at`) and whether it shows were set by the board's names mode (see
+    /// [`super::labels`]), not by hand: the mode may move it again. A spot set by hand clears it,
+    /// and the mode never moves such a name.
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub name_placed: bool,
     /// How a pour of their net joins its pads, over the pour's own `connect`; `None`: as the pour
     /// says.
     #[serde(default, skip_serializing_if = "Option::is_none")]

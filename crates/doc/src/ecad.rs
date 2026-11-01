@@ -31,6 +31,7 @@ pub mod impedance;
 pub mod infer;
 pub mod info;
 pub mod intent;
+pub mod labels;
 pub mod layers;
 pub mod names;
 pub mod overbar;

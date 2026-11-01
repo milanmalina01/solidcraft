@@ -494,3 +494,21 @@ fn the_board_pages_show_each_copper_layer_the_assembly_and_the_stack_up() {
     assert_eq!(b.entries.iter().map(|e| e.kind).collect::<Vec<_>>(), [PageKind::BoardTop]);
     assert!(b.warnings.iter().any(|w| w.contains("no inner copper layers")), "{:?}", b.warnings);
 }
+
+#[test]
+fn the_board_pages_print_the_names_the_silkscreen_mode_left_and_the_assembly_page_every_name() {
+    use solidcraft_doc::ecad::labels::{NamesMode, layout};
+    let mut e = design();
+    let names = |e: &Electronics, kind: PageKind| {
+        let b = compose(e, &Options { pages: vec![kind], ..options() }).unwrap();
+        let page = b.pages.first().unwrap().clone();
+        ["R1", "R2", "R3", "R4"].into_iter().filter(|d| texts(&page).iter().any(|t| t.text == *d)).count()
+    };
+    assert_eq!(names(&e, PageKind::BoardTop), 4, "every name shows before");
+    e.board = layout(&e, NamesMode::None, None).unwrap().board;
+    assert_eq!(names(&e, PageKind::BoardTop), 0, "none: no name on the silkscreen page");
+    assert_eq!(names(&e, PageKind::AssemblyTop), 4, "the assembly page keeps every name");
+    let fit = layout(&design(), NamesMode::Fit, None).unwrap();
+    e.board = fit.board.clone();
+    assert_eq!(names(&e, PageKind::BoardTop), fit.placed.iter().filter(|d| d.starts_with('R') && d.len() == 2 && d.as_str() != "R5").count());
+}

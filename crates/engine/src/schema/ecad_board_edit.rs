@@ -135,6 +135,51 @@ pub struct NamesParams {
     pub show_values: Option<bool>,
 }
 
+/// How the board lays out its silkscreen names.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum NamesModeParam {
+    /// Every name on the silk.
+    Full,
+    /// The names that fit legally; the rest go to the assembly drawing.
+    Fit,
+    /// Only connectors, test points, switches and LEDs, where they fit.
+    Minimal,
+    /// No name on the silk.
+    None,
+}
+
+/// `ecad.board.labels`: lay out every footprint's name on the silkscreen, in one step.
+#[derive(Debug, Deserialize, JsonSchema)]
+#[schemars(deny_unknown_fields)]
+pub struct LabelsParams {
+    pub mode: NamesModeParam,
+    /// The names' height in millimetres; at least the least the fab prints legibly (that when
+    /// left out).
+    pub height: Option<f64>,
+    /// Work it out and say what it would do, changing nothing.
+    pub dry_run: Option<bool>,
+}
+
+/// What `ecad.board.labels` returns.
+#[derive(Debug, Serialize, JsonSchema)]
+pub struct LabelsResult {
+    pub mode: NamesModeParam,
+    /// The height used, in millimetres.
+    pub height: f64,
+    /// The names on the silk at a legal spot, by designator.
+    pub placed: Vec<String>,
+    /// The names hidden, left to the assembly drawing.
+    pub moved_to_assembly: Vec<String>,
+    /// Full: the names left at their usual spot because no legal one was found.
+    pub unplaceable: Vec<String>,
+    /// Names whose spot was set by hand: never moved.
+    pub kept: Vec<String>,
+    pub why: Vec<String>,
+    #[serde(flatten)]
+    pub board: BoardResult,
+}
+
 /// `ecad.board.track.reshape`: a track's new points and sweeps.
 #[derive(Debug, Deserialize, JsonSchema)]
 #[schemars(deny_unknown_fields)]

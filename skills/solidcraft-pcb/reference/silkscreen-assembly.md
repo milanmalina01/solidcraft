@@ -6,7 +6,7 @@ Designators are for people: hand assembly, inspection, rework and debugging. Mac
 
 ## Modes
 
-Every footprint's designator prints on the silkscreen. Set one height for the board with `ecad.board.names {"height":1.0}` (left null, each is sized to its courtyard, 0.5–1 mm, which is below most fabs' minimum), and hide or move single names with `ecad.board.edit` (`show_name`, `name_at`). A per-board silkscreen mode that places every designator against the rules below comes later; until then, work the ladder by hand.
+Every footprint's designator prints on the silkscreen. `ecad.board.labels {"mode":"fit"}` lays every name out at once against the rules below: just outside its courtyard, upright (0°), off pads, open vias, holes, other names and the edge band, nearer its own part than any other, at the least height the fab prints (`height` may ask for more). It then runs `silk.size`, `silk.clip` and `silk.designator` on the result and hides any name they still flag, so Fit leaves no silk finding on a name it placed. Its reply lists the names `placed`, `moved_to_assembly` and (Full) `unplaceable`. A name moved or shown by hand with `ecad.board.edit` (`show_name`, `name_at`) is never moved by it. `ecad.board.names {"height":1.0}` still sets one height by hand. Arrays get no range label yet.
 
 Choose what the silkscreen carries:
 
@@ -121,4 +121,4 @@ Orient like parts the same way within a row or group, and polarised parts in one
 
 `silk.size`, `silk.clip`, `silk.designator`, `silk.polarity`, and the DRC code `silk_over_pad`.
 
-No check covers the must-keep set, the assembly drawing, fiducials, orientation or test and debug access yet: review those against this file.
+`ecad.board.labels` keeps the must-keep set by designator (connectors J, P, CN, X; test points TP; switches SW, S; LEDs) and the intent's connectors in Minimal; polarity marks and the board's own text are drawings, which it leaves alone. No check covers the must-keep set, the assembly drawing, fiducials, orientation or test and debug access yet: review those against this file.

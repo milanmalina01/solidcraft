@@ -1400,6 +1400,80 @@ fn a_stitching_grid_is_staggered_inside_the_board_and_breaks_no_rule() {
     assert!(!after.drc().findings.iter().any(|f| f.severity == Severity::Error), "{:?}", after.drc().findings);
 }
 
+// Silkscreen names mode, on the `silk` board packed tight: its eight chips and diodes in two rows
+// 2 mm apart, J1 and U1 where they are.
+
+fn dense() -> Electronics {
+    let mut e = scratch("silk");
+    let mut moves = Vec::new();
+    for (k, d) in ["C1", "C2", "C3", "C4", "R1", "R2", "D1", "D2"].iter().enumerate() {
+        let (x, y) = (-6.0 + 2.0 * (k % 4) as f64, if k < 4 { -6.0 } else { -4.0 });
+        moves.push(json!(["move", {"items": [d], "to": [x, y]}]));
+    }
+    run(&mut e, Value::Array(moves));
+    e
+}
+
+/// The silk findings on `e` about names.
+fn name_findings(e: &Electronics) -> Vec<String> {
+    let only = BTreeSet::from(["silk.size", "silk.clip", "silk.designator"]);
+    quality::check(e, &e.board_nets(), Some(&only)).findings.into_iter().map(|q| q.finding.message).filter(|m| m.contains("'s name")).collect()
+}
+
+#[test]
+fn the_fit_mode_leaves_no_silk_finding_on_a_dense_board_and_the_others_do_as_they_say() {
+    use super::labels::{NamesMode, layout, least_height};
+    let e = dense();
+    assert_eq!(least_height(&e.board), 1.5, "the standard profile's 0.15 mm stroke needs 1.5 mm");
+    let apply = |l: &super::labels::Layout| {
+        let mut x = e.clone();
+        x.board = l.board.clone();
+        x.validate().unwrap();
+        x
+    };
+    // Fit: what fits is placed, the rest is hidden, and no name finding is left.
+    let fit = layout(&e, NamesMode::Fit, None).unwrap();
+    assert!(!fit.placed.is_empty() && fit.unplaceable.is_empty(), "{:?}", (&fit.placed, &fit.moved_to_assembly));
+    assert_eq!(fit.placed.len() + fit.moved_to_assembly.len(), 10);
+    assert!(!fit.moved_to_assembly.is_empty(), "the board is dense: some names go to the assembly drawing");
+    let laid = apply(&fit);
+    assert_eq!(name_findings(&laid), Vec::<String>::new());
+    assert_eq!(laid.board.name_height, Some(1.5));
+    assert!(laid.board.footprints.iter().all(|f| f.name_placed));
+    for f in &laid.board.footprints {
+        let d = &laid.schematic.parts.iter().find(|p| p.id == f.part).unwrap().designator;
+        assert_eq!(f.show_name, fit.placed.contains(d), "{d}");
+    }
+    // Full: every name shows; those with no legal spot are counted.
+    let full = layout(&e, NamesMode::Full, Some(2.0)).unwrap();
+    assert!(full.moved_to_assembly.is_empty() && full.height == 2.0);
+    assert!(apply(&full).board.footprints.iter().all(|f| f.show_name));
+    assert_eq!(full.placed.len() + full.unplaceable.len(), 10);
+    // Minimal: the connector and the LED only; none: nothing.
+    let minimal = layout(&e, NamesMode::Minimal, None).unwrap();
+    assert!(minimal.placed.iter().all(|d| d == "J1" || d == "D1"), "{:?}", minimal.placed);
+    assert!(minimal.moved_to_assembly.contains(&"R1".to_string()));
+    let none = layout(&e, NamesMode::None, None).unwrap();
+    assert!(none.placed.is_empty() && none.moved_to_assembly.len() == 10);
+    // A height under the fab's least is raised to it, and says so; past the most, refused.
+    let low = layout(&e, NamesMode::Fit, Some(0.5)).unwrap();
+    assert!(low.height == 1.5 && low.why.iter().any(|w| w.contains("1.5 mm")), "{:?}", low.why);
+    assert!(layout(&e, NamesMode::Fit, Some(50.0)).is_err() && layout(&e, NamesMode::Fit, Some(f64::NAN)).is_err());
+    // A name set by hand is never moved or hidden, not even by none.
+    let mut hand = e.clone();
+    let u1 = footprint_of(&hand, "U1");
+    let f = hand.board.footprints.iter_mut().find(|f| f.id == u1).unwrap();
+    f.name_at = Some([0.0, 6.0]);
+    for mode in [NamesMode::Fit, NamesMode::None] {
+        let l = layout(&hand, mode, None).unwrap();
+        let g = l.board.footprints.iter().find(|f| f.id == u1).unwrap();
+        assert!(g.name_at == Some([0.0, 6.0]) && g.show_name && !g.name_placed && l.kept == ["U1"], "{mode:?}");
+    }
+    // Laying out again changes nothing.
+    let again = layout(&laid, NamesMode::Fit, None).unwrap();
+    assert!(again.changed.is_empty(), "{:?}", again.changed);
+}
+
 // Ground connectivity: a GND plane on inner1 (the largest, so the reference), a 16 by 2 mm GND
 // strip on the bottom tied to it by one via at its left end.
 

@@ -168,6 +168,33 @@ fn names(app: &mut SolveApp, ui: &mut Ui) {
     if height.is_none() {
         ui_kit::text(ui, &tr("electronics.board_names_auto"), ui_kit::Text::Note("electronics.board_names_auto"));
     }
+    // The silkscreen names mode lays every name out at once (`ecad.board.labels`); picking the
+    // mode the board has lays them out again for the board as it is now.
+    let modes = ["full", "fit", "minimal", "none"];
+    let shown_modes: Vec<String> = modes.iter().map(|m| tr(&format!("electronics.board_names_mode_{m}"))).collect();
+    let current = board(app).names_mode.map_or(usize::MAX, |m| modes.iter().position(|x| *x == m.name()).unwrap_or(usize::MAX));
+    let mut options = shown_modes.clone();
+    if current == usize::MAX {
+        options.insert(0, tr("electronics.board_names_mode_own"));
+    }
+    let at = if current == usize::MAX { 0 } else { current };
+    if let Some(i) = crate::electronics_editor::choice(ui, "board_names_mode", &tr("electronics.board_names_mode"), at, &options) {
+        let pick = if current == usize::MAX { i.checked_sub(1) } else { Some(i) };
+        if let Some(mode) = pick.and_then(|k| modes.get(k)) {
+            match app.run("ecad.board.labels", json!({"mode": mode})) {
+                Ok(r) => {
+                    let count = |k: &str| r.get(k).and_then(Value::as_array).map_or(0, Vec::len).to_string();
+                    let text = crate::i18n::format(
+                        "electronics.board_names_laid_out",
+                        &[("placed", &count("placed")), ("assembly", &count("moved_to_assembly")), ("unplaceable", &count("unplaceable"))],
+                    );
+                    app.set_status(text, false);
+                }
+                Err(e) => app.set_status(e, true),
+            }
+        }
+    }
+    ui_kit::text(ui, &tr("electronics.board_names_mode_help"), ui_kit::Text::Note("electronics.board_names_mode_help"));
     if ui_kit::checkbox_row(ui, "board:names:show", &tr("electronics.board_names_show"), names) {
         drop(app.run("ecad.board.names", json!({"show_names": !names})));
     }

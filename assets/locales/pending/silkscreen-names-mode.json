@@ -1,0 +1,90 @@
+{
+  "en": {
+    "cmd.ecad_board_labels": "Silkscreen Names",
+    "electronics.board_names_mode": "Silkscreen names",
+    "electronics.board_names_mode_full": "Full: every name",
+    "electronics.board_names_mode_fit": "Fit: what fits legally",
+    "electronics.board_names_mode_minimal": "Minimal: connectors, test points, switches, LEDs",
+    "electronics.board_names_mode_none": "None",
+    "electronics.board_names_mode_own": "As each footprint has them",
+    "electronics.board_names_mode_help": "Lays every name out just outside its part, clear of pads, vias, holes and other names, at the least height the fab prints. Names you moved by hand stay where they are; hidden ones are on the assembly drawing.",
+    "electronics.board_names_laid_out": "{placed} names placed, {assembly} left to the assembly drawing, {unplaceable} with no legal spot."
+  },
+  "de": {
+    "cmd.ecad_board_labels": "Bestückungsdruck-Namen",
+    "electronics.board_names_mode": "Namen im Bestückungsdruck",
+    "electronics.board_names_mode_full": "Voll: jeder Name",
+    "electronics.board_names_mode_fit": "Passend: was regelkonform passt",
+    "electronics.board_names_mode_minimal": "Minimal: Steckverbinder, Testpunkte, Schalter, LEDs",
+    "electronics.board_names_mode_none": "Keine",
+    "electronics.board_names_mode_own": "Wie jeder Footprint sie hat",
+    "electronics.board_names_mode_help": "Setzt jeden Namen knapp außerhalb seines Bauteils, frei von Pads, Vias, Bohrungen und anderen Namen, in der kleinsten Höhe, die der Hersteller druckt. Von Hand verschobene Namen bleiben, wo sie sind; ausgeblendete stehen in der Bestückungszeichnung.",
+    "electronics.board_names_laid_out": "{placed} Namen gesetzt, {assembly} der Bestückungszeichnung überlassen, {unplaceable} ohne regelkonformen Platz."
+  },
+  "ja": {
+    "cmd.ecad_board_labels": "シルク印刷の名前",
+    "electronics.board_names_mode": "シルク印刷の名前",
+    "electronics.board_names_mode_full": "フル: すべての名前",
+    "electronics.board_names_mode_fit": "フィット: 規則どおり収まるもの",
+    "electronics.board_names_mode_minimal": "最小: コネクタ、テストポイント、スイッチ、LED",
+    "electronics.board_names_mode_none": "なし",
+    "electronics.board_names_mode_own": "各フットプリントのまま",
+    "electronics.board_names_mode_help": "各名前を部品のすぐ外側に、パッド、ビア、穴、ほかの名前を避け、基板メーカーが印刷できる最小の高さで配置します。手で動かした名前はそのままで、隠した名前は組立図に載ります。",
+    "electronics.board_names_laid_out": "{placed} 個の名前を配置、{assembly} 個を組立図に任せ、{unplaceable} 個は規則どおりの場所がありません。"
+  },
+  "zh": {
+    "cmd.ecad_board_labels": "丝印名称",
+    "electronics.board_names_mode": "丝印名称",
+    "electronics.board_names_mode_full": "完整：所有名称",
+    "electronics.board_names_mode_fit": "适配：符合规则能放下的",
+    "electronics.board_names_mode_minimal": "最少：连接器、测试点、开关、LED",
+    "electronics.board_names_mode_none": "无",
+    "electronics.board_names_mode_own": "按各封装自身",
+    "electronics.board_names_mode_help": "将每个名称放在其元件外侧附近，避开焊盘、过孔、孔和其他名称，采用制造商能印刷的最小高度。你手动移动的名称保持原位；隐藏的名称在装配图上。",
+    "electronics.board_names_laid_out": "已放置 {placed} 个名称，{assembly} 个留给装配图，{unplaceable} 个没有合规位置。"
+  },
+  "ko": {
+    "cmd.ecad_board_labels": "실크 인쇄 이름",
+    "electronics.board_names_mode": "실크 인쇄 이름",
+    "electronics.board_names_mode_full": "전체: 모든 이름",
+    "electronics.board_names_mode_fit": "맞춤: 규칙대로 들어가는 것",
+    "electronics.board_names_mode_minimal": "최소: 커넥터, 테스트 포인트, 스위치, LED",
+    "electronics.board_names_mode_none": "없음",
+    "electronics.board_names_mode_own": "각 풋프린트대로",
+    "electronics.board_names_mode_help": "각 이름을 부품 바로 바깥에 패드, 비아, 구멍, 다른 이름을 피해 제조사가 인쇄할 수 있는 최소 높이로 배치합니다. 손으로 옮긴 이름은 그대로 두며, 숨긴 이름은 조립도에 있습니다.",
+    "electronics.board_names_laid_out": "이름 {placed}개 배치, {assembly}개는 조립도로, {unplaceable}개는 규칙에 맞는 자리가 없습니다."
+  },
+  "ar": {
+    "cmd.ecad_board_labels": "أسماء الطباعة الحريرية",
+    "electronics.board_names_mode": "أسماء الطباعة الحريرية",
+    "electronics.board_names_mode_full": "كامل: كل الأسماء",
+    "electronics.board_names_mode_fit": "ملاءمة: ما يتسع وفق القواعد",
+    "electronics.board_names_mode_minimal": "أدنى: الموصلات ونقاط الاختبار والمفاتيح والثنائيات الباعثة للضوء",
+    "electronics.board_names_mode_none": "لا شيء",
+    "electronics.board_names_mode_own": "كما في كل بصمة",
+    "electronics.board_names_mode_help": "يضع كل اسم خارج قطعته مباشرة، بعيدًا عن الوسادات والثقوب الموصلة والثقوب والأسماء الأخرى، بأقل ارتفاع يطبعه المصنع. تبقى الأسماء التي نقلتها يدويًا في مكانها، والمخفية تظهر في رسم التجميع.",
+    "electronics.board_names_laid_out": "وُضع {placed} اسمًا، وتُرك {assembly} لرسم التجميع، و{unplaceable} بلا موضع مسموح."
+  },
+  "he": {
+    "cmd.ecad_board_labels": "שמות בהדפסת המשי",
+    "electronics.board_names_mode": "שמות בהדפסת המשי",
+    "electronics.board_names_mode_full": "מלא: כל השמות",
+    "electronics.board_names_mode_fit": "התאמה: מה שנכנס לפי הכללים",
+    "electronics.board_names_mode_minimal": "מינימלי: מחברים, נקודות בדיקה, מתגים, נוריות",
+    "electronics.board_names_mode_none": "ללא",
+    "electronics.board_names_mode_own": "כפי שבכל טביעה",
+    "electronics.board_names_mode_help": "מציב כל שם ממש מחוץ לרכיב שלו, הרחק מפדים, וייות, חורים ושמות אחרים, בגובה הקטן ביותר שהיצרן מדפיס. שמות שהזזתם ידנית נשארים במקומם; שמות מוסתרים מופיעים בשרטוט ההרכבה.",
+    "electronics.board_names_laid_out": "הוצבו {placed} שמות, {assembly} הושארו לשרטוט ההרכבה, ל־{unplaceable} אין מקום חוקי."
+  },
+  "vi": {
+    "cmd.ecad_board_labels": "Tên trên lớp in lụa",
+    "electronics.board_names_mode": "Tên trên lớp in lụa",
+    "electronics.board_names_mode_full": "Đầy đủ: mọi tên",
+    "electronics.board_names_mode_fit": "Vừa: những gì đặt hợp lệ được",
+    "electronics.board_names_mode_minimal": "Tối thiểu: đầu nối, điểm đo, công tắc, LED",
+    "electronics.board_names_mode_none": "Không",
+    "electronics.board_names_mode_own": "Như từng footprint",
+    "electronics.board_names_mode_help": "Đặt mỗi tên ngay bên ngoài linh kiện của nó, tránh pad, via, lỗ và các tên khác, ở chiều cao nhỏ nhất mà nhà sản xuất in được. Tên bạn đã di chuyển bằng tay giữ nguyên chỗ; tên bị ẩn có trên bản vẽ lắp ráp.",
+    "electronics.board_names_laid_out": "Đã đặt {placed} tên, {assembly} tên để cho bản vẽ lắp ráp, {unplaceable} tên không có chỗ hợp lệ."
+  }
+}

@@ -229,6 +229,7 @@ fn calls(keys: &[String; 3]) -> Vec<(&'static str, Value)> {
         ("ecad.board.hole.edit", json!({"holes": [12], "drill": 3.0})),
         ("ecad.board.edit", json!({"footprints": [{"footprint": "R1", "name_at": [0, 1.5]}]})),
         ("ecad.board.names", json!({"height": 0.8})),
+        ("ecad.board.labels", json!({"mode": "fit"})),
         ("ecad.board.track.reshape", json!({"track": 8, "points": [[-9.2, 0], [0, 1], [9.2, 0]]})),
         ("ecad.board.track.split", json!({"track": 8, "segment": 0, "at": [0, 0]})),
         ("ecad.board.track.miter", json!({"track": 8, "radius": 0.5})),
@@ -420,4 +421,41 @@ fn hostile_electronics_params_never_panic() {
         workers.into_iter().flat_map(|w| w.join().unwrap()).collect()
     });
     assert!(failures.is_empty(), "{} hostile calls failed:\n{}", failures.len(), failures.join("\n"));
+}
+
+#[test]
+fn silkscreen_names_lay_out_in_one_step_and_keep_what_was_set_by_hand() {
+    let mut s = board();
+    // A name moved by hand first: the layout leaves it.
+    run(&mut s, "ecad.board.edit", json!({"footprints": [{"footprint": "R1", "name_at": [0, 2]}]}));
+    let before = s.doc.clone();
+    let dry = run(&mut s, "ecad.board.labels", json!({"mode": "fit", "dry_run": true}));
+    assert!(Arc::ptr_eq(&before, &s.doc), "a dry run changes nothing");
+    assert!(dry["height"].as_f64().is_some_and(|h| h >= 1.5), "{dry}");
+    assert_eq!(dry["kept"], json!(["R1"]));
+    let undo = s.undo.len();
+    let r = run(&mut s, "ecad.board.labels", json!({"mode": "fit"}));
+    assert_eq!(s.undo.len(), undo + 1, "one undo step");
+    assert_eq!(
+        (r["placed"].clone(), r["moved_to_assembly"].clone()),
+        (dry["placed"].clone(), dry["moved_to_assembly"].clone()),
+        "what the dry run said"
+    );
+    let board = &s.doc.ecad.board;
+    assert_eq!(board.names_mode, Some(solidcraft_doc::ecad::labels::NamesMode::Fit));
+    let r1 = board.footprints.iter().find(|f| f.name_at == Some([0.0, 2.0])).unwrap();
+    assert!(!r1.name_placed && r1.show_name);
+    // None hides every name but the one set by hand; the assembly drawing keeps them all.
+    let none = run(&mut s, "ecad.board.labels", json!({"mode": "none"}));
+    assert!(none["placed"].as_array().is_some_and(Vec::is_empty), "{none}");
+    assert!(s.doc.ecad.board.footprints.iter().all(|f| f.show_name == (f.name_at == Some([0.0, 2.0]))));
+    run(&mut s, "edit.undo", json!({}));
+    assert_eq!(s.doc.ecad.board.names_mode, Some(solidcraft_doc::ecad::labels::NamesMode::Fit), "undo brings the fit layout back");
+    // Moved by hand after a layout, a name is the user's again.
+    let placed = s.doc.ecad.board.footprints.iter().find(|f| f.name_placed && f.show_name).map(|f| f.id).unwrap();
+    run(&mut s, "ecad.board.edit", json!({"footprints": [{"footprint": placed, "name_at": [1, 1]}]}));
+    assert!(s.doc.ecad.board.footprints.iter().any(|f| f.id == placed && !f.name_placed));
+    for bad in [json!({"mode": "fit", "height": 99}), json!({"mode": "some"}), json!({})] {
+        assert!(s.execute("ecad.board.labels", &bad).is_err(), "{bad}");
+    }
 }

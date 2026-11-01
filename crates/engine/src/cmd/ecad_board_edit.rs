@@ -8,6 +8,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use serde_json::Value;
 use solidcraft_doc::ecad::airwires::footprint_pads;
 use solidcraft_doc::ecad::board::{DEFAULT_HOLE_DRILL, MAX_HOLES, THICKNESS, check_hole};
+use solidcraft_doc::ecad::labels::{NamesMode, layout};
 use solidcraft_doc::ecad::layers::{MAX_COPPER_LAYERS, MIN_COPPER_LAYERS};
 use solidcraft_doc::ecad::names::NAME_HEIGHT;
 use solidcraft_doc::ecad::place::snap;
@@ -21,8 +22,8 @@ use super::ecad_board::{Index, MAX_ITEMS, board_point, board_result, refuse_clas
 use crate::params::bad;
 use crate::schema::ecad_board::BoardResult;
 use crate::schema::ecad_board_edit::{
-    EditParams, HoleEditParams, HoleParams, MiterParams, MiterResult, MiterStyle, NamesParams, ReshapeParams, SplitParams, SplitResult,
-    StackKindParam, StackParams, StackResult, ThicknessFrom, UnrouteParams,
+    EditParams, HoleEditParams, HoleParams, LabelsParams, LabelsResult, MiterParams, MiterResult, MiterStyle, NamesModeParam, NamesParams,
+    ReshapeParams, SplitParams, SplitResult, StackKindParam, StackParams, StackResult, ThicknessFrom, UnrouteParams,
 };
 use crate::schema::{TypedContract, output_schema_for};
 use crate::{Result, Session};
@@ -64,6 +65,14 @@ pub static COMMANDS: &[CommandSpec] = &[
         .params(
             "height? (mm, 0.1 to 10; null: each footprint's sized to its courtyard, 0.5 to 1 mm, or as its library footprint's spot says); show_names? bool (every footprint's name shown or hidden); show_values? bool (every value) → {changed, footprints}: the board's name and value texts in one step; a footprint's own spot for them stays",
         ),
+    CommandSpec::new("ecad.board.labels", "Silkscreen Names", crate::checked!("ecad.board.labels", labels))
+        .icon("text")
+        .doc_only()
+        .contract(&LABELS_CONTRACT)
+        .output(output_schema_for::<LabelsResult>)
+        .params(
+            "mode: full|fit|minimal|none; height? (mm, at most 5; at least the least the fab prints legibly: silk.size's height and the height whose stroke, a tenth of it, the profile's least stroke is; that when left out); dry_run? → {mode, height, placed, moved_to_assembly, unplaceable, kept, why, changed, footprints}: every footprint's name (designator) laid out for the board at once: just outside its courtyard, upright (0°), off pads, open vias, holes, other names, courtyards and the board's edge band, nearer its own part than any other; full = every name (those with no legal spot stay at their usual spot, unplaceable), fit = those that fit (the rest hidden, left to the assembly drawing, which prints every name), minimal = connectors, test points, switches and LEDs only, none = none. The silk checks (silk.size, silk.clip, silk.designator) then run on the result and a name they still flag is hidden (fit, minimal) or counted (full). A name moved or shown by hand (ecad.board.edit) is never moved; values stay as they are. One undo step; the PDF's board pages print the same names",
+        ),
     CommandSpec::new("ecad.board.track.reshape", "Reshape Track", crate::checked!("ecad.board.track.reshape", reshape))
         .icon("trace")
         .doc_only()
@@ -98,6 +107,7 @@ const STACK_CONTRACT: TypedContract<StackParams> = TypedContract::new();
 const HOLE_CONTRACT: TypedContract<HoleParams> = TypedContract::new();
 const HOLE_EDIT_CONTRACT: TypedContract<HoleEditParams> = TypedContract::new();
 const EDIT_CONTRACT: TypedContract<EditParams> = TypedContract::new();
+const LABELS_CONTRACT: TypedContract<LabelsParams> = TypedContract::new();
 const NAMES_CONTRACT: TypedContract<NamesParams> = TypedContract::new();
 const RESHAPE_CONTRACT: TypedContract<ReshapeParams> = TypedContract::new();
 const SPLIT_CONTRACT: TypedContract<SplitParams> = TypedContract::new();
@@ -311,14 +321,17 @@ fn edit(s: &mut Session, p: &Value) -> Result<Value> {
             other => other,
         };
         let Some(f) = board.footprints.get_mut(k) else { continue };
+        // A name moved or shown by hand is the user's: the names mode leaves it from now on.
         if let Some(v) = name_at {
             f.name_at = v;
+            f.name_placed = false;
         }
         if let Some(v) = value_at {
             f.value_at = v;
         }
         if let Some(v) = e.show_name {
             f.show_name = v;
+            f.name_placed = false;
         }
         if let Some(v) = e.show_value {
             f.show_value = v;
@@ -326,6 +339,36 @@ fn edit(s: &mut Session, p: &Value) -> Result<Value> {
     }
     store_board(s, board, CMD)?;
     reply(board_result(s, &old))
+}
+
+fn labels(s: &mut Session, p: &Value) -> Result<Value> {
+    const CMD: &str = "ecad.board.labels";
+    let p: LabelsParams = parse(CMD, p)?;
+    let mode = match p.mode {
+        NamesModeParam::Full => NamesMode::Full,
+        NamesModeParam::Fit => NamesMode::Fit,
+        NamesModeParam::Minimal => NamesMode::Minimal,
+        NamesModeParam::None => NamesMode::None,
+    };
+    let old = s.doc.ecad.board.clone();
+    let l = layout(&s.doc.ecad, mode, p.height).map_err(|e| bad(CMD, e))?;
+    let out = |board| LabelsResult {
+        mode: p.mode,
+        height: l.height,
+        placed: l.placed.clone(),
+        moved_to_assembly: l.moved_to_assembly.clone(),
+        unplaceable: l.unplaceable.clone(),
+        kept: l.kept.clone(),
+        why: l.why.clone(),
+        board,
+    };
+    if p.dry_run.unwrap_or(false) {
+        let mut dry = board_result(s, &old);
+        dry.changed = Vec::new();
+        return reply(out(dry));
+    }
+    store_board(s, l.board.clone(), CMD)?;
+    reply(out(board_result(s, &old)))
 }
 
 fn names(s: &mut Session, p: &Value) -> Result<Value> {
