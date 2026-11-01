@@ -37,6 +37,7 @@ mod ecad_board_check;
 mod ecad_board_draw;
 mod ecad_board_edit;
 mod ecad_board_ground;
+mod ecad_board_marking;
 mod ecad_board_metrics;
 mod ecad_board_pour;
 mod ecad_board_rules;
@@ -379,6 +380,7 @@ pub fn command_specs() -> Vec<&'static CommandSpec> {
     v.extend(ecad_board_rules::COMMANDS.iter());
     v.extend(ecad_board_stitch::COMMANDS.iter());
     v.extend(ecad_board_ground::COMMANDS.iter());
+    v.extend(ecad_board_marking::COMMANDS.iter());
     v.extend(ecad_drc::COMMANDS.iter());
     v.extend(ecad_board_check::COMMANDS.iter());
     v.extend(ecad_intent::COMMANDS.iter());

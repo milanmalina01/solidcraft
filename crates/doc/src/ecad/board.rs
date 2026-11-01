@@ -123,6 +123,10 @@ pub struct Board {
     /// [`super::labels`]); `None` while they are as each footprint has them.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub names_mode: Option<super::labels::NamesMode>,
+    /// The board's markings (see [`super::marking`]): their drawings are in `graphics` and
+    /// `keepouts`, tagged with the marking's id.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub markings: Vec<super::marking::Marking>,
     /// Design rule check findings someone accepted, by key (see [`super::drc`]).
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub approvals: Vec<Approval>,
@@ -166,6 +170,7 @@ impl Default for Board {
             rules: Rules::default(),
             name_height: None,
             names_mode: None,
+            markings: Vec::new(),
             approvals: Vec::new(),
             fab_profile: profiles::find(DEFAULT_PROFILE).map(FabChoice::of),
             drc_levels: BTreeMap::new(),
@@ -288,6 +293,10 @@ pub struct BoardGraphic {
     pub mirror: bool,
     /// The shape, in board millimetres, with no footprint `layer` or `side` of its own.
     pub graphic: Graphic,
+    /// The board marking it is part of, by the marking's id (see [`super::marking`]): made again
+    /// with it when the design's revision or date changes.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub marking: Option<u64>,
 }
 
 fn top() -> CopperLayer {

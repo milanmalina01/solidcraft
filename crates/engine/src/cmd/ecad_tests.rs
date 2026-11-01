@@ -230,6 +230,7 @@ fn calls(keys: &[String; 3]) -> Vec<(&'static str, Value)> {
         ("ecad.board.edit", json!({"footprints": [{"footprint": "R1", "name_at": [0, 1.5]}]})),
         ("ecad.board.names", json!({"height": 0.8})),
         ("ecad.board.labels", json!({"mode": "fit"})),
+        ("ecad.board.marking", json!({"side": "top", "at": [-14, 9.5]})),
         ("ecad.board.track.reshape", json!({"track": 8, "points": [[-9.2, 0], [0, 1], [9.2, 0]]})),
         ("ecad.board.track.split", json!({"track": 8, "segment": 0, "at": [0, 0]})),
         ("ecad.board.track.miter", json!({"track": 8, "radius": 0.5})),
@@ -457,5 +458,44 @@ fn silkscreen_names_lay_out_in_one_step_and_keep_what_was_set_by_hand() {
     assert!(s.doc.ecad.board.footprints.iter().any(|f| f.id == placed && !f.name_placed));
     for bad in [json!({"mode": "fit", "height": 99}), json!({"mode": "some"}), json!({})] {
         assert!(s.execute("ecad.board.labels", &bad).is_err(), "{bad}");
+    }
+}
+
+#[test]
+fn a_board_marking_is_one_step_and_follows_the_design_info() {
+    let mut s = board();
+    run(&mut s, "ecad.design.info", json!({"title": "Sensor", "revision": "A", "date": "2026-10-31"}));
+    let template = json!({"part_number": "MM-{project}-{number}", "qr": true});
+    let p = json!({"side": "top", "at": [-14, 9.5], "template": template, "number": "7", "layer_marks": true});
+    let before = s.doc.clone();
+    let mut dry_p = p.clone();
+    dry_p["dry_run"] = json!(true);
+    let dry = run(&mut s, "ecad.board.marking", dry_p);
+    assert!(Arc::ptr_eq(&before, &s.doc), "a dry run changes nothing");
+    assert_eq!(dry["part_number"], "MM-Sensor-7");
+    assert_eq!(dry["lines"], json!(["Sensor", "REV A  2026-10-31", "MM-Sensor-7"]));
+    let undo = s.undo.len();
+    let r = run(&mut s, "ecad.board.marking", p.clone());
+    assert_eq!(s.undo.len(), undo + 1, "one undo step");
+    let id = r["marking"].as_u64().unwrap();
+    assert!(id > 0 && r["graphics"] == dry["graphics"] && r["keepouts"].as_u64() == Some(4), "{r}");
+    // A new revision makes the block again, in the same step as the info.
+    let undo = s.undo.len();
+    run(&mut s, "ecad.design.info", json!({"revision": "B"}));
+    assert_eq!(s.undo.len(), undo + 1);
+    let texts: Vec<String> = s.doc.ecad.board.graphics.iter().filter(|g| g.marking == Some(id)).map(|g| g.graphic.text.clone()).collect();
+    assert!(texts.contains(&"REV B  2026-10-31".to_string()) && !texts.contains(&"REV A  2026-10-31".to_string()), "{texts:?}");
+    run(&mut s, "edit.undo", json!({}));
+    assert!(s.doc.ecad.board.graphics.iter().any(|g| g.marking == Some(id) && g.graphic.text == "REV A  2026-10-31"), "undo takes both back");
+    // Off the board, or a hostile template: refused, nothing changes.
+    for bad in [
+        json!({"side": "top", "at": [100, 100]}),
+        json!({"side": "top", "at": [0, 0], "template": {"height": 99}}),
+        json!({"side": "top", "at": [0, 0], "template": {"made_by": "x".repeat(65)}}),
+        json!({"side": "middle", "at": [0, 0]}),
+    ] {
+        let (doc, undo) = (s.doc.clone(), s.undo.len());
+        assert!(s.execute("ecad.board.marking", &bad).is_err(), "{bad}");
+        assert!(Arc::ptr_eq(&doc, &s.doc) && s.undo.len() == undo);
     }
 }

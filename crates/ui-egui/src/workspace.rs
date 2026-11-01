@@ -138,7 +138,12 @@ pub const SECTIONS: &[Section] = &[
     Section { tab: "BOARD DESIGN", panel: "VIEW", promoted: 1, ids: &["view.fit"] },
     Section { tab: "BOARD DESIGN", panel: "LAYERS", promoted: 1, ids: &["ecad.board.stack"] },
     Section { tab: "BOARD DESIGN", panel: "BOARD SHAPE", promoted: 1, ids: &["ecad.board.outline"] },
-    Section { tab: "BOARD DESIGN", panel: "PLACE", promoted: 4, ids: &["ecad.board.sync", "ecad.board.via", "ecad.board.stitch", "ecad.board.hole"] },
+    Section {
+        tab: "BOARD DESIGN",
+        panel: "PLACE",
+        promoted: 4,
+        ids: &["ecad.board.sync", "ecad.board.via", "ecad.board.stitch", "ecad.board.hole", "ecad.board.marking"],
+    },
     Section { tab: "BOARD DESIGN", panel: "ROUTE", promoted: 1, ids: &["ecad.board.track"] },
     Section { tab: "BOARD DESIGN", panel: "POLYGON", promoted: 1, ids: &["ecad.board.pour"] },
     Section { tab: "BOARD DESIGN", panel: "UNROUTE", promoted: 1, ids: &["ecad.board.unroute"] },

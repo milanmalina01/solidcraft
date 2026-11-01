@@ -33,6 +33,7 @@ pub mod info;
 pub mod intent;
 pub mod labels;
 pub mod layers;
+pub mod marking;
 pub mod names;
 pub mod overbar;
 pub mod path;

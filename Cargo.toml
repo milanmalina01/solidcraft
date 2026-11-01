@@ -82,6 +82,9 @@ cadmpeg-core = "=0.6.3"
 cadmpeg-ir = "=0.6.3"
 cadmpeg-registry = { version = "=0.6.3", default-features = false, features = ["fcstd", "rhino", "step"] }
 
+# The QR code a board marking can carry (crates/doc/src/ecad/marking.rs): MIT OR Apache-2.0,
+# pure Rust, no dependencies without its image features.
+qrcode = { version = "0.14", default-features = false }
 # fonts (sketch text outlines; MIT OR Apache-2.0, pure Rust)
 ttf-parser = { version = "0.25", default-features = false, features = ["std"] }
 # Schematic and board print pages as PDF (crates/io/src/pages): the file structure, and the

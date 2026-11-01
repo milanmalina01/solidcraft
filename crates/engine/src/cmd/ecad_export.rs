@@ -156,6 +156,11 @@ fn info(s: &mut Session, p: &Value) -> Result<Value> {
         }
         i.validate().map_err(|e| bad(CMD, e))?;
     }
+    // The board's markings print the title, revision and date: made again, in this same step.
+    if !next.board.markings.is_empty() && changed.iter().any(|c| matches!(c.as_str(), "title" | "revision" | "date" | "company" | "author")) {
+        let f = super::ecad_board_marking::fields(s, &next);
+        solidcraft_doc::ecad::marking::refresh(&mut next, &f).map_err(|e| bad(CMD, e))?;
+    }
     commit(s, next, CMD)?;
     info_result(s, changed)
 }

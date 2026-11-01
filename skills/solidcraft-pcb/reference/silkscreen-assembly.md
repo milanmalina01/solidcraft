@@ -22,7 +22,7 @@ The must-keep set stays on silk whatever you choose:
 - connector pin-1 and user-facing labels
 - test points
 - switches and LEDs
-- board name, revision and date code
+- board name, revision and date code: `ecad.board.marking {"side":"top","at":[x,y]}` stamps them as one block from the design info the print export uses (with the template's part number, serial box, QR code, maker's text and the fab's order-number placeholder) and makes it again when `ecad.design.info` changes the revision or date; `layer_marks` adds TOP/BOT (or 1..n) in copper on each layer, side by side, each in an area pours keep out of
 
 When designators do not fit, work down this ladder (Benson; Hausherr):
 1. Shrink to the fab minimum.

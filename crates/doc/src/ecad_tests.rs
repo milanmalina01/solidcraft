@@ -3,12 +3,13 @@ use std::collections::BTreeSet;
 use serde_json::{Value, json};
 
 use super::airwires::footprint_pads;
-use super::board::{Board, Track, Via, ViaProtection, ViaRole};
+use super::board::{Board, BoardGraphic, Track, Via, ViaProtection, ViaRole};
 use super::checks::Severity;
 use super::current::{self, CurrentError, Fit, OZ_MM};
+use super::graphics::GraphicType;
 use super::impedance::{self, ImpedanceError, LineKind, Medium};
 use super::intent::{NetIntent, PairIntent, PartIntent};
-use super::layers::CopperLayer;
+use super::layers::{CopperLayer, DrawLayer};
 use super::place::{Motion, snap_point};
 use super::quality::{self, Status, catalog};
 use super::schematic::{Actor, Approval};
@@ -1472,6 +1473,80 @@ fn the_fit_mode_leaves_no_silk_finding_on_a_dense_board_and_the_others_do_as_the
     // Laying out again changes nothing.
     let again = layout(&laid, NamesMode::Fit, None).unwrap();
     assert!(again.changed.is_empty(), "{:?}", again.changed);
+}
+
+// Board markings, on the `return` board (four layers, a GND plane on the bottom).
+
+#[test]
+fn a_marking_stamps_its_lines_qr_and_layer_marks_and_follows_the_revision() {
+    use super::marking::{self, Fields, Marking, MarkingTemplate, qr_cells};
+    let mut e = scratch("return");
+    run(&mut e, json!([["pour", {"layer": "bottom", "net": "GND", "rect": [30, 20], "remove_islands": false}]]));
+    let template = MarkingTemplate {
+        part_number: "MM-{project}-{number}".into(),
+        serial_box: true,
+        qr: true,
+        made_by: "Workshop".into(),
+        ..MarkingTemplate::default()
+    };
+    let fields = Fields { title: "Sensor".into(), revision: "B".into(), date: "2026-10-31".into(), ..Fields::default() };
+    assert_eq!(marking::part_number(&template.part_number, &fields, "7"), "MM-Sensor-7");
+    let id = e.board.take_id().unwrap();
+    let m = Marking { id, side: Side::Top, at: [-14.0, 9.5], number: "7".into(), template, layer_marks: true };
+    marking::stamp(&mut e.board, &m, &fields).unwrap();
+    e.board.markings.push(m.clone());
+    e.validate().unwrap();
+    let texts: Vec<(String, String)> = e
+        .board
+        .graphics
+        .iter()
+        .filter(|g| g.marking == Some(id) && g.graphic.kind == GraphicType::Text)
+        .map(|g| (g.layer.name(), g.graphic.text.clone()))
+        .collect();
+    for want in ["Sensor", "REV B  2026-10-31", "MM-Sensor-7", "Workshop", "S/N"] {
+        assert!(texts.contains(&("silkscreen_top".into(), want.into())), "{want}: {texts:?}");
+    }
+    // A mark on each of the four copper layers, side by side, each in a keepout of pours only.
+    let marks: Vec<&BoardGraphic> = e.board.graphics.iter().filter(|g| g.marking == Some(id) && matches!(g.layer, DrawLayer::Copper(_))).collect();
+    assert_eq!(marks.iter().map(|g| g.graphic.text.as_str()).collect::<Vec<_>>(), ["1", "2", "3", "4"]);
+    let keepouts: Vec<_> = e.board.keepouts.iter().filter(|k| k.marking == Some(id)).collect();
+    assert_eq!(keepouts.len(), 4);
+    assert!(keepouts.iter().all(|k| k.forbid.pours && !k.forbid.tracks && !k.forbid.vias && k.layers.len() == 1));
+    let xs: Vec<f64> = keepouts.iter().map(|k| k.outline[0][0]).collect();
+    assert!(xs.windows(2).all(|w| w[1] > w[0] + 1.0), "side by side: {xs:?}");
+    // The QR code is filled squares; the bottom plane's fill keeps out of the bottom mark's area.
+    assert!(qr_cells("MM-Sensor-7 B").is_some_and(|c| c.len() >= 21));
+    assert!(e.board.graphics.iter().any(|g| g.marking == Some(id) && g.graphic.fill));
+    let nets = e.board_nets();
+    let fill = nets.fills.iter().find(|f| f.layer == CopperLayer::Bottom).unwrap();
+    let bottom = keepouts.iter().find(|k| k.layers == [CopperLayer::Bottom]).unwrap();
+    let mid = [(bottom.outline[0][0] + bottom.outline[2][0]) / 2.0, (bottom.outline[0][1] + bottom.outline[2][1]) / 2.0];
+    assert_eq!(fill.region.locate(&[mid]), [None], "no pour copper under the bottom mark");
+    // The design rule check finds nothing wrong with the marking's copper.
+    let mine: BTreeSet<String> = marks.iter().map(|g| format!("g{}", g.id)).collect();
+    let bad: Vec<String> = e
+        .drc()
+        .findings
+        .into_iter()
+        .filter(|f| f.severity == Severity::Error && f.key.split('|').any(|k| mine.contains(k)))
+        .map(|f| f.message)
+        .collect();
+    assert!(bad.is_empty(), "{bad:?}");
+    // A new revision makes the block again.
+    marking::refresh(&mut e, &Fields { revision: "C".into(), ..fields.clone() }).unwrap();
+    assert!(e.board.graphics.iter().any(|g| g.marking == Some(id) && g.graphic.text == "REV C  2026-10-31"));
+    assert!(!e.board.graphics.iter().any(|g| g.graphic.text == "REV B  2026-10-31"));
+    assert_eq!(e.board.keepouts.iter().filter(|k| k.marking == Some(id)).count(), 4);
+    // Deleted, it stays gone.
+    e.board.graphics.retain(|g| g.marking != Some(id));
+    marking::refresh(&mut e, &fields).unwrap();
+    assert!(e.board.markings.is_empty() && !e.board.keepouts.iter().any(|k| k.marking == Some(id)));
+    // Hostile templates are refused.
+    for bad in
+        [MarkingTemplate { height: 0.0, ..MarkingTemplate::default() }, MarkingTemplate { made_by: "x".repeat(65), ..MarkingTemplate::default() }]
+    {
+        assert!(bad.validate().is_err());
+    }
 }
 
 // Ground connectivity: a GND plane on inner1 (the largest, so the reference), a 16 by 2 mm GND

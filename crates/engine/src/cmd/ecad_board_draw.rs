@@ -70,7 +70,7 @@ fn add(s: &mut Session, layer: DrawLayer, mirror: bool, g: Graphic, cmd: &str) -
     }
     let mut board = old.clone();
     let id = board.take_id().map_err(|e| bad(cmd, e))?;
-    board.graphics.push(BoardGraphic { id, layer, mirror, graphic: g });
+    board.graphics.push(BoardGraphic { id, layer, mirror, graphic: g, marking: None });
     store_board(s, board, cmd)?;
     reply(board_result(s, &old))
 }

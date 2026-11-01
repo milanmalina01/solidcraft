@@ -66,6 +66,7 @@ pub mod electronics_board_check;
 pub mod electronics_board_draw;
 pub mod electronics_board_ground;
 pub mod electronics_board_layers;
+pub mod electronics_board_marking;
 pub mod electronics_board_outline;
 pub mod electronics_board_pour;
 pub mod electronics_board_quality;

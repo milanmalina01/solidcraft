@@ -18,6 +18,7 @@ pub const DOCUMENTED: &[&str] = &[
     "ecad.board.flip",
     "ecad.board.hole",
     "ecad.board.keepout",
+    "ecad.board.marking",
     "ecad.board.netclass",
     "ecad.board.outline",
     "ecad.board.pour",

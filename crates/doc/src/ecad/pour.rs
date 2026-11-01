@@ -163,6 +163,9 @@ pub struct Keepout {
     pub curves: Vec<f64>,
     #[serde(default, skip_serializing_if = "Forbid::is_all")]
     pub forbid: Forbid,
+    /// The board marking whose layer mark it clears pours round (see [`super::marking`]).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub marking: Option<u64>,
 }
 
 impl Keepout {

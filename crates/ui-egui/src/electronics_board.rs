@@ -93,6 +93,9 @@ pub enum Tool {
     Keepout(Vec<[f64; 2]>),
     /// The Stitch Vias tool: its pick and preview are in [`BoardView::stitch`].
     Stitch,
+    /// A click stamps a board marking; its options are in [`BoardView::marking`] and the
+    /// preferences.
+    Marking,
 }
 
 impl Tool {
@@ -110,6 +113,7 @@ impl Tool {
             Tool::Pour(_) => "ecad.board.pour",
             Tool::Keepout(_) => "ecad.board.keepout",
             Tool::Stitch => "ecad.board.stitch",
+            Tool::Marking => "ecad.board.marking",
         }
     }
 }
@@ -211,6 +215,8 @@ pub struct BoardView {
     /// The Ground connectivity layer's map, and the revision it last tried to solve.
     pub ground: crate::electronics_board_ground::GroundView,
     pub ground_tried: Option<(u64, u64)>,
+    /// The Board Marking tool's options for this board.
+    pub marking: crate::electronics_board_marking::MarkingOptions,
     /// A box to frame on the next frame (a finding of the design rule check), in millimetres.
     pub frame: Option<[[f64; 2]; 2]>,
     /// The design rule check worked out last, and when the board changed after it.
@@ -264,6 +270,7 @@ impl Default for BoardView {
             stitch: StitchOptions::default(),
             ground: Default::default(),
             ground_tried: None,
+            marking: Default::default(),
             frame: None,
             drc: rules::DrcState::default(),
             quality: crate::electronics_board_quality::QualityState::default(),
@@ -1174,6 +1181,7 @@ fn tool_click(app: &mut SolveApp, map: PageMap, p: Pos2, free: bool, double: boo
         _ if double => {}
         Tool::Via => route::via_click(app, map, p, free),
         Tool::Hole => draw::hole_click(app, map, p, free),
+        Tool::Marking => crate::electronics_board_marking::click(app, map, p, free),
         Tool::Unroute => route::unroute_click(app, map, p, shift),
         Tool::Miter => route::miter_click(app, map, p),
         Tool::Split => {}
@@ -1457,6 +1465,7 @@ pub(crate) fn start(app: &mut SolveApp, id: &str) -> bool {
         "ecad.board.pour" => Tool::Pour(Vec::new()),
         "ecad.board.keepout" => Tool::Keepout(Vec::new()),
         "ecad.board.stitch" => Tool::Stitch,
+        "ecad.board.marking" => Tool::Marking,
         "ecad.board.rules" | "ecad.drc.inspect" => {
             rules::toggle(app, id);
             return true;
@@ -1964,7 +1973,7 @@ fn paint_tool(app: &SolveApp, ui: &Ui, painter: &egui::Painter, map: PageMap, re
         Some(Tool::Pour(_) | Tool::Keepout(_)) => pour::paint_tool(app, painter, map, hover, free, t),
         Some(Tool::Track(_)) => route::paint(app, painter, map, hover, free, t),
         Some(Tool::Unroute | Tool::Miter | Tool::Split) => route::paint_hover(app, painter, map, hover, shift, t),
-        Some(Tool::Stitch) | None => {}
+        Some(Tool::Stitch | Tool::Marking) | None => {}
     }
 }
 
@@ -2048,6 +2057,7 @@ fn tool_options(app: &mut SolveApp, ui: &mut Ui, tool: &Tool) {
         Tool::Pour(_) => pour::pour_options(app, ui),
         Tool::Keepout(_) => pour::keepout_options(app, ui),
         Tool::Stitch => stitch::options(app, ui),
+        Tool::Marking => crate::electronics_board_marking::options(app, ui),
     };
     ui_kit::text(ui, crate::i18n::tr(help), ui_kit::Text::Note(help));
 }

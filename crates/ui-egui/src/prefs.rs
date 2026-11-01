@@ -558,6 +558,8 @@ preference_settings! {
     direct_interaction: bool = false, PAGE_NAVIGATION => check("Direct interaction", "Work on the model directly in the viewport. Press a flat face or a profile and pull: up extrudes, down into a body cuts, and sideways movement sets the step size");
     /// Mouse gestures: a ring of tools on the right button.
     mouse_gestures: crate::mouse_gesture::Config = Default::default(), PAGE_NAVIGATION;
+    /// The board marking template (`ecad.board.marking`): kept for every design, not per board.
+    board_marking: solidcraft_engine::doc::ecad::marking::MarkingTemplate = Default::default();
     /// The wheel zooms out when turned forward.
     zoom_reverse: bool = false, PAGE_NAVIGATION => check("Reverse zoom direction");
     /// What an orbit turns around.
@@ -2511,6 +2513,7 @@ pub fn set(app: &mut SolveApp, p: &serde_json::Value) -> Result<serde_json::Valu
     if new.msaa != app.preferences.msaa && !app.msaa_supported.is_empty() && !app.msaa_supported.contains(&new.msaa) {
         return Err(format!("this graphics device doesn't support `msaa` {}; it supports {:?}", new.msaa, app.msaa_supported));
     }
+    new.board_marking.validate()?;
     if new.graphics_adapter.len() > 1024 || new.graphics_adapter.chars().any(char::is_control) {
         return Err("`graphics_adapter` must be a name of at most 1024 bytes without control characters".into());
     }

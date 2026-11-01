@@ -415,7 +415,7 @@ fn keepout(s: &mut Session, p: &Value) -> Result<Value> {
     };
     let mut board = old.clone();
     let id = board.take_id().map_err(|e| bad(CMD, e))?;
-    board.keepouts.push(Keepout { id, layers, outline, curves, forbid: forbid(Forbid::default(), p.forbid) });
+    board.keepouts.push(Keepout { id, layers, outline, curves, forbid: forbid(Forbid::default(), p.forbid), marking: None });
     keepout_reply(s, board, &old, id, CMD)
 }
 
