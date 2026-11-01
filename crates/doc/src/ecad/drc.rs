@@ -36,6 +36,8 @@
 //! the rest is left out and `truncated` is set. A truncated check names no approval stale: the
 //! findings it did not reach may still hold them.
 
+mod dfm;
+
 use std::collections::{BTreeMap, BTreeSet};
 
 use serde::{Deserialize, Serialize};
@@ -233,6 +235,38 @@ pub const RULES: &[DrcRule] = &[
         "rules.silk_to_pad",
         "silkscreen is closer to a pad than the rules' silk-to-pad gap",
     ),
+    rule(
+        "via_near_pad",
+        WARNING,
+        P,
+        "routing-dfm#vias",
+        "profile.via_to_pad",
+        "an open via's ring is closer to a surface-mount pad than the fab profile's via-to-pad gap, so no solder mask web stays between them and the solder can wick into the via (a tented, plugged or filled via: an info)",
+    ),
+    rule(
+        "pad_entry",
+        WARNING,
+        P,
+        "routing-dfm#pad-entry",
+        "profile.pad_entry_angle",
+        "a track leaves a surface-mount pad near its corner, or further off square to the pad's edge than the fab profile's entry angle",
+    ),
+    rule(
+        "acute_angle",
+        WARNING,
+        P,
+        "routing-dfm#corners",
+        "profile.acute_angle",
+        "a track bends, or meets a pad or another track of its net, at a pocket under the fab profile's least angle (an acid trap)",
+    ),
+    rule(
+        "sliver",
+        WARNING,
+        P,
+        "routing-dfm#copper",
+        "profile.track",
+        "a pour's fill has copper narrower than the least track, or a gap narrower than the least gap",
+    ),
     rule("unrouted", WARNING, C, "workflow#done", "connections.open", "a connection still to route (one per airwire)"),
     rule("dangling_track", WARNING, P, "routing-dfm#connectivity", "track.end_joins", "a track end touches nothing"),
     rule("via_stub", WARNING, P, "power-ground#stitching", "via.layers_joined", "a via joins copper on one layer only, or none"),
@@ -341,7 +375,7 @@ pub enum Bound {
 #[derive(Clone, Debug, PartialEq)]
 pub struct Limit {
     pub value: f64,
-    /// `mm`, `ratio`, `nets`, `connections`, `layers`, `spokes`, `profiles`, `mm²`, or
+    /// `mm`, `ratio`, `degrees`, `nets`, `connections`, `layers`, `spokes`, `profiles`, `mm²`, or
     /// `protection` for a categorical measure (see [`DrcFinding::measured_text`]).
     pub units: &'static str,
     /// A categorical limit's name (`filled_capped`); its rank is `value`.
@@ -924,6 +958,9 @@ pub fn check(ecad: &Electronics, nets: &BoardNets) -> DrcReport {
     keepouts(&mut c, &mut f);
     reliefs(&c, &mut f);
     silkscreen(&mut c, &mut f);
+    dfm::vias_near_pads(&mut c, &mut f);
+    dfm::pad_entries_and_pockets(&mut c, &mut f);
+    dfm::slivers(&mut c, &mut f);
     unrouted(&c, &mut f);
     ends(&mut c, &mut f);
     pours(&c, &mut f);

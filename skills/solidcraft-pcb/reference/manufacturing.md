@@ -17,9 +17,11 @@ A fab profile holds a fab class's numbers, each with its source, and sets the DR
 | `copper_to_edge` | Copper back from a routed edge | 0.3 mm | 0.25 mm | 0.25 mm |
 | `drill_to_copper`, `drill_to_copper_pth` | Inner-layer copper back from via holes, plated through holes | 0.2, 0.3 mm | 0.2, 0.2 mm | 0.2, 0.2 mm |
 | `silk_to_pad` | Legend back from pads | 0.15 mm | 0.10 mm | 0.10 mm |
+| `via_to_pad` | Open via ring back from an SMD pad (`verify`) | 0.25 mm | 0.2 mm | 0.15 mm |
+| `pad_entry_angle`, `acute_angle` | Most a track leaves a pad off square; least pocket angle (`verify`) | 30°, 90° | 30°, 90° | 30°, 90° |
 | `microvia_drill`, `microvia_aspect`, `microvia_depth` | Laser micro vias between neighbouring layers | none | none | 0.10 mm, 1:1, 0.25 mm deep |
 
-The figures come from the fabs' published pages (Eurocircuits pattern and drill classes, JLCPCB capabilities) and record the month they were read. Fabs change them, so check the fab's own page before ordering. Micro via limits come from public summaries of IPC-6012 and are marked `verify`: findings from them are warnings at most.
+The figures come from the fabs' published pages (Eurocircuits pattern and drill classes, JLCPCB capabilities) and record the month they were read. Fabs change them, so check the fab's own page before ordering. Micro via limits come from public summaries of IPC-6012, and the via-to-pad gap and the two angles from public summaries of fab DFM guides; they are marked `verify`: findings from them are warnings at most.
 
 What the profiles do not hold yet, from the same fabs' pages:
 

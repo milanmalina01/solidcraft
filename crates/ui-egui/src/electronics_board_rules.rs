@@ -295,6 +295,10 @@ pub(crate) fn message(f: &DrcFinding) -> String {
         ("relief_starved", ..) if args.get("connected").is_some_and(|n| n == "0") => "electronics.drc_msg_relief_starved_none".to_string(),
         ("relief_starved", ..) if args.contains_key("connected") => "electronics.drc_msg_relief_starved_few".to_string(),
         ("relief_starved", ..) if args.contains_key("value") => "electronics.drc_msg_relief_starved_narrow".to_string(),
+        // Leaving a pad by its corner; a pocket with a pad's edge or another track.
+        ("pad_entry", ..) if args.contains_key("share") => "electronics.drc_msg_pad_entry_corner".to_string(),
+        ("acute_angle", ..) if args.get("meets").is_some_and(|m| m == "pad") => "electronics.drc_msg_acute_angle_pad".to_string(),
+        ("acute_angle", ..) if args.get("meets").is_some_and(|m| m == "track") => "electronics.drc_msg_acute_angle_track".to_string(),
         _ => f.message_key.clone(),
     };
     let pairs: Vec<(&str, &str)> = args.iter().map(|(k, v)| (*k, v.as_str())).collect();
@@ -821,7 +825,11 @@ fn profile_section(ui: &mut Ui, chosen: Option<(&'static FabProfile, u32)>, rule
     }
     ui_kit::section(ui, ("electronics_profile_figures", p.id), &tr("electronics.profile_figures"), false, |ui| {
         for (key, units, f) in p.figures() {
-            let value = if units == "mm" { format!("{} mm", mm(f.value)) } else { format!("1:{}", mm(f.value)) };
+            let value = match units {
+                "mm" => format!("{} mm", mm(f.value)),
+                "degrees" => format!("{}°", mm(f.value)),
+                _ => format!("1:{}", mm(f.value)),
+            };
             let line = format!("{} · {value}", figure_name(key));
             ui_kit::text(ui, &line, ui_kit::Text::Inline);
             let source = if f.verify { crate::i18n::format("electronics.profile_verify", &[("source", f.source)]) } else { f.source.to_string() };

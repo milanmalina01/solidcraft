@@ -121,7 +121,7 @@ pub struct DrcItemOut {
 #[derive(Debug, Serialize, JsonSchema)]
 pub struct MeasureOut {
     pub value: f64,
-    /// `mm`, `ratio`, `nets`, `connections`, `layers`, `spokes`, `profiles`, `mm²`, `findings`,
+    /// `mm`, `ratio`, `degrees`, `nets`, `connections`, `layers`, `spokes`, `profiles`, `mm²`, `findings`,
     /// or `protection`: a categorical measure, named by `text` (a via's protection: `open`,
     /// `tented`, `plugged`, `filled`, `filled_capped`) and ranked by `value` in that order from 0.
     pub units: String,

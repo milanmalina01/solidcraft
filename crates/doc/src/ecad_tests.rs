@@ -1206,6 +1206,93 @@ fn design_rule_approvals_hold_their_finding_and_go_stale_without_it() {
     assert_eq!(e.drc().stale, ["short|t999"]);
 }
 
+// Manufacturability, on the `return` board: R1.2 is a 0.6 by 0.9 mm SIG pad at (-9.2, 0), the
+// standard profile keeps 0.25 mm from an open via to a pad and 30° off square, and no pocket under
+// 90°.
+
+/// The findings of `code` on the `return` board after `commands`, by severity.
+fn dfm_case(commands: Value, code: &str) -> Vec<Severity> {
+    drc_case(commands).into_iter().filter(|f| f.0 == code).map(|f| f.1).collect()
+}
+
+#[test]
+fn a_via_too_near_a_pad_is_found_and_a_tented_one_is_an_info() {
+    // A 0.6 mm SIG via 0.45 mm below R1.2's lower edge (y -0.45), then 0.15 mm.
+    let via = |y: f64| json!(["via", {"at": [-9.2, y], "net": "SIG", "diameter": 0.6, "drill": 0.3}]);
+    assert_eq!(dfm_case(json!([via(-1.2)]), "via_near_pad"), []);
+    assert_eq!(dfm_case(json!([via(-0.9)]), "via_near_pad"), [Severity::Warning]);
+    let mut e = scratch("return");
+    run(&mut e, json!([via(-0.9)]));
+    let f = e.drc().findings.into_iter().find(|f| f.code == "via_near_pad").unwrap();
+    assert!(close(f.measured, 0.15, 1e-9) && close(f.limit.value, 0.25, 1e-12) && f.margin < 0.0, "{f:?}");
+    assert!(f.note.is_some() && f.fix.iter().any(|x| x.command == "ecad.board.via.edit"), "{f:?}");
+    e.board.vias.last_mut().unwrap().protection = ViaProtection::Tented;
+    let tented: Vec<Severity> = e.drc().findings.iter().filter(|f| f.code == "via_near_pad").map(|f| f.severity).collect();
+    assert_eq!(tented, [Severity::Info], "solder can't reach a tented via's hole");
+}
+
+#[test]
+fn a_track_leaving_a_pad_askew_or_by_its_corner_is_a_pad_entry() {
+    let track = |points: Value| json!([["track", {"layer": "top", "points": points, "width": 0.2}]]);
+    // Square out of the middle of the right edge.
+    assert_eq!(dfm_case(track(json!([[-9.2, 0], [-5, 0]])), "pad_entry"), []);
+    // At 45°: off square by more than 30°.
+    let askew = drc_case(track(json!([[-9.2, 0], [-8.2, 1]])));
+    assert!(has(&askew, "pad_entry", Severity::Warning) && !askew.iter().any(|f| f.0 == "acute_angle"), "one finding for both: {askew:?}");
+    // Square, but 0.35 mm off the middle of an edge 0.45 mm to its corner (78 %).
+    assert_eq!(dfm_case(track(json!([[-9.2, 0.35], [-5, 0.35]])), "pad_entry"), [Severity::Warning]);
+}
+
+#[test]
+fn pockets_under_90_degrees_are_acute_angles() {
+    let track = |points: Value| json!(["track", {"layer": "top", "points": points, "width": 0.2}]);
+    // Bends: 90° and 135° pass, 26.6° doesn't.
+    assert_eq!(dfm_case(json!([track(json!([[-9.2, 0], [-5, 0], [-5, -3]]))]), "acute_angle"), []);
+    assert_eq!(dfm_case(json!([track(json!([[-9.2, 0], [-5, 0], [-3, -2]]))]), "acute_angle"), []);
+    assert_eq!(dfm_case(json!([track(json!([[-9.2, 0], [-5, 0], [-7, -1]]))]), "acute_angle"), [Severity::Warning]);
+    // A T into SIG: square passes, at 45° it leaves a 45° pocket.
+    let tee = |end: [f64; 2]| json!([track(json!([[-9.2, 0], [9.2, 0]])), track(json!([[0, 0], end]))]);
+    assert_eq!(dfm_case(tee([0.0, -2.0]), "acute_angle"), []);
+    assert_eq!(dfm_case(tee([2.0, -2.0]), "acute_angle"), [Severity::Warning]);
+    // Leaving R1.2 20° off square: a 70° pocket with the pad's edge (not yet a pad entry).
+    let (s, c) = 20f64.to_radians().sin_cos();
+    let found = drc_case(json!([track(json!([[-9.2, 0], [-9.2 + 3.0 * c, 3.0 * s]]))]));
+    assert!(has(&found, "acute_angle", Severity::Warning) && !found.iter().any(|f| f.0 == "pad_entry"), "{found:?}");
+}
+
+#[test]
+fn slivers_of_copper_and_gaps_in_a_fill_are_found() {
+    // Two GND blocks on the bottom joined by a neck, and one block with a slot cut into it.
+    let necked = |w: f64| {
+        let h = w / 2.0;
+        json!([["pour", {"layer": "bottom", "net": "GND", "remove_islands": false, "points": [
+            [-6, -9], [-1, -9], [-1, -6.0 - h], [1, -6.0 - h], [1, -9], [6, -9], [6, -3], [1, -3], [1, -6.0 + h], [-1, -6.0 + h], [-1, -3], [-6, -3]
+        ]}]])
+    };
+    let slotted = |w: f64| {
+        let h = w / 2.0;
+        json!([["pour", {"layer": "bottom", "net": "GND", "remove_islands": false, "points": [
+            [-6, -9], [6, -9], [6, -3], [h, -3], [h, -6], [-h, -6], [-h, -3], [-6, -3]
+        ]}]])
+    };
+    let thin = |commands: Value| {
+        let mut e = scratch("return");
+        run(&mut e, commands);
+        e.board.pours.last_mut().unwrap().min_width = 0.05;
+        e.drc().findings.into_iter().filter(|f| f.code == "sliver").collect::<Vec<_>>()
+    };
+    assert!(thin(necked(0.5)).is_empty());
+    let neck = thin(necked(0.1));
+    assert_eq!(neck.len(), 1, "{neck:?}");
+    assert!(neck[0].severity == Severity::Warning && neck[0].measured < 0.15 && neck[0].limit.value == 0.15, "{:?}", neck[0]);
+    assert!(neck[0].fix.iter().any(|x| x.command == "ecad.board.pour.edit" && x.params["min_width"] == 0.15));
+    assert!(thin(slotted(0.5)).is_empty());
+    let slot = thin(slotted(0.1));
+    assert!(slot.len() == 1 && slot[0].args.contains(&("gaps", "1".to_string())), "{slot:?}");
+    // At the default least width the fill itself drops the neck.
+    assert_eq!(dfm_case(necked(0.1), "sliver"), []);
+}
+
 #[test]
 fn a_move_that_brings_copper_too_close_names_the_clash() {
     let mut e = scratch("return");

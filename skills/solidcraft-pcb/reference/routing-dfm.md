@@ -42,7 +42,7 @@ The fab minimum means nothing at mains voltage. Size each gap from the peak volt
   - Measured radiation from a 90° bend equals that of two 45° bends (Wang, Hubing et al. 2000).
   - Rounding the outside corner removes only about 21 % of the excess copper, so a rounded corner is fine only because the corner was negligible anyway.
 - **When corners do matter:** RF lines (use the mitre or arc in `rf-emc.md#rf-lines`), multi-Gb/s pairs (keep bends symmetric, interior angle above 135°, `signal-integrity.md#pairs`), and high voltage (above).
-- **Never turn more than 90° in one bend.** Never let a track meet another track, a pad or a pour at an acute angle. The narrow etched pocket can leave copper or a ragged tip. Modern etching has reduced the problem but not removed it, and fab DFM still flags it. The fix costs one segment. No check covers acute pockets yet: look for them.
+- **Never turn more than 90° in one bend.** Never let a track meet another track, a pad or a pour at an acute angle. The narrow etched pocket can leave copper or a ragged tip. Modern etching has reduced the problem but not removed it, and fab DFM still flags it. The fix costs one segment. `acute_angle` flags a bend, a T or a pad exit under the profile's least angle (90°).
 
 ## Pad entry
 
@@ -51,6 +51,7 @@ The fab minimum means nothing at mains voltage. Size each gap from the peak volt
 - **Run straight for about one pad width before the first bend.**
 - **Side entry is fine where it shortens a decoupling loop:** vias beside the pads give a smaller loop than vias off the ends (`power-ground.md#decoupling`).
 - **BGA dog-bones at 45° are normal.**
+- `pad_entry` flags a track that leaves a rectangular or oval pad more than the profile's entry angle (30°) off square to its edge, or more than half way from the edge's middle to a corner. Round pads are not checked.
 
 ## Pad to pour
 
@@ -78,14 +79,14 @@ One table governs every pad connected to a pour or plane. Other rules defer to i
   - Do not use micro-via sizes for through vias.
 - **Drill to copper:** on inner layers, keep unconnected copper back from each hole: max(inner ring + 0.075, 0.20) mm from the tool (Eurocircuits), or 0.2 mm for vias and 0.3 mm for PTH at JLCPCB.
 - **Via in pad** must be filled and capped (IPC-4761 type VII). An open via in a pad wicks the solder away. Thermal vias under an exposed pad are the exception: drill ≤ 0.3 mm, plugged or tented from the component side (TI SLUA271).
-- **Via beside a pad:** keep a mask web between the via and the pad, joined by a short track (dog-bone), or tent or plug the via. A via half over a pad is the worst case.
+- **Via beside a pad:** keep a mask web between the via and the pad, joined by a short track (dog-bone), or tent or plug the via. A via half over a pad is the worst case. `via_near_pad` flags an open via closer than the profile's via-to-pad gap (0.25 mm on the standard profile, from public DFM summaries); a tented, plugged or filled one is an info.
 - **Protection:** give each via an explicit `protection` (open, tented, plugged, filled, filled_capped) that the fab offers, on `ecad.board.via` or `ecad.board.via.edit`. A mask tent alone is not a seal: Eurocircuits tents only with resin fill, and Leiton no longer offers tenting.
 - **Teardrops** (no tool or check yet): add them where the ring is near the minimum (within 0.05 mm), on inner layers of Class 2/3 builds and on flex. IPC-A-600 accepts Class 2 inner breakout only with such lands (ZVEI). They are optional elsewhere.
 - **Economy:** change layers only when needed. Give both members of a pair the same via count. Keep the number of distinct drill sizes small: 6 or fewer on production boards.
 
 ## Copper
 
-- **Slivers:** no copper narrower than the minimum track width, including pour necks, fingers between pads and clearance leftovers. Set the pour's `min_width` to at least the minimum track width.
+- **Slivers:** no copper narrower than the minimum track width, including pour necks, fingers between pads and clearance leftovers. Set the pour's `min_width` to at least the minimum track width. `sliver` flags a fill's copper narrower than the least track and its slots narrower than the least gap.
 - **Islands:** remove copper islands that connect to nothing, or tie them down with at least two vias. On multilayer boards with solid planes, signal-layer ground fills add little and shift nearby impedances (Johnson, Ground Fills). On 2-layer boards a well-stitched ground fill helps (`power-ground.md#pours`).
 - **Board edge:** keep copper back from the edge: 0.2–0.3 mm on routed edges, 0.4–0.45 mm on V-scored edges, and more for planes. Castellations and edge fingers are declared, not flagged.
 
@@ -117,8 +118,8 @@ Neat routing is how a board stays reviewable. Each rule here gives way to an ele
 
 ## Checks that point here
 
-DRC: `short`, `clearance`, `track_width`, `track_width_class`, `annular_ring`, `copper_to_edge`, `dangling_track`, `via_aspect_ratio`, `drill_to_copper`, `via_in_pad`, `relief_starved`.
+DRC: `short`, `clearance`, `track_width`, `track_width_class`, `annular_ring`, `copper_to_edge`, `dangling_track`, `via_aspect_ratio`, `drill_to_copper`, `via_in_pad`, `via_near_pad`, `pad_entry`, `acute_angle`, `sliver`, `relief_starved`.
 
 Quality: `dfm.pad_to_pour`, `dfm.tombstone`.
 
-No check covers voltage spacing, acute pockets, pad entry, teardrops, slivers, the mask or neat routing yet: review those against this file.
+No check covers voltage spacing, teardrops, the mask or neat routing yet: review those against this file. The limits of `via_near_pad`, `pad_entry` and `acute_angle` come from public summaries, so their findings are warnings.
