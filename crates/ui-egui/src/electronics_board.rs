@@ -454,8 +454,13 @@ fn fit(app: &mut SolveApp, rect: Rect) {
 
 /// Frame the box `[[x0, y0], [x1, y1]]` with a margin, at least `least` millimetres across, in the
 /// free part of `rect`.
-fn frame(app: &mut SolveApp, rect: Rect, [[x0, y0], [x1, y1]]: [[f64; 2]; 2], least: f64) {
-    let content = crate::shell::content_rect(app, rect);
+fn frame(app: &mut SolveApp, rect: Rect, b: [[f64; 2]; 2], least: f64) {
+    frame_within(app, rect, rect, b, least);
+}
+
+/// As [`frame`], centred in the part `seen` of the view that nothing covers.
+fn frame_within(app: &mut SolveApp, rect: Rect, seen: Rect, [[x0, y0], [x1, y1]]: [[f64; 2]; 2], least: f64) {
+    let content = crate::shell::content_rect(app, rect).intersect(seen);
     let area = if content.is_positive() { content } else { rect };
     let (w, h) = (((x1 - x0) * 1.3).max(least), ((y1 - y0) * 1.3).max(least));
     let scale = (f64::from(area.width()) / w).min(f64::from(area.height()) / h);
@@ -487,10 +492,17 @@ pub fn show(app: &mut SolveApp, ui: &mut Ui) {
         fit(app, rect);
     }
     if let Some(b) = app.electronics.board.frame.take() {
-        frame(app, rect, b, rules::FRAME_MM);
+        // A finding framed from the DRC panel shows beside the panel, not under it.
+        let panel = matches!(app.electronics.design.open, Some(crate::electronics_design::Open::Drc(_)))
+            .then(|| ui.ctx().memory(|m| m.area_rect(egui::Id::new("electronics_board_drc"))))
+            .flatten();
+        let left = panel.filter(|p| p.left() > rect.left() + rect.width() * 0.25 && p.left() < rect.right());
+        let rect_seen = left.map_or(rect, |p| rect.with_max_x(p.left()));
+        frame_within(app, rect, rect_seen, b, rules::FRAME_MM);
     }
     refresh(app);
     crate::electronics_board_ground::refresh(app, ui.ctx());
+    crate::electronics_board_marking::refresh(app);
     if !input(app, ui, rect, &response) {
         crate::electronics_workspace::with_page_camera(app, |app| {
             crate::navigation::handle(app, ui, rect, &response, crate::navigation::NavCaps { orbit: false, pick: false });
@@ -552,6 +564,14 @@ fn hits(app: &SolveApp, map: PageMap, p: Pos2) -> Vec<u64> {
         under.sort_by_key(|(rank, _)| *rank);
         under.into_iter().for_each(|(_, id)| add(id));
     }
+    // Tracks before pads: a press on a track (also where it runs into a pad) takes the track, so
+    // a drag reshapes it and never moves the part; the part is taken by its pads and body where
+    // no track is.
+    for layer in pick_order(app, b) {
+        if copper_shown(app, layer) {
+            b.tracks.iter().rev().filter(|t| t.layer == layer && on_track(map, t, p)).for_each(|t| add(t.id));
+        }
+    }
     let through = |pad: &&solidcraft_engine::doc::ecad::BoardPad| pad.top && pad.bottom;
     if !hidden.contains(&Layer::Pads) {
         nets.pads.iter().rev().filter(through).filter(|pad| pad.contains([x, y])).for_each(|pad| add(pad.footprint));
@@ -561,7 +581,6 @@ fn hits(app: &SolveApp, map: PageMap, p: Pos2) -> Vec<u64> {
             continue;
         }
         nets.pads.iter().rev().filter(|pad| !through(pad) && pad.on(layer) && pad.contains([x, y])).for_each(|pad| add(pad.footprint));
-        b.tracks.iter().rev().filter(|t| t.layer == layer && on_track(map, t, p)).for_each(|t| add(t.id));
     }
     if let Some(id) = draw::hit(app, map, p) {
         add(id);
@@ -957,7 +976,23 @@ fn drag_input(app: &mut SolveApp, ui: &Ui, map: PageMap, down: bool, pos: Option
     let Some(drag) = app.electronics.board.drag.as_mut() else { return false };
     if down {
         if let Some(p) = pos {
+            let was = drag.moving;
             drag.moving |= p.distance(drag.press) > DRAG_POINTS;
+            let moving = drag.moving;
+            // Once, as the drag starts: how to leave the grid for a fine edit.
+            if moving && !was && !free {
+                let text = crate::i18n::format("electronics.board_drag_grid_hint", &[("grid", &crate::electronics_editor::mm(g))]);
+                app.set_status(text, false);
+            }
+            // While Cmd (Ctrl) is held: that the drag is off the grid, said once each time.
+            if moving && free {
+                let text = crate::i18n::tr("electronics.board_drag_free");
+                let shown = crate::i18n::tr_diagnostic(text);
+                if app.status.as_ref().is_none_or(|(s, ..)| *s != shown) {
+                    app.set_status(text, false);
+                }
+            }
+            let Some(drag) = app.electronics.board.drag.as_mut() else { return false };
             let (x, y) = map.to_page(p);
             let raw = [x - drag.from[0], y - drag.from[1]];
             if drag.moving && raw.iter().all(|v| v.is_finite()) {
@@ -1973,7 +2008,8 @@ fn paint_tool(app: &SolveApp, ui: &Ui, painter: &egui::Painter, map: PageMap, re
         Some(Tool::Pour(_) | Tool::Keepout(_)) => pour::paint_tool(app, painter, map, hover, free, t),
         Some(Tool::Track(_)) => route::paint(app, painter, map, hover, free, t),
         Some(Tool::Unroute | Tool::Miter | Tool::Split) => route::paint_hover(app, painter, map, hover, shift, t),
-        Some(Tool::Stitch | Tool::Marking) | None => {}
+        Some(Tool::Marking) => crate::electronics_board_marking::paint(app, painter, map, snap(app, map, hover, free), ghost, t),
+        Some(Tool::Stitch) | None => {}
     }
 }
 

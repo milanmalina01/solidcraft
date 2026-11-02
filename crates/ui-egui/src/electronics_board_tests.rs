@@ -112,3 +112,64 @@ fn stitching_where_needed_previews_ghost_vias_and_numbers_then_places_them() {
     let placed = h.app.session.doc.ecad.board.vias.iter().filter(|v| v.pattern == Some(Pattern::Needed)).count();
     assert_eq!((placed, h.app.session.undo.len()), (preview.spots.len(), undo + 1));
 }
+
+#[test]
+fn a_drag_on_a_track_over_a_pad_reshapes_the_track_and_never_moves_the_part() {
+    let mut h = board_with_a_resistor();
+    let (f_at, pad) = {
+        let nets = h.app.session.doc.ecad.board_nets();
+        let p = nets.pads.iter().find(|p| p.pad.number == "2").unwrap();
+        (h.app.session.doc.ecad.board.footprints[0].at, p.at())
+    };
+    run(&mut h, "ecad.board.track", json!({"layer": "top", "points": [pad, [pad[0] + 6.0, pad[1]]], "width": 0.25}));
+    h.frames(2);
+    let before = h.app.session.doc.ecad.board.tracks[0].points.clone();
+    let rect = crate::scenario::rect_of("electronics:board").unwrap();
+    let map = crate::electronics_workspace::PageMap::new(&h.app.electronics.page.cam, rect).unwrap();
+    // On the pad, where the track runs into it, then 2 mm up.
+    let from = map.to_screen(pad[0] + 0.15, pad[1]);
+    let to = map.to_screen(pad[0] + 0.15, pad[1] + 2.0);
+    h.step(&json!({"drag": [[from.x, from.y], [to.x, to.y]], "steps": 8})).unwrap();
+    h.frames(2);
+    let b = &h.app.session.doc.ecad.board;
+    assert_eq!(b.footprints[0].at, f_at, "the part stays");
+    assert_ne!(b.tracks[0].points, before, "the track is reshaped");
+}
+
+#[test]
+fn the_drc_panel_refreshes_after_an_edit_beside_the_window_and_marks_the_picked_gap() {
+    use crate::electronics_board_rules::{cached, current};
+    use crate::electronics_design::Open;
+    let mut h = board_with_a_resistor();
+    run(&mut h, "ecad.schematic.power", json!({"ports": [{"name": "GND", "at": "R1.1"}]}));
+    run(&mut h, "ecad.board.outline", json!({"rect": [30, 20]}));
+    h.app.start("ecad.drc.inspect");
+    h.frames(3);
+    assert!(matches!(h.app.electronics.design.open, Some(Open::Drc(_))), "the panel is open");
+    let clearances = |h: &Harness| cached(&h.app).map_or(0, |r| r.findings.iter().filter(|f| f.code == "clearance").count());
+    assert_eq!(clearances(&h), 0);
+    // A GND via 0.1 mm off R1.2's outer edge, where the clearance is 0.2 mm.
+    let nets = h.app.session.board_nets();
+    let pad = |n: &str| nets.pads.iter().find(|p| p.pad.number == n).unwrap();
+    let (one, two) = (pad("1").at(), pad("2"));
+    let out = if two.at()[0] >= one[0] { 1.0 } else { -1.0 };
+    let at = [two.at()[0] + out * (two.pad.size[0] / 2.0 + 0.3 + 0.1), two.at()[1]];
+    run(&mut h, "ecad.board.via", json!({"at": at, "net": "GND"}));
+    let via = h.app.session.doc.ecad.board.vias.last().unwrap().id;
+    h.frames(1);
+    assert!(!current(&h.app), "the edit never waited for the check");
+    assert!(until(&mut h, |h| current(&h.app)), "worked out beside the window");
+    assert_eq!(clearances(&h), 1);
+    let f = cached(&h.app).unwrap().findings.iter().find(|f| f.code == "clearance").unwrap().clone();
+    let [a, b] = f.span.expect("a gap has its two ends");
+    assert!(((a[0] - b[0]).hypot(a[1] - b[1]) - 0.1).abs() < 0.01, "{a:?} {b:?}");
+    // Next picks it: framed, its items picked, its one marker.
+    click(&mut h, "electronics:editor:drc-next");
+    let Some(Open::Drc(w)) = &h.app.electronics.design.open else { panic!("closed") };
+    assert_eq!(w.picked.as_deref(), Some(f.key.as_str()));
+    assert!(h.app.electronics.board.selection.contains(&via), "{:?}", h.app.electronics.board.selection);
+    // Moved away (the fix), the finding goes once the check has run again.
+    run(&mut h, "ecad.board.move", json!({"items": [via], "by": [out * 2.0, 0.0]}));
+    assert!(until(&mut h, |h| current(&h.app)));
+    assert_eq!(clearances(&h), 0, "{:?}", cached(&h.app).map(|r| r.findings.iter().map(|f| f.message.clone()).collect::<Vec<_>>()));
+}

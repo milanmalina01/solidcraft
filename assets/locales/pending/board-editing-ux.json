@@ -1,0 +1,66 @@
+{
+  "en": {
+    "electronics.board_drag_free": "Off the grid: Cmd (Ctrl) is held, so the drag follows the pointer exactly.",
+    "electronics.board_drag_grid_hint": "On the {grid} mm grid: hold Cmd (Ctrl) while dragging to leave it; finer grids are in the grid menu.",
+    "electronics.drc_next": "Next",
+    "electronics.drc_of": "{i} of {n}",
+    "electronics.drc_of_none": "{n} to look at",
+    "electronics.drc_previous": "Previous"
+  },
+  "de": {
+    "electronics.board_drag_free": "Ohne Raster: Cmd (Strg) ist gedrückt, das Ziehen folgt genau dem Zeiger.",
+    "electronics.board_drag_grid_hint": "Auf dem {grid}-mm-Raster: Cmd (Strg) beim Ziehen halten, um es zu verlassen; feinere Raster stehen im Rastermenü.",
+    "electronics.drc_next": "Weiter",
+    "electronics.drc_of": "{i} von {n}",
+    "electronics.drc_of_none": "{n} zu prüfen",
+    "electronics.drc_previous": "Zurück"
+  },
+  "ja": {
+    "electronics.board_drag_free": "グリッドなし：Cmd（Ctrl）を押しているため、ドラッグはポインターに正確に従います。",
+    "electronics.board_drag_grid_hint": "{grid} mm グリッド上です。ドラッグ中に Cmd（Ctrl）を押すとグリッドから外れます。細かいグリッドはグリッドメニューにあります。",
+    "electronics.drc_next": "次へ",
+    "electronics.drc_of": "{n} 件中 {i} 件目",
+    "electronics.drc_of_none": "確認する項目 {n} 件",
+    "electronics.drc_previous": "前へ"
+  },
+  "zh": {
+    "electronics.board_drag_free": "脱离网格：已按住 Cmd（Ctrl），拖动会精确跟随指针。",
+    "electronics.board_drag_grid_hint": "在 {grid} mm 网格上：拖动时按住 Cmd（Ctrl）可离开网格；更细的网格在网格菜单中。",
+    "electronics.drc_next": "下一个",
+    "electronics.drc_of": "第 {i} 个，共 {n} 个",
+    "electronics.drc_of_none": "待查看 {n} 个",
+    "electronics.drc_previous": "上一个"
+  },
+  "ko": {
+    "electronics.board_drag_free": "격자 해제: Cmd(Ctrl)를 누르고 있어 끌기가 포인터를 정확히 따릅니다.",
+    "electronics.board_drag_grid_hint": "{grid}mm 격자 위입니다. 끄는 동안 Cmd(Ctrl)를 누르면 격자를 벗어납니다. 더 촘촘한 격자는 격자 메뉴에 있습니다.",
+    "electronics.drc_next": "다음",
+    "electronics.drc_of": "{n}개 중 {i}번째",
+    "electronics.drc_of_none": "확인할 항목 {n}개",
+    "electronics.drc_previous": "이전"
+  },
+  "ar": {
+    "electronics.board_drag_free": "خارج الشبكة: مفتاح Cmd (Ctrl) مضغوط، لذا يتبع السحب المؤشر تمامًا.",
+    "electronics.board_drag_grid_hint": "على شبكة {grid} مم: اضغط Cmd (Ctrl) أثناء السحب لمغادرتها؛ الشبكات الأدق في قائمة الشبكة.",
+    "electronics.drc_next": "التالي",
+    "electronics.drc_of": "{i} من {n}",
+    "electronics.drc_of_none": "{n} للمراجعة",
+    "electronics.drc_previous": "السابق"
+  },
+  "he": {
+    "electronics.board_drag_free": "מחוץ לרשת: Cmd (Ctrl) לחוץ, ולכן הגרירה עוקבת בדיוק אחרי הסמן.",
+    "electronics.board_drag_grid_hint": "על רשת של {grid} מ״מ: החזיקו Cmd (Ctrl) בזמן הגרירה כדי לצאת ממנה; רשתות עדינות יותר בתפריט הרשת.",
+    "electronics.drc_next": "הבא",
+    "electronics.drc_of": "{i} מתוך {n}",
+    "electronics.drc_of_none": "{n} לבדיקה",
+    "electronics.drc_previous": "הקודם"
+  },
+  "vi": {
+    "electronics.board_drag_free": "Ngoài lưới: đang giữ Cmd (Ctrl) nên thao tác kéo bám chính xác theo con trỏ.",
+    "electronics.board_drag_grid_hint": "Trên lưới {grid} mm: giữ Cmd (Ctrl) khi kéo để rời lưới; lưới mịn hơn có trong menu lưới.",
+    "electronics.drc_next": "Tiếp",
+    "electronics.drc_of": "{i} trên {n}",
+    "electronics.drc_of_none": "{n} mục cần xem",
+    "electronics.drc_previous": "Trước"
+  }
+}
