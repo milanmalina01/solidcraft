@@ -67,6 +67,7 @@ mod edit;
 mod face;
 mod features;
 mod features_more;
+pub use ecad_board_marking::{fields as marking_fields, template_of as marking_template_of};
 pub use ecad_export::{pages_book, title_info};
 pub use ecad_generate::symbol_style_preview;
 pub(crate) use face::{FaceRefForm, face_ref_form};

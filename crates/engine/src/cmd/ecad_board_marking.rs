@@ -33,7 +33,7 @@ const CONTRACT: TypedContract<MarkingParams> = TypedContract::new();
 
 /// What the block prints from the design: the print export's title block fields, from `ecad`'s
 /// design info, else the document's properties.
-pub(super) fn fields(s: &Session, ecad: &Electronics) -> Fields {
+pub fn fields(s: &Session, ecad: &Electronics) -> Fields {
     let i = &ecad.info;
     let m = &s.doc.metadata;
     let or = |own: &str, key: &str| if own.is_empty() { m.text(key).unwrap_or_default().to_string() } else { own.to_string() };
