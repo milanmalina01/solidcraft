@@ -136,7 +136,12 @@ pub const SECTIONS: &[Section] = &[
     // Move is a drag (a drag on a track reshapes it), R turns and F flips on the board.
     Section { tab: "BOARD DESIGN", panel: "SWITCH", promoted: 3, ids: &["ecad.view.schematic", "ecad.view.board", "ecad.view.board_3d"] },
     Section { tab: "BOARD DESIGN", panel: "VIEW", promoted: 1, ids: &["view.fit"] },
-    Section { tab: "BOARD DESIGN", panel: "LAYERS", promoted: 1, ids: &["ecad.board.stack"] },
+    Section {
+        tab: "BOARD DESIGN",
+        panel: "LAYERS",
+        promoted: 4,
+        ids: &["ecad.board.stack", "ecad.view.layers", "ecad.board.labels", "ecad.view.ground"],
+    },
     Section { tab: "BOARD DESIGN", panel: "BOARD SHAPE", promoted: 1, ids: &["ecad.board.outline"] },
     Section {
         tab: "BOARD DESIGN",
@@ -151,7 +156,7 @@ pub const SECTIONS: &[Section] = &[
     Section { tab: "BOARD DESIGN", panel: "MODIFY", promoted: 3, ids: &["ecad.board.rotate", "ecad.board.flip", "ecad.board.delete"] },
     // The board's DOCUMENT tab: the layer stack, and drawing on the silkscreen, the documentation
     // layer and copper.
-    Section { tab: "BOARD DOCUMENT", panel: "LAYERS", promoted: 1, ids: &["ecad.board.stack"] },
+    Section { tab: "BOARD DOCUMENT", panel: "LAYERS", promoted: 3, ids: &["ecad.board.stack", "ecad.view.layers", "ecad.board.labels"] },
     Section {
         tab: "BOARD DOCUMENT",
         panel: "DRAW",

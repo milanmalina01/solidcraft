@@ -124,6 +124,27 @@ fn swatch(ui: &Ui, rect: Rect, colour: Color32) {
     ui.painter().rect_filled(rect, f32::from(t.control_radius) / 2.0, colour);
 }
 
+/// Lay the board's names out in `mode` (`ecad.board.labels`), and say what it did.
+pub(crate) fn lay_out_names(app: &mut SolveApp, mode: &str) {
+    match app.run("ecad.board.labels", json!({"mode": mode})) {
+        Ok(r) => {
+            let count = |k: &str| r.get(k).and_then(Value::as_array).map_or(0, Vec::len).to_string();
+            let text = crate::i18n::format(
+                "electronics.board_names_laid_out",
+                &[("placed", &count("placed")), ("assembly", &count("moved_to_assembly")), ("unplaceable", &count("unplaceable"))],
+            );
+            app.set_status(text, false);
+        }
+        Err(e) => app.set_status(e, true),
+    }
+}
+
+/// Tidy Names (the ribbon): the board's names laid out again in its mode, Fit unless it has one.
+pub(crate) fn tidy_names(app: &mut SolveApp) {
+    let mode = board(app).names_mode.map_or("fit", |m| m.name());
+    lay_out_names(app, mode);
+}
+
 /// The Layers tab: each group's layers, the board's names, then the Layer Stack button.
 pub(crate) fn tab(app: &mut SolveApp, ui: &mut Ui) {
     let t = Tokens::get();
@@ -181,17 +202,7 @@ fn names(app: &mut SolveApp, ui: &mut Ui) {
     if let Some(i) = crate::electronics_editor::choice(ui, "board_names_mode", &tr("electronics.board_names_mode"), at, &options) {
         let pick = if current == usize::MAX { i.checked_sub(1) } else { Some(i) };
         if let Some(mode) = pick.and_then(|k| modes.get(k)) {
-            match app.run("ecad.board.labels", json!({"mode": mode})) {
-                Ok(r) => {
-                    let count = |k: &str| r.get(k).and_then(Value::as_array).map_or(0, Vec::len).to_string();
-                    let text = crate::i18n::format(
-                        "electronics.board_names_laid_out",
-                        &[("placed", &count("placed")), ("assembly", &count("moved_to_assembly")), ("unplaceable", &count("unplaceable"))],
-                    );
-                    app.set_status(text, false);
-                }
-                Err(e) => app.set_status(e, true),
-            }
+            lay_out_names(app, mode);
         }
     }
     ui_kit::text(ui, &tr("electronics.board_names_mode_help"), ui_kit::Text::Note("electronics.board_names_mode_help"));

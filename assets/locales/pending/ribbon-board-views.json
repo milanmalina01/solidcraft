@@ -1,0 +1,58 @@
+{
+  "en": {
+    "cmd.ecad_view_ground": "Ground Map",
+    "cmd.ecad_view_layers": "Layers",
+    "help.ecad.board.labels": "Lays every silkscreen name out again in the board's names mode (Fit unless another is chosen): inside the board, just outside its part, aligned to its edge and nearer it than any other part; a name that doesn't fit goes to the assembly drawing. Names you moved by hand stay. One step to undo.",
+    "help.ecad.view.ground": "Shows or hides the ground connectivity heat map on the active layer: green where the ground copper is well tied to the main ground, red where it is weak or isolated. Use it before and after stitching.",
+    "help.ecad.view.layers": "Opens the Layers panel: show or hide each layer, choose the silkscreen names mode and the ground map."
+  },
+  "de": {
+    "cmd.ecad_view_ground": "Massekarte",
+    "cmd.ecad_view_layers": "Lagen",
+    "help.ecad.board.labels": "Ordnet alle Namen im Bestückungsdruck im Namensmodus der Platine neu an (Passend, sofern kein anderer gewählt ist): auf der Platine, knapp außerhalb ihres Bauteils, an dessen Kante ausgerichtet und näher an ihm als an jedem anderen; was nicht passt, kommt in die Bestückungszeichnung. Von Hand verschobene Namen bleiben. Ein Schritt zum Rückgängigmachen.",
+    "help.ecad.view.ground": "Blendet die Wärmekarte der Masseanbindung auf der aktiven Lage ein oder aus: grün, wo das Massekupfer gut mit der Hauptmasse verbunden ist, rot, wo es schwach oder isoliert ist. Nutzen Sie sie vor und nach dem Stitching.",
+    "help.ecad.view.layers": "Öffnet das Lagen-Panel: jede Lage ein- oder ausblenden, den Namensmodus und die Massekarte wählen."
+  },
+  "ja": {
+    "cmd.ecad_view_ground": "グランドマップ",
+    "cmd.ecad_view_layers": "レイヤー",
+    "help.ecad.board.labels": "シルクのすべての名前を基板の名前モード（ほかを選んでいなければフィット）で配置し直します。基板の内側、部品のすぐ外側に、部品の辺に揃え、ほかのどの部品よりもその部品に近く置きます。収まらない名前は組立図に回ります。手で動かした名前はそのままです。1 回で元に戻せます。",
+    "help.ecad.view.ground": "アクティブなレイヤーのグランド接続ヒートマップを表示・非表示にします。メイングランドにしっかりつながった銅は緑、弱いか孤立した銅は赤です。スティッチングの前後に使ってください。",
+    "help.ecad.view.layers": "レイヤーパネルを開きます。各レイヤーの表示・非表示、シルクの名前モード、グランドマップを選べます。"
+  },
+  "zh": {
+    "cmd.ecad_view_ground": "接地图",
+    "cmd.ecad_view_layers": "层",
+    "help.ecad.board.labels": "按电路板的名称模式（未选择其他时为适配）重新布置所有丝印名称：在板内、紧靠其元件外侧、与元件边缘对齐，且比任何其他元件更靠近它；放不下的名称转到装配图。你手动移动的名称保持不动。可一步撤销。",
+    "help.ecad.view.ground": "显示或隐藏当前层的接地连通性热图：接地铜与主地连接良好处为绿色，连接弱或孤立处为红色。在缝合前后使用。",
+    "help.ecad.view.layers": "打开层面板：显示或隐藏各层，选择丝印名称模式和接地图。"
+  },
+  "ko": {
+    "cmd.ecad_view_ground": "접지 맵",
+    "cmd.ecad_view_layers": "레이어",
+    "help.ecad.board.labels": "보드의 이름 모드(다른 모드를 고르지 않았으면 맞춤)로 실크 이름을 모두 다시 배치합니다. 보드 안, 부품 바로 바깥에 부품 가장자리에 맞추고 다른 어떤 부품보다 그 부품에 가깝게 둡니다. 들어가지 않는 이름은 조립도로 갑니다. 손으로 옮긴 이름은 그대로입니다. 한 번에 되돌릴 수 있습니다.",
+    "help.ecad.view.ground": "활성 레이어의 접지 연결성 히트맵을 표시하거나 숨깁니다. 메인 접지에 잘 연결된 접지 구리는 녹색, 약하거나 고립된 곳은 빨간색입니다. 스티칭 전후에 사용하세요.",
+    "help.ecad.view.layers": "레이어 패널을 엽니다. 각 레이어를 표시하거나 숨기고, 실크 이름 모드와 접지 맵을 고릅니다."
+  },
+  "ar": {
+    "cmd.ecad_view_ground": "خريطة الأرضي",
+    "cmd.ecad_view_layers": "الطبقات",
+    "help.ecad.board.labels": "يعيد ترتيب كل أسماء الطباعة الحريرية بنمط أسماء اللوحة (الملاءمة ما لم يُختر غيره): داخل اللوحة، خارج قطعتها مباشرة، محاذية لحافتها وأقرب إليها من أي قطعة أخرى؛ والاسم الذي لا يتسع ينتقل إلى رسم التجميع. تبقى الأسماء التي نقلتها يدويًا. خطوة واحدة للتراجع.",
+    "help.ecad.view.ground": "يُظهر أو يُخفي خريطة حرارة اتصال الأرضي على الطبقة النشطة: أخضر حيث يرتبط نحاس الأرضي جيدًا بالأرضي الرئيسي، وأحمر حيث يكون ضعيفًا أو معزولًا. استخدمها قبل الربط وبعده.",
+    "help.ecad.view.layers": "يفتح لوحة الطبقات: أظهر كل طبقة أو أخفها، واختر نمط أسماء الطباعة الحريرية وخريطة الأرضي."
+  },
+  "he": {
+    "cmd.ecad_view_ground": "מפת הארקה",
+    "cmd.ecad_view_layers": "שכבות",
+    "help.ecad.board.labels": "מסדר מחדש את כל שמות הדפסת המשי לפי מצב השמות של הלוח (התאמה, אלא אם נבחר אחר): בתוך הלוח, ממש מחוץ לרכיב, מיושר לשפתו וקרוב אליו יותר מכל רכיב אחר; שם שאינו נכנס עובר לשרטוט ההרכבה. שמות שהזזתם ידנית נשארים. ביטול בצעד אחד.",
+    "help.ecad.view.ground": "מציג או מסתיר את מפת החום של קישוריות ההארקה בשכבה הפעילה: ירוק היכן שנחושת ההארקה קשורה היטב להארקה הראשית, אדום היכן שהיא חלשה או מבודדת. השתמשו בה לפני התפירה ואחריה.",
+    "help.ecad.view.layers": "פותח את חלונית השכבות: הצגה או הסתרה של כל שכבה, בחירת מצב השמות ומפת ההארקה."
+  },
+  "vi": {
+    "cmd.ecad_view_ground": "Bản đồ mass",
+    "cmd.ecad_view_layers": "Lớp",
+    "help.ecad.board.labels": "Sắp xếp lại mọi tên trên lớp in lụa theo chế độ tên của bo (Vừa nếu chưa chọn chế độ khác): trong bo, ngay bên ngoài linh kiện, thẳng hàng với cạnh của nó và gần nó hơn mọi linh kiện khác; tên không vừa chuyển sang bản vẽ lắp ráp. Tên bạn đã di chuyển bằng tay giữ nguyên. Hoàn tác trong một bước.",
+    "help.ecad.view.ground": "Hiện hoặc ẩn bản đồ nhiệt kết nối mass trên lớp đang hoạt động: xanh nơi đồng mass nối tốt với mass chính, đỏ nơi yếu hoặc bị cô lập. Dùng trước và sau khi khâu via.",
+    "help.ecad.view.layers": "Mở bảng Lớp: hiện hoặc ẩn từng lớp, chọn chế độ tên in lụa và bản đồ mass."
+  }
+}

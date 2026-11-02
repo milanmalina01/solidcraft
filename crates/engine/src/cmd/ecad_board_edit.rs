@@ -65,7 +65,7 @@ pub static COMMANDS: &[CommandSpec] = &[
         .params(
             "height? (mm, 0.1 to 10; null: each footprint's sized to its courtyard, 0.5 to 1 mm, or as its library footprint's spot says); show_names? bool (every footprint's name shown or hidden); show_values? bool (every value) → {changed, footprints}: the board's name and value texts in one step; a footprint's own spot for them stays",
         ),
-    CommandSpec::new("ecad.board.labels", "Silkscreen Names", crate::checked!("ecad.board.labels", labels))
+    CommandSpec::new("ecad.board.labels", "Tidy Names", crate::checked!("ecad.board.labels", labels))
         .icon("text")
         .doc_only()
         .contract(&LABELS_CONTRACT)

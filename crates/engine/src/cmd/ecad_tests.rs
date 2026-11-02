@@ -140,6 +140,8 @@ fn calls(keys: &[String; 3]) -> Vec<(&'static str, Value)> {
         ("ecad.inspect", json!({})),
         ("ecad.view.schematic", json!({})),
         ("ecad.view.board", json!({})),
+        ("ecad.view.ground", json!({"shown": true})),
+        ("ecad.view.layers", json!({})),
         ("ecad.component.create", json!({"name": "L0603", "prefix": "L", "value": "10u", "symbol": "RES", "footprint": "R0603"})),
         ("ecad.component.edit", json!({"component": "R0603", "value": "4k7", "mpn": "X1"})),
         ("ecad.component.copy", json!({"component": "R0603", "name": "R0603 copy"})),

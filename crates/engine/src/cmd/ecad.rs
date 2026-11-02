@@ -13,7 +13,10 @@ use solidcraft_doc::ecad::{
 
 use super::CommandSpec;
 use crate::params::bad;
-use crate::schema::ecad::{ComponentSummary, InspectParams, InspectResult, ItemSummary, SchematicCounts, ViewParams, ViewResult};
+use crate::schema::ecad::{
+    ComponentSummary, GroundViewParams, GroundViewResult, InspectParams, InspectResult, ItemSummary, LayersViewResult, SchematicCounts, ViewParams,
+    ViewResult,
+};
 use crate::schema::ecad_component::{ComponentId, ComponentRef, Direction, Electrical, Kind, Number, RowSpec, Shape, Side};
 use crate::schema::ecad_library::Counts;
 use crate::schema::ecad_schematic::{DetachedOut, NetChangeOut};
@@ -48,6 +51,23 @@ pub static COMMANDS: &[CommandSpec] = &[
         .contract(&VIEW_CONTRACT)
         .output(output_schema_for::<ViewResult>)
         .params("No parameters → {view: board}: an electronics design's page shows its circuit board. Changes nothing in the design"),
+    // Board view toggles the ribbon offers (the Inspector's Layers tab has them too).
+    CommandSpec::new("ecad.view.ground", "Ground Map", crate::checked!("ecad.view.ground", view_ground))
+        .icon("eye")
+        .noundo()
+        .doc_only()
+        .enabled(electronics_design)
+        .contract(&GROUND_VIEW_CONTRACT)
+        .output(output_schema_for::<GroundViewResult>)
+        .params("shown? (left out: toggled) → {layer: ground, shown?}: the board view's Ground connectivity map (how weakly the ground net's copper on the active layer is tied, as ecad.board.ground.inspect measures it) shown or hidden. Changes nothing in the design"),
+    CommandSpec::new("ecad.view.layers", "Layers", crate::checked!("ecad.view.layers", view_layers))
+        .icon("eye")
+        .noundo()
+        .doc_only()
+        .enabled(electronics_design)
+        .contract(&VIEW_CONTRACT)
+        .output(output_schema_for::<LayersViewResult>)
+        .params("No parameters → {panel: layers}: the board view's Layers panel (each layer shown or hidden, the silkscreen names mode, the ground map). Changes nothing in the design"),
     CommandSpec::new("ecad.view.board_3d", "3D Board", crate::checked!("ecad.view.board_3d", view_later))
         .icon("box")
         .noundo()
@@ -60,6 +80,7 @@ pub static COMMANDS: &[CommandSpec] = &[
 
 const INSPECT_CONTRACT: TypedContract<InspectParams> = TypedContract::new();
 const VIEW_CONTRACT: TypedContract<ViewParams> = TypedContract::new();
+const GROUND_VIEW_CONTRACT: TypedContract<GroundViewParams> = TypedContract::new();
 
 /// Why the 3D board is greyed out.
 const COMING_NEXT: &str = "Coming next";
@@ -84,6 +105,20 @@ fn view_board(s: &mut Session, p: &Value) -> Result<Value> {
     let _: ViewParams = parse(CMD, p)?;
     electronics_design(s).map_err(|e| bad(CMD, e))?;
     reply(ViewResult { view: "board".into(), param_warnings: Vec::new() })
+}
+
+fn view_ground(s: &mut Session, p: &Value) -> Result<Value> {
+    const CMD: &str = "ecad.view.ground";
+    let p: GroundViewParams = parse(CMD, p)?;
+    electronics_design(s).map_err(|e| bad(CMD, e))?;
+    reply(GroundViewResult { layer: "ground".into(), shown: p.shown })
+}
+
+fn view_layers(s: &mut Session, p: &Value) -> Result<Value> {
+    const CMD: &str = "ecad.view.layers";
+    let _: ViewParams = parse(CMD, p)?;
+    electronics_design(s).map_err(|e| bad(CMD, e))?;
+    reply(LayersViewResult { panel: "layers".into() })
 }
 
 /// The 3D board: not built yet.

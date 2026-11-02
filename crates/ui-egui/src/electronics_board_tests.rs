@@ -69,6 +69,28 @@ fn until(h: &mut Harness, done: impl Fn(&Harness) -> bool) -> bool {
 }
 
 #[test]
+fn the_ribbon_tidies_names_and_shows_the_ground_map() {
+    let mut h = grounded_board();
+    assert!(h.app.electronics.board.hidden.contains(&crate::electronics_board_layers::Layer::Ground), "hidden until asked");
+    h.app.start("ecad.view.ground");
+    h.frames(2);
+    assert!(!h.app.electronics.board.hidden.contains(&crate::electronics_board_layers::Layer::Ground));
+    assert!(
+        until(&mut h, |h| crate::electronics_board_ground::note(&h.app).is_some_and(|n| n.contains("GND"))),
+        "the map is solved beside the window"
+    );
+    h.app.start("ecad.view.layers");
+    h.frames(2);
+    assert!(h.app.electronics.board.layers_tab);
+    // Tidy Names: Fit unless the board has a mode, in one undo step.
+    let undo = h.app.session.undo.len();
+    h.app.start("ecad.board.labels");
+    h.frames(2);
+    assert_eq!(h.app.session.doc.ecad.board.names_mode, Some(solidcraft_engine::doc::ecad::labels::NamesMode::Fit));
+    assert_eq!(h.app.session.undo.len(), undo + 1);
+}
+
+#[test]
 fn stitching_where_needed_previews_ghost_vias_and_numbers_then_places_them() {
     use solidcraft_engine::doc::ecad::stitch::Pattern;
     let mut h = grounded_board();

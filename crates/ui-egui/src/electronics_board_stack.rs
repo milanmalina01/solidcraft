@@ -101,7 +101,8 @@ pub(crate) fn stack_window(app: &mut SolveApp, ctx: &egui::Context) {
     } else {
         ("electronics_board_stack", crate::electronics_design::beside(app, ctx))
     };
-    let closed = ui_kit::Window::new(egui::Id::new(id), "list", &title).placed(Align2::RIGHT_TOP, at).show_body(ctx, |ui| {
+    // Resizable, so the whole stack-up and the calculator show however many layers it has.
+    let closed = ui_kit::Window::new(egui::Id::new(id), "list", &title).placed(Align2::RIGHT_TOP, at).resizable().show_body(ctx, |ui| {
         layers = crate::electronics_editor::choice(ui, "electronics_board_stack_layers", &tr("electronics.field_copper_layers"), now, &options)
             .and_then(|i| counts.get(i).copied());
         thick = crate::electronics_editor::number(app, ui, "board:stack:thickness", &tr("electronics.field_thickness"), thickness);

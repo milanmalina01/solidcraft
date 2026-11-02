@@ -1451,6 +1451,23 @@ fn the_fit_mode_leaves_no_silk_finding_on_a_dense_board_and_the_others_do_as_the
         let d = &laid.schematic.parts.iter().find(|p| p.id == f.part).unwrap().designator;
         assert_eq!(f.show_name, fit.placed.contains(d), "{d}");
     }
+    // Every name on the board, inside its outline, and nearer its own part than any other.
+    let ring = path::tessellate(&laid.board.outline, &laid.board.outline_curves, true, 0.01);
+    let shown = super::labels::shown_names(&laid);
+    assert_eq!(shown.len(), fit.placed.len());
+    let gap = |[a0, a1]: [[f64; 2]; 2], [b0, b1]: [[f64; 2]; 2]| {
+        ((b0[0] - a1[0]).max(a0[0] - b1[0]).max(0.0)).hypot((b0[1] - a1[1]).max(a0[1] - b1[1]).max(0.0))
+    };
+    for (d, side, b, court) in &shown {
+        let corners = [b[0], [b[1][0], b[0][1]], b[1], [b[0][0], b[1][1]]];
+        assert!(corners.iter().all(|c| super::copper::inside(*c, &ring)), "{d} is off the board: {b:?}");
+        let own = gap(*b, *court);
+        for (o, s2, _, other) in &shown {
+            if o != d && s2 == side {
+                assert!(gap(*b, *other) > own, "{d}'s name is as near {o} as its own part");
+            }
+        }
+    }
     // Full: every name shows; those with no legal spot are counted.
     let full = layout(&e, NamesMode::Full, Some(2.0)).unwrap();
     assert!(full.moved_to_assembly.is_empty() && full.height == 2.0);

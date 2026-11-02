@@ -201,7 +201,10 @@ pub(crate) fn set_view(app: &mut SolveApp, view: &str) {
 pub(crate) fn start(app: &mut SolveApp, id: &str) -> bool {
     match id {
         // The SWITCH group: the command says which view, and `set_view` follows it.
-        "ecad.view.schematic" | "ecad.view.board" => drop(app.run(id, json!({}))),
+        "ecad.view.schematic" | "ecad.view.board" | "ecad.view.ground" | "ecad.view.layers" => drop(app.run(id, json!({}))),
+        // Tidy Names: the board's names laid out again in its mode (Fit unless it has one), in
+        // one step.
+        "ecad.board.labels" => crate::electronics_board_layers::tidy_names(app),
         "ecad.schematic.duplicate" => duplicate(app),
         "ecad.netlist.inspect" => toggle(app, Open::Netlist),
         "ecad.erc.inspect" => toggle(app, Open::Checks { picked: None, note: String::new() }),

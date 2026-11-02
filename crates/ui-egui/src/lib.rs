@@ -1052,6 +1052,17 @@ impl SolveApp {
                         electronics_design::set_view(self, view);
                     }
                 }
+                // The board view's toggles the ribbon offers (an agent's call too).
+                "ecad.view.ground" => {
+                    let hidden = &mut self.electronics.board.hidden;
+                    let shown = v.get("shown").and_then(Value::as_bool).unwrap_or(hidden.contains(&electronics_board_layers::Layer::Ground));
+                    if shown {
+                        hidden.remove(&electronics_board_layers::Layer::Ground);
+                    } else {
+                        hidden.insert(electronics_board_layers::Layer::Ground);
+                    }
+                }
+                "ecad.view.layers" => self.electronics.board.layers_tab = true,
                 // A check run from anywhere (an agent too) brings the board's DRC summary up to date.
                 "ecad.drc.inspect" | "ecad.board.check" => electronics_board_rules::checked_now(self),
                 "view.tool" => {

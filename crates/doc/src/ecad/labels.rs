@@ -9,13 +9,15 @@
 //!   LEDs), where they fit; the rest are hidden.
 //! - **none**: every name hidden.
 //!
-//! A legal spot is just outside the part's courtyard (on a side, centred or shifted along it),
+//! A legal spot is inside the board's outline, just outside the part's courtyard on a side,
+//! centred on it or flush with one of its ends (aligned to the part's edge),
 //! reading at 0° (the board prints names upright, never at 180° or 270°), at the board's one name
 //! height, which is at least the fab's least ([`least_height`]: `silk.size`'s height, and the
 //! height whose stroke, a tenth of it, the fab prints). It keeps the legend clearance off pads
 //! and open vias (`silk_to_pad`, `silk.clip`'s `open_via`), off holes (`hole_margin`) and the
 //! board's edge (`edge_band`), off every courtyard on its side, off the names placed before it,
-//! and nearer its own part's body than `silk.designator`'s `ratio` times any other's. Parts go
+//! nearer its own part's body than `silk.designator`'s `ratio` times any other's, and its box
+//! nearer its own courtyard than any other part's (by [`NEAREST_MARGIN`]): never between two parts. Parts go
 //! smallest courtyard first, as they have the fewest spots. Then the silk checks themselves
 //! (`silk.size`, `silk.clip`, `silk.designator`) run on the result: in fit and minimal a name
 //! they still flag is hidden, so those modes leave no silk finding on a name the mode placed; in
@@ -68,6 +70,9 @@ pub const MAX_TESTS: usize = 1 << 23;
 pub const ROUNDS: usize = 4;
 /// The highest name height asked for, in millimetres.
 pub const MAX_HEIGHT: f64 = 5.0;
+/// A name's box must be nearer its own courtyard than any other part's by at least this, in
+/// millimetres.
+const NEAREST_MARGIN: f64 = 0.1;
 /// The gap kept between two names, in millimetres.
 const NAME_GAP: f64 = 0.1;
 /// How far out past the usual spot a name may be tried, as shares of its height.
@@ -302,8 +307,8 @@ pub fn layout(ecad: &Electronics, mode: NamesMode, height: Option<f64>) -> Resul
                 ours.push(e.index);
             }
             (true, None) if mode == NamesMode::Full => {
-                // Every name stays on the silk: at its usual spot, counted as unplaceable.
-                let at = names::spot(e.court, Around::Above, [w, h]);
+                // Every name stays on the silk, on the board where it can: counted as unplaceable.
+                let at = on_board(e, [w, h], &ring, &edges, edge_band).unwrap_or_else(|| names::spot(e.court, Around::Above, [w, h]));
                 f.name_at = Some(snap_point([at[0] - f.at[0], at[1] - f.at[1]]));
                 f.show_name = true;
                 result.unplaceable.push(e.designator.clone());
@@ -362,6 +367,24 @@ pub fn layout(ecad: &Electronics, mode: NamesMode, height: Option<f64>) -> Resul
     Ok(result)
 }
 
+/// Each shown name with a spot of its own: its designator, side, box on the board (at the board's
+/// name height) and its part's courtyard box.
+pub fn shown_names(ecad: &Electronics) -> Vec<(String, Side, [[f64; 2]; 2], [[f64; 2]; 2])> {
+    let board = &ecad.board;
+    let h = board.name_height.unwrap_or(names::MAX_AUTO_HEIGHT);
+    let mut out = Vec::new();
+    for f in board.footprints.iter().filter(|f| f.show_name) {
+        let (Some(placed), Some(o)) = (ecad.placed(f), f.name_at) else { continue };
+        let placement = f.placement();
+        let Some(court) = courtyard(placed.resolved.footprint, &placement) else { continue };
+        let side = if placement.mirror { Side::Bottom } else { Side::Top };
+        let at = [f.at[0] + o[0], f.at[1] + o[1]];
+        let w = names::text_width(h, placed.part.designator.chars().count());
+        out.push((placed.part.designator.clone(), side, [at, [at[0] + w, at[1] + h]], court));
+    }
+    out
+}
+
 fn fmt(v: f64) -> String {
     let s = format!("{:.3}", (v * 1000.0).round() / 1000.0);
     s.trim_end_matches('0').trim_end_matches('.').to_string()
@@ -385,9 +408,11 @@ fn find_spot(
 ) -> Option<[f64; 2]> {
     for a in [Around::Above, Around::Below, Around::Right, Around::Left] {
         let base = names::spot(e.court, a, [w, h]);
-        let along: [f64; 5] = match a {
-            Around::Above | Around::Below => [0.0, -w / 2.0, w / 2.0, -w, w],
-            Around::Right | Around::Left => [0.0, -h, h, -2.0 * h, 2.0 * h],
+        // Centred on the side, else flush with one of its ends: aligned to the part's edge.
+        let [lo, hi] = e.court;
+        let along: [f64; 3] = match a {
+            Around::Above | Around::Below => [0.0, lo[0] - base[0], hi[0] - w - base[0]],
+            Around::Right | Around::Left => [0.0, lo[1] - base[1], hi[1] - h - base[1]],
         };
         for out in OUT {
             let push = out * h;
@@ -453,8 +478,43 @@ fn legal(
     if keepoff.iter().any(|k| k.side == e.side && gap(&core, &k.core) < k.margin) {
         return false;
     }
-    // Nearer its own body than `ratio` times any other's on its side.
+    // Nearer its own body than `ratio` times any other's on its side, and its box nearer its own
+    // courtyard than any other part's: never between two parts.
     let c = [(b[0][0] + b[1][0]) / 2.0, (b[0][1] + b[1][1]) / 2.0];
     let own = box_distance(c, e.body);
-    !bodies.iter().any(|(i, s, other)| *i != e.index && *s == e.side && box_distance(c, *other) < own * ratio)
+    if bodies.iter().any(|(i, s, other)| *i != e.index && *s == e.side && box_distance(c, *other) < own * ratio) {
+        return false;
+    }
+    let own_gap = box_gap(b, e.court);
+    !courts.iter().zip(bodies).any(|((s, c), (i, _, _))| *i != e.index && *s == e.side && box_gap(b, *c) <= own_gap + NEAREST_MARGIN)
+}
+
+/// The gap between two boxes (0 when they meet).
+fn box_gap([a0, a1]: [[f64; 2]; 2], [b0, b1]: [[f64; 2]; 2]) -> f64 {
+    let dx = (b0[0] - a1[0]).max(a0[0] - b1[0]).max(0.0);
+    let dy = (b0[1] - a1[1]).max(a0[1] - b1[1]).max(0.0);
+    dx.hypot(dy)
+}
+
+/// Full: a spot that is at least on the board, clear of its edge and off its own courtyard, for
+/// a name no legal spot was found for.
+fn on_board(e: &Entry, [w, h]: [f64; 2], ring: &[[f64; 2]], edges: &[Core], edge_band: f64) -> Option<[f64; 2]> {
+    for a in [Around::Above, Around::Below, Around::Right, Around::Left] {
+        for out in [0.0, 1.0, 2.0, 4.0] {
+            let base = names::spot(e.court, a, [w, h]);
+            let at = match a {
+                Around::Above => [base[0], base[1] + out * h],
+                Around::Below => [base[0], base[1] - out * h],
+                Around::Right => [base[0] + out * h, base[1]],
+                Around::Left => [base[0] - out * h, base[1]],
+            };
+            let at = snap_point(at);
+            let core = box_core([at, [at[0] + w, at[1] + h]]);
+            let inside_ring = ring.is_empty() || core.points.iter().all(|p| inside(*p, ring));
+            if inside_ring && !edges.iter().any(|edge| gap(&core, edge) < edge_band) {
+                return Some(at);
+            }
+        }
+    }
+    None
 }

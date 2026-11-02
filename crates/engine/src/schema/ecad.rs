@@ -96,6 +96,31 @@ pub struct ViewResult {
     pub param_warnings: Vec<String>,
 }
 
+/// `ecad.view.ground`: show or hide the board view's Ground connectivity map.
+#[derive(Debug, Deserialize, JsonSchema)]
+#[schemars(deny_unknown_fields)]
+pub struct GroundViewParams {
+    /// Shown (true) or hidden (false); toggled when left out.
+    pub shown: Option<bool>,
+}
+
+/// What `ecad.view.ground` returns: what the board view does with it.
+#[derive(Debug, Serialize, JsonSchema)]
+pub struct GroundViewResult {
+    /// `ground`.
+    pub layer: String,
+    /// Shown or hidden; absent: toggled.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub shown: Option<bool>,
+}
+
+/// What `ecad.view.layers` returns: the board view's Layers tab is shown.
+#[derive(Debug, Serialize, JsonSchema)]
+pub struct LayersViewResult {
+    /// `layers`.
+    pub panel: String,
+}
+
 #[cfg(test)]
 mod tests {
     use serde_json::json;
