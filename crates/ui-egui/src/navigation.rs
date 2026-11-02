@@ -104,6 +104,9 @@ pub(crate) struct RawWheel {
     shift_pan: egui::Vec2,
     /// Bare horizontal input in points (thumb wheel: always pans sideways).
     mouse_pan: egui::Vec2,
+    /// Scrolling with the zoom modifier held (Cmd on macOS, Ctrl elsewhere), in points: a mouse
+    /// whose wheel pans (a Magic Mouse's one-finger swipe) zooms with it.
+    pub(crate) modifier_zoom: f32,
 }
 
 /// Route wheel points to the vertical axis, matching egui's scroll modifiers.
@@ -174,10 +177,24 @@ pub(crate) fn immediate_wheel(
     coast: &mut TrackpadCoast,
     shift_orbits: bool,
 ) -> RawWheel {
-    let mut out = RawWheel { zoom: 0.0, point_zoom: 0.0, pan: egui::Vec2::ZERO, shift_pan: egui::Vec2::ZERO, mouse_pan: egui::Vec2::ZERO };
+    let mut out =
+        RawWheel { zoom: 0.0, point_zoom: 0.0, pan: egui::Vec2::ZERO, shift_pan: egui::Vec2::ZERO, mouse_pan: egui::Vec2::ZERO, modifier_zoom: 0.0 };
     for event in &input.events {
         let egui::Event::MouseWheel { unit, delta, modifiers, phase } = event else { continue };
         if modifiers.matches_any(options.zoom_modifier) {
+            // Zoom-modifier scrolling (never pans or orbits): the larger axis, so a sideways
+            // swipe zooms too.
+            if *phase == egui::TouchPhase::Move {
+                let points = match unit {
+                    egui::MouseWheelUnit::Point => *delta,
+                    egui::MouseWheelUnit::Line => *delta * options.line_scroll_speed,
+                    egui::MouseWheelUnit::Page => *delta * page_height,
+                };
+                let v = if points.y.abs() >= points.x.abs() { points.y } else { points.x };
+                if v.is_finite() {
+                    out.modifier_zoom += v.clamp(-1e4, 1e4);
+                }
+            }
             continue;
         }
         let point = matches!(unit, egui::MouseWheelUnit::Point);
@@ -514,6 +531,9 @@ pub(crate) fn handle(app: &mut SolveApp, ui: &mut egui::Ui, rect: Rect, resp: &e
     } else {
         scroll
     };
+    // Cmd (Ctrl) + scroll zooms about the pointer, like the wheel, when the preference is on
+    // (its default); off, it does nothing, as before.
+    let scroll = scroll + if app.preferences.modifier_scroll_zoom { raw.modifier_zoom } else { 0.0 };
     // Pinch-to-zoom (trackpad): direct manipulation, never smoothed.
     let pinch = ui.input(pinch_factor);
     let h = rect.height().max(1.0) as f64;
@@ -1031,6 +1051,26 @@ mod tests {
         assert!(matches!(events.as_slice(), [egui::Event::MouseWheel { phase: TouchPhase::End, delta, .. }] if *delta == egui::Vec2::ZERO));
         let (wheel, _) = web_frame(&mut state, 0.21, vec![web_wheel(Point, vec2(0.0, -2.0), Modifiers::NONE)], &mut gesture);
         assert_eq!(wheel.pan, vec2(0.0, -2.0));
+    }
+
+    #[test]
+    fn modifier_scroll_is_zoom_and_never_pans_or_starts_a_gesture() {
+        use egui::{Modifiers, MouseWheelUnit::*, TouchPhase, vec2};
+        let wheel = |unit, delta, phase| egui::Event::MouseWheel { unit, delta, modifiers: Modifiers::COMMAND, phase };
+        let mut input = egui::InputState::default();
+        input.events = vec![
+            wheel(Point, vec2(0.0, 0.0), TouchPhase::Start),
+            wheel(Point, vec2(0.0, 30.0), TouchPhase::Move),
+            wheel(Point, vec2(-12.0, 4.0), TouchPhase::Move),
+            wheel(Line, vec2(0.0, 1.0), TouchPhase::Move),
+            wheel(Point, vec2(0.0, 0.0), TouchPhase::End),
+        ];
+        let mut gesture = false;
+        let options = egui::InputOptions::default();
+        let raw = super::immediate_wheel(&input, options, 600.0, &mut gesture, &mut Default::default(), false);
+        assert_eq!(raw.modifier_zoom, 30.0 - 12.0 + options.line_scroll_speed, "the larger axis of each move");
+        assert_eq!((raw.pan, raw.zoom, raw.point_zoom), (egui::Vec2::ZERO, 0.0, 0.0));
+        assert!(!gesture, "a modified swipe is no pan gesture");
     }
 
     #[test]

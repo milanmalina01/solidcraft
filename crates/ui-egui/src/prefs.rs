@@ -724,6 +724,9 @@ preference_settings! {
     smooth_wheel_zoom: bool = true, PAGE_NAVIGATION => check("Smooth wheel zoom", "Turn off to apply each wheel event immediately, without a smoothing tail");
     /// Two-finger trackpad scroll pans (off: it zooms like the wheel); pinch always zooms.
     trackpad_pan: bool = true, PAGE_NAVIGATION;
+    /// Cmd + scroll (Ctrl + scroll off macOS) zooms about the pointer in every view; off, it
+    /// does nothing, as before. For a mouse whose wheel pans, such as a Magic Mouse.
+    modifier_scroll_zoom: bool = true, PAGE_NAVIGATION => check_tr("nav.modifier_scroll_zoom.label");
     /// Horizontal trackpad and thumb-wheel scrolling pans the view the other way (#2007).
     pan_reverse_x: bool = false, PAGE_NAVIGATION => check("Reverse horizontal pan direction", "Horizontal two-finger scrolling and the thumb wheel pan the other way");
     /// View changes (axis view, Look At, Home) animate; `look_at_speed` scales how fast.

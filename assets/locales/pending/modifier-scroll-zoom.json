@@ -1,0 +1,26 @@
+{
+  "en": {
+    "nav.modifier_scroll_zoom.label": "Cmd + scroll zooms (Ctrl + scroll on Windows and Linux)"
+  },
+  "de": {
+    "nav.modifier_scroll_zoom.label": "Cmd + Scrollen zoomt (Strg + Scrollen unter Windows und Linux)"
+  },
+  "ja": {
+    "nav.modifier_scroll_zoom.label": "Cmd + スクロールでズーム（Windows と Linux では Ctrl + スクロール）"
+  },
+  "zh": {
+    "nav.modifier_scroll_zoom.label": "Cmd + 滚动缩放（Windows 和 Linux 上为 Ctrl + 滚动）"
+  },
+  "ko": {
+    "nav.modifier_scroll_zoom.label": "Cmd + 스크롤로 확대/축소(Windows와 Linux에서는 Ctrl + 스크롤)"
+  },
+  "ar": {
+    "nav.modifier_scroll_zoom.label": "Cmd + التمرير يكبّر (Ctrl + التمرير في Windows وLinux)"
+  },
+  "he": {
+    "nav.modifier_scroll_zoom.label": "Cmd + גלילה מגדילה (Ctrl + גלילה ב־Windows וב־Linux)"
+  },
+  "vi": {
+    "nav.modifier_scroll_zoom.label": "Cmd + cuộn để thu phóng (Ctrl + cuộn trên Windows và Linux)"
+  }
+}

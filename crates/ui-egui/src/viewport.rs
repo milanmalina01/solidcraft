@@ -8765,6 +8765,34 @@ mod tests {
     }
 
     #[test]
+    fn cmd_scroll_zooms_about_the_pointer_while_plain_swipes_keep_panning() {
+        let mut h = crate::scenario::Harness::new();
+        // A Magic Mouse: one-finger swipes arrive bracketed and pan.
+        assert!(h.app.preferences.trackpad_pan && h.app.preferences.modifier_scroll_zoom);
+        h.call("ui.move", json!({"x":800,"y":500}));
+        let swipe = |h: &mut crate::scenario::Harness, delta: egui::Vec2, modifiers: egui::Modifiers| {
+            for (phase, d) in
+                [(egui::TouchPhase::Start, egui::Vec2::ZERO), (egui::TouchPhase::Move, delta), (egui::TouchPhase::End, egui::Vec2::ZERO)]
+            {
+                h.app.synthetic.push(egui::Event::MouseWheel { unit: egui::MouseWheelUnit::Point, delta: d, modifiers, phase });
+            }
+            h.frame();
+            h.frames(30);
+        };
+        let height = h.app.cam.half_height();
+        swipe(&mut h, vec2(0.0, 40.0), egui::Modifiers::NONE);
+        assert!((h.app.cam.half_height() - height).abs() < 1e-9, "a plain swipe pans, never zooms");
+        let height = h.app.cam.half_height();
+        swipe(&mut h, vec2(0.0, 40.0), egui::Modifiers::COMMAND);
+        assert!(h.app.cam.half_height() < height * 0.99, "Cmd + swipe up zooms in");
+        // Off, it does nothing, as before.
+        h.app.preferences.modifier_scroll_zoom = false;
+        let (height, target) = (h.app.cam.half_height(), h.app.cam.target);
+        swipe(&mut h, vec2(0.0, 40.0), egui::Modifiers::COMMAND);
+        assert!((h.app.cam.half_height() - height).abs() < 1e-9 && h.app.cam.target == target);
+    }
+
+    #[test]
     fn immediate_wheel_zoom_applies_normalized_input_once() {
         let mut h = crate::scenario::Harness::new();
         h.app.preferences.smooth_wheel_zoom = false;

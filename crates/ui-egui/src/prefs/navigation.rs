@@ -77,6 +77,8 @@ pub(super) fn show(app: &mut SolveApp, ui: &mut egui::Ui, t: &Tokens) {
                 ui_kit::text(ui, crate::i18n::tr("nav.free_orbit_upright.help"), ui_kit::Text::Hint("free_orbit_upright"));
             }
         }
+        let modifier_zoom = setting::modifier_scroll_zoom(app, ui);
+        crate::scenario::publish_target("prefs:modifier_scroll_zoom", modifier_zoom.rect);
         let help = if app.preferences.nav == TOUCHPAD_NAV {
             app.tr("nav.touchpad.help").to_owned()
         } else if !app.preferences.free_orbit && app.preferences.nav != OPENSCAD_NAV {
