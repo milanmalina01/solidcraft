@@ -1237,37 +1237,56 @@ fn a_via_too_near_a_pad_is_found_and_a_tented_one_is_an_info() {
 }
 
 #[test]
-fn a_track_leaving_a_pad_askew_or_by_its_corner_is_a_pad_entry() {
+fn a_thin_track_leaving_a_pad_by_its_corner_is_a_pad_entry() {
     let track = |points: Value| json!([["track", {"layer": "top", "points": points, "width": 0.2}]]);
-    // Square out of the middle of the right edge.
+    // R1.2 is 0.6 x 0.9 mm at (-9.2, 0). Square out of the middle of its right edge.
     assert_eq!(dfm_case(track(json!([[-9.2, 0], [-5, 0]])), "pad_entry"), []);
-    // At 45°: off square by more than 30°.
-    let askew = drc_case(track(json!([[-9.2, 0], [-8.2, 1]])));
-    assert!(has(&askew, "pad_entry", Severity::Warning) && !askew.iter().any(|f| f.0 == "acute_angle"), "one finding for both: {askew:?}");
-    // Square, but 0.35 mm off the middle of an edge 0.45 mm to its corner (78 %).
+    // A plain 45° exit from the middle of the edge: no pad entry (its sharp side is an acute
+    // angle, below).
+    assert_eq!(dfm_case(track(json!([[-9.2, 0], [-8.2, 1]])), "pad_entry"), []);
+    // Square, 0.35 mm off the middle of an edge 0.45 mm to its corner: its copper reaches the
+    // corner, and 0.2 mm is thin beside a 0.9 mm edge.
     assert_eq!(dfm_case(track(json!([[-9.2, 0.35], [-5, 0.35]])), "pad_entry"), [Severity::Warning]);
+    // As wide as half the edge: not thin.
+    let wide = json!([["track", {"layer": "top", "points": [[-9.2, 0.25], [-5, 0.25]], "width": 0.45}]]);
+    assert_eq!(dfm_case(wide, "pad_entry"), []);
 }
 
 #[test]
-fn pockets_under_90_degrees_are_acute_angles() {
+fn only_an_empty_gap_opening_under_70_degrees_is_an_acute_angle() {
     let track = |points: Value| json!(["track", {"layer": "top", "points": points, "width": 0.2}]);
     // Bends: 90° and 135° pass, 26.6° doesn't.
     assert_eq!(dfm_case(json!([track(json!([[-9.2, 0], [-5, 0], [-5, -3]]))]), "acute_angle"), []);
     assert_eq!(dfm_case(json!([track(json!([[-9.2, 0], [-5, 0], [-3, -2]]))]), "acute_angle"), []);
     assert_eq!(dfm_case(json!([track(json!([[-9.2, 0], [-5, 0], [-7, -1]]))]), "acute_angle"), [Severity::Warning]);
-    // A T into SIG: square passes, at 45° it leaves a 45° pocket.
+    // A T into SIG: square passes, at 45° it leaves a 45° gap on one side.
     let tee = |end: [f64; 2]| json!([track(json!([[-9.2, 0], [9.2, 0]])), track(json!([[0, 0], end]))]);
     assert_eq!(dfm_case(tee([0.0, -2.0]), "acute_angle"), []);
     assert_eq!(dfm_case(tee([2.0, -2.0]), "acute_angle"), [Severity::Warning]);
-    // Onto another track's corner: 45° off its other side leaves a 45° pocket; moved to go
-    // straight on along a side (the fix), none.
+    // Onto another track's corner: 45° off its other side leaves a 45° gap; moved to go straight
+    // on along a side (the fix), none.
     let corner = |end: [f64; 2]| json!([track(json!([[-9.2, 0], [0, 0], [0, -3]])), track(json!([[0, 0], end]))]);
     assert_eq!(dfm_case(corner([3.0, -3.0]), "acute_angle"), [Severity::Warning]);
     assert_eq!(dfm_case(corner([3.0, 0.0]), "acute_angle"), []);
-    // Leaving R1.2 20° off square: a 70° pocket with the pad's edge (not yet a pad entry).
-    let (s, c) = 20f64.to_radians().sin_cos();
-    let found = drc_case(json!([track(json!([[-9.2, 0], [-9.2 + 3.0 * c, 3.0 * s]]))]));
-    assert!(has(&found, "acute_angle", Severity::Warning) && !found.iter().any(|f| f.0 == "pad_entry"), "{found:?}");
+    // Entering R1.2's right edge 30° off square: the gap above opens at 60° and is flagged, the
+    // one below at 120° isn't; one finding, at the upper corner.
+    let off = |deg: f64| {
+        let (s, c) = deg.to_radians().sin_cos();
+        json!([track(json!([[-9.2, 0], [-9.2 + 3.0 * c, 3.0 * s]]))])
+    };
+    let mut e = scratch("return");
+    run(&mut e, off(30.0));
+    let found: Vec<super::drc::DrcFinding> = e.drc().findings.into_iter().filter(|f| f.code == "acute_angle").collect();
+    assert_eq!(found.len(), 1, "{found:?}");
+    assert!(close(found[0].measured, 60.0, 1.0) && found[0].at[1] > 0.0, "{:?}", found[0]);
+    assert_eq!(dfm_case(off(30.0), "pad_entry"), []);
+    // 11° off square: the sharp side opens at 79°, over 70: nothing.
+    assert_eq!(dfm_case(off(11.0), "acute_angle"), []);
+    // Out of R1.2's top right corner at 45°: its sides meet the top and the right edge, each gap
+    // opening at 135°: nothing.
+    let diagonal = json!([track(json!([[-9.25, 0.1], [-7.25, 2.1]]))]);
+    assert_eq!(dfm_case(diagonal.clone(), "acute_angle"), []);
+    assert_eq!(dfm_case(diagonal, "pad_entry"), []);
 }
 
 #[test]

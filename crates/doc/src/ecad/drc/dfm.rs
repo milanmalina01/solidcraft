@@ -1,8 +1,7 @@
 //! The design rule check's manufacturability codes: an open via too close to a surface-mount pad
-//! (`via_near_pad`), a track that leaves a pad near its corner or askew (`pad_entry`), a pocket
-//! under the least angle where a track bends or meets a pad or another track of its net
-//! (`acute_angle`), and copper or a gap in a pour's fill narrower than the least track or gap
-//! (`sliver`).
+//! (`via_near_pad`), a thin track that leaves a pad by its corner (`pad_entry`), an empty gap that
+//! opens under the least angle where copper of one net meets (`acute_angle`), and copper or a gap
+//! in a pour's fill narrower than the least track or gap (`sliver`).
 //!
 //! Their limits are the fab profile's (`via_to_pad`, `pad_entry_angle`, `acute_angle`, `track`
 //! and `gap`); without a profile, [`VIA_TO_PAD`], [`ENTRY_ANGLE`], [`ACUTE_ANGLE`] and the rules'
@@ -10,15 +9,18 @@
 //! guides, not from a standard or a capability page, so each finding is a warning (an info for a
 //! tented, plugged or filled via) with a note that says so.
 //!
-//! - A pad is taken as the rectangle of its size (a rounded or oval pad's corners included); round
-//!   pads have no edge to leave square and are skipped by `pad_entry` and the pad pockets.
+//! - A pad is taken as the rectangle of its size (a rounded or oval pad's corners included) for
+//!   `pad_entry`; round pads have no edge to leave and are skipped there.
 //! - A track leaves a pad where its middle line first crosses the rectangle from an end inside it.
-//!   It leaves near a corner when it crosses more than [`CORNER_SHARE`] of the way from the edge's
-//!   middle to its end.
-//! - The pocket between a track and a pad's edge is the smaller angle between them; where the track
-//!   leaves askew enough for `pad_entry`, that finding stands for both.
-//! - Track pockets: each track's sharpest bend; two tracks of one net ending together, at the angle
-//!   between them; a track ending on another's side (a T), at the smaller angle it makes with it.
+//!   It leaves by the corner when its copper reaches past the corner along that edge, and is thin
+//!   there under [`THIN_SHARE`] of the edge's length. A diagonal exit (more than the profile's
+//!   `pad_entry_angle` off square) is fine wherever it leaves.
+//! - Pockets are measured on the merged copper, never on middle lines: a track's straight piece at
+//!   an end is merged with the pad, or the other track's pieces, it ends on; each inward corner of
+//!   the union that neither had alone is where their edges meet, and the empty gap there opens at
+//!   the angle between those edges. Only gaps under the least angle (70° by default) count, so a
+//!   track entering a pad askew is flagged on its sharp side alone, and not at all while both
+//!   sides stay open. A track's own sharpest bend is measured between its pieces.
 //! - Slivers: a fill opened by half the least track (shrunk, then grown back) loses its necks and
 //!   fingers; closed by half the least gap it fills its narrow slots. What changes by more than
 //!   [`SLIVER_AREA`] of the limit squared counts (a square corner changes by much less); one
@@ -38,15 +40,19 @@ use crate::ecad::copper::{disc, pad_core, pieces};
 use crate::ecad::footprint::{PadKind, PadShape};
 use crate::ecad::grid::{Grid, grow};
 use crate::ecad::layers::CopperLayer;
+use solidcraft_geom::region::Region;
 
 /// Without a fab profile: the least gap from an open via's ring to a pad, in millimetres.
 pub const VIA_TO_PAD: f64 = 0.25;
-/// Without a fab profile: how far off square a track may leave a pad, in degrees.
+/// Without a fab profile: how far off square a track leaves a pad and still counts as square to
+/// its edge, in degrees (more is a diagonal exit, fine from anywhere on the edge).
 pub const ENTRY_ANGLE: f64 = 30.0;
-/// Without a fab profile: the least pocket angle, in degrees.
-pub const ACUTE_ANGLE: f64 = 90.0;
-/// A track leaves a pad near its corner past this share of the way from the edge's middle.
-pub const CORNER_SHARE: f64 = 0.5;
+/// Without a fab profile: the least opening of an empty gap where copper meets, in degrees.
+pub const ACUTE_ANGLE: f64 = 70.0;
+/// A track is thin beside a pad's edge under this share of the edge's length.
+pub const THIN_SHARE: f64 = 0.5;
+/// Corners of merged copper closer than this, in millimetres, are one corner.
+const JOIN_TOLERANCE: f64 = 0.01;
 /// What a fill's opening or closing must change, as a share of the limit squared, to count.
 pub const SLIVER_AREA: f64 = 0.5;
 /// The most fill corners the sliver test works through, all fills together.
@@ -136,6 +142,10 @@ struct Exit {
     at: [f64; 2],
     off_square: f64,
     toward_corner: f64,
+    /// How far, in millimetres, the crossing is from the corner it is nearer, along the edge.
+    to_corner: f64,
+    /// The length of the edge it crosses, in millimetres.
+    edge: f64,
 }
 
 /// Where the line `line` (from an end inside the pad) first leaves it; `None` if it stays inside.
@@ -173,7 +183,8 @@ fn exit(f: &Frame, line: &[[f64; 2]]) -> Option<Exit> {
         let half = f.half[other];
         let toward_corner = if half > 0.0 { local_at[other].abs() / half } else { 0.0 };
         let at = [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
-        return Some(Exit { at, off_square, toward_corner });
+        let (to_corner, edge) = ((half - local_at[other].abs()).max(0.0), 2.0 * half);
+        return Some(Exit { at, off_square, toward_corner, to_corner, edge });
     }
     None
 }
@@ -264,10 +275,12 @@ fn lines(t: &crate::ecad::board::Track) -> (Vec<[f64; 2]>, Vec<[f64; 2]>) {
     (line, back)
 }
 
-/// Tracks that leave a non-round surface-mount pad they end in near its corner, or more than the
-/// profile's `pad_entry_angle` off square to its edge (`pad_entry`); and those that leave it at a
-/// pocket under the least angle without that (`acute_angle`). Then each track's sharpest bend,
-/// and where two tracks of one net meet, against the least angle (`acute_angle`).
+/// Tracks that leave a non-round surface-mount pad they end in from its corner while thin beside
+/// the edge they leave by (`pad_entry`); a diagonal exit, more than the profile's
+/// `pad_entry_angle` off square, is fine wherever it leaves. Then the empty gaps where copper
+/// meets, against the least angle (`acute_angle`): each track's sharpest bend, and every inward
+/// corner of a track merged with the pad or other track of its net it ends on (see
+/// [`junction_gaps`]).
 pub(super) fn pad_entries_and_pockets(c: &mut Ctx, f: &mut Found) {
     let lim = limits(c);
     let (board, nets) = (c.board, c.nets);
@@ -283,7 +296,7 @@ pub(super) fn pad_entries_and_pockets(c: &mut Ctx, f: &mut Found) {
             tracks.push((ti, line, back));
         }
     }
-    // Pads.
+    // Pads: a thin track leaving by the corner.
     for (ti, line, back) in &tracks {
         let Some(t) = board.tracks.get(*ti) else { continue };
         let root = nets.track_islands.get(*ti).copied();
@@ -302,64 +315,36 @@ pub(super) fn pad_entries_and_pockets(c: &mut Ctx, f: &mut Found) {
                     continue;
                 }
                 let Some(x) = exit(fr, l) else { continue };
+                let diagonal = x.off_square > lim.entry + ANGLE_SLACK;
+                // Its copper reaches past the corner, and it is thin beside the edge.
+                let spill = t.width / 2.0 / x.off_square.to_radians().cos().max(0.2);
+                let cornered = x.to_corner <= spill + 1e-9;
+                let thin = t.width < THIN_SHARE * x.edge - 1e-9;
+                if diagonal || !cornered || !thin {
+                    continue;
+                }
                 let (item, pad) = (DrcItem::TrackEnd(t.id, end), pad_item(p));
-                let askew = x.off_square > lim.entry + ANGLE_SLACK;
-                let cornered = x.toward_corner > CORNER_SHARE + 1e-9;
-                if askew || cornered {
-                    let message = if askew {
-                        format!(
-                            "track {} leaves pad {} {}° off square to its edge (at most {}°): enter a pad along its axis, square to its edge",
-                            t.id,
-                            p.reference(),
-                            mm(x.off_square),
-                            mm(lim.entry)
-                        )
-                    } else {
-                        format!(
-                            "track {} leaves pad {} near its corner ({} % of the way from the edge's middle): enter a pad near the middle of its edge",
-                            t.id,
-                            p.reference(),
-                            mm(x.toward_corner * 100.0)
-                        )
-                    };
-                    let (off, toward) = (x.off_square, x.toward_corner);
-                    let (item, pad) = (item.clone(), pad.clone());
-                    f.add("pad_entry", &[item.key(), pad.key()], || {
-                        let d = Draft::new(x.at, vec![item, pad], message).layer(Some(t.layer)).note(NOTE);
-                        let d = if askew {
-                            d.count(off, lim.entry, "degrees", Bound::Max)
-                                .param("profile.pad_entry_angle")
-                                .arg("angle", mm(off))
-                                .arg("limit", mm(lim.entry))
-                        } else {
-                            d.count(toward, CORNER_SHARE, "ratio", Bound::Max).param("pad_entry.corner_share").arg("share", mm(toward * 100.0))
-                        };
-                        d.fix(
+                let share = x.toward_corner;
+                let message = format!(
+                    "track {} ({} mm) leaves pad {} at its corner, {} % of the way from the edge's middle: enter a pad near the middle of its edge",
+                    t.id,
+                    mm(t.width),
+                    p.reference(),
+                    mm((share * 100.0).round())
+                );
+                f.add("pad_entry", &[item.key(), pad.key()], || {
+                    Draft::new(x.at, vec![item, pad], message)
+                        .layer(Some(t.layer))
+                        .note(NOTE)
+                        .count(share, 1.0, "ratio", Bound::Max)
+                        .param("pad_entry.corner")
+                        .arg("share", mm((share * 100.0).round()))
+                        .fix(
                             "ecad.board.track.reshape",
                             serde_json::Value::Null,
-                            format!("reshape track {} so it leaves the pad from the middle of its edge, square to it, for about a pad width", t.id),
+                            format!("reshape track {} so it leaves the pad from the middle of its edge", t.id),
                         )
-                    });
-                }
-                let pocket = 90.0 - x.off_square;
-                if !askew && pocket < lim.acute - ANGLE_SLACK {
-                    let message = format!(
-                        "track {} meets the edge of pad {} at {}°: the pocket under {}° can trap etchant; leave the pad square to its edge",
-                        t.id,
-                        p.reference(),
-                        mm(pocket),
-                        mm(lim.acute)
-                    );
-                    f.add("acute_angle", &[item.key(), pad.key()], || {
-                        Draft::new(x.at, vec![item, pad], message)
-                            .layer(Some(t.layer))
-                            .count(pocket, lim.acute, "degrees", Bound::Min)
-                            .arg("angle", mm(pocket))
-                            .arg("limit", mm(lim.acute))
-                            .arg("meets", "pad".into())
-                            .note(NOTE)
-                    });
-                }
+                });
             }
         }
     }
@@ -398,7 +383,7 @@ pub(super) fn pad_entries_and_pockets(c: &mut Ctx, f: &mut Found) {
             });
         }
     }
-    // Where two tracks of one net meet: by end, then by end on the other's side.
+    // Junctions: a track end merged with what of its net it ends on.
     let mut seg_grid: BTreeMap<CopperLayer, Grid> = BTreeMap::new();
     let mut segs: Vec<(usize, [f64; 2], [f64; 2])> = Vec::new();
     for (k, line, _) in &tracks {
@@ -415,116 +400,175 @@ pub(super) fn pad_entries_and_pockets(c: &mut Ctx, f: &mut Found) {
     for (k, p) in nets.pads.iter().enumerate() {
         pad_grid.insert(k, p.bbox());
     }
-    let mut done: std::collections::BTreeSet<(u64, u8, u64)> = std::collections::BTreeSet::new();
+    let mut done: std::collections::BTreeSet<(u64, u64, i64, i64)> = std::collections::BTreeSet::new();
     for (ti, line, back) in &tracks {
         let Some(t) = board.tracks.get(*ti) else { continue };
         let root = nets.track_islands.get(*ti).copied();
-        let Some(grid) = seg_grid.get(&t.layer) else { continue };
+        let r = t.width / 2.0;
         for (end, l) in [(0u8, line), (1u8, back)] {
             let (Some(at), Some(next)) = (l.first().copied(), l.get(1).copied()) else { continue };
-            // Inside a pad the pocket is the pad's copper.
-            let in_pad =
-                pad_grid.near_box([at, at], nets.pads.len()).into_iter().any(|k| nets.pads.get(k).is_some_and(|p| p.on(t.layer) && p.contains(at)));
-            if in_pad {
-                continue;
-            }
-            let dir = sub(next, at);
-            let near = grid.near_box([at, at], segs.len());
+            let mine = stroke_region(at, next, r);
+            // Pads it ends in or on.
+            let reach = [[at[0] - r, at[1] - r], [at[0] + r, at[1] + r]];
+            let near = pad_grid.near_box(reach, nets.pads.len());
             if !c.visit(near.len()) {
                 return;
             }
-            // The other track and the pocket angle: the least over its pieces at this end.
-            let mut found: BTreeMap<usize, (f64, u8)> = BTreeMap::new();
+            for k in near {
+                let Some(p) = nets.pads.get(k) else { continue };
+                if !c.spend(8) {
+                    return;
+                }
+                if !p.on(t.layer) || nets.pad_islands.get(k).copied() != root {
+                    continue;
+                }
+                let core = pad_core(p);
+                if gap(&disc(at, r), &core) > 1e-9 {
+                    continue;
+                }
+                let theirs = Region::polygon(&crate::ecad::copper::hull_outline(&core, 0.0));
+                for (corner, opening) in junction_gaps(&mine, &theirs, at, near_reach(&core, r)) {
+                    if opening >= lim.acute - ANGLE_SLACK || !done.insert((t.id, p.footprint.wrapping_add(1 << 40), key(corner[0]), key(corner[1]))) {
+                        continue;
+                    }
+                    let (a, b) = (DrcItem::TrackEnd(t.id, end), pad_item(p));
+                    let message = format!(
+                        "the gap between track {} and pad {} opens at {}°: a pocket under {}° can trap etchant; turn the track so both sides open wider",
+                        t.id,
+                        p.reference(),
+                        mm(opening.round()),
+                        mm(lim.acute)
+                    );
+                    f.add("acute_angle", &[a.key(), b.key()], || {
+                        Draft::new(corner, vec![a, b], message)
+                            .layer(Some(t.layer))
+                            .count(opening, lim.acute, "degrees", Bound::Min)
+                            .arg("angle", mm(opening.round()))
+                            .arg("limit", mm(lim.acute))
+                            .arg("meets", "pad".into())
+                            .note(NOTE)
+                            .fix(
+                                "ecad.board.track.reshape",
+                                serde_json::Value::Null,
+                                format!("reshape track {} so it leaves the pad square to its edge", t.id),
+                            )
+                    });
+                }
+            }
+            // Other tracks of its net it ends on (their end, bend or side).
+            let Some(grid) = seg_grid.get(&t.layer) else { continue };
+            let near = grid.near_box(reach, segs.len());
+            if !c.visit(near.len()) {
+                return;
+            }
+            let mut others: BTreeMap<usize, Vec<([f64; 2], [f64; 2])>> = BTreeMap::new();
             for s in near {
                 let Some((oi, a, b)) = segs.get(s) else { continue };
-                if oi == ti || !c.spend(1) {
+                if oi == ti || nets.track_islands.get(*oi).copied() != root || !c.spend(1) {
                     continue;
                 }
                 let Some(o) = board.tracks.get(*oi) else { continue };
-                if nets.track_islands.get(*oi).copied() != root {
+                if gap(&disc(at, r), &crate::ecad::copper::stroke(*a, *b, o.width / 2.0)) > 1e-9 {
                     continue;
                 }
-                let reach = t.width.max(o.width) / 2.0;
-                let (da, db) = (len(sub(*a, at)), len(sub(*b, at)));
-                // End to end: the other track's own end there.
-                let other_end = |p: [f64; 2]| {
-                    let (ol, ob) = match tracks.iter().find(|(k, ..)| k == oi) {
-                        Some((_, l, b)) => (l.first().copied(), b.first().copied()),
-                        None => (None, None),
-                    };
-                    if ol.is_some_and(|q| len(sub(q, p)) <= 1e-9) {
-                        Some(0u8)
-                    } else if ob.is_some_and(|q| len(sub(q, p)) <= 1e-9) {
-                        Some(1u8)
-                    } else {
-                        None
-                    }
-                };
-                let (pocket, oe) = if da <= reach || db <= reach {
-                    let (near_pt, far_pt) = if da <= db { (*a, *b) } else { (*b, *a) };
-                    match other_end(near_pt) {
-                        Some(oe) => match angle(dir, sub(far_pt, near_pt)) {
-                            Some(th) => (th, oe),
-                            None => continue,
-                        },
-                        // A bend of the other track: each of its sides, as a ray from the bend,
-                        // makes a pocket with this one (straight on along a side leaves none).
-                        None => match angle(dir, sub(far_pt, near_pt)) {
-                            Some(th) => (th, 2),
-                            None => continue,
-                        },
-                    }
-                } else {
-                    // On the other's side, between its ends: a T.
-                    let (proj, _) = crate::ecad::path::project(at, *a, *b, 0.0);
-                    if len(sub(proj, at)) > o.width / 2.0 + 1e-9 || len(sub(proj, *a)) <= 1e-9 || len(sub(proj, *b)) <= 1e-9 {
+                others.entry(*oi).or_default().push((*a, *b));
+            }
+            for (oi, pieces) in others {
+                let Some(o) = board.tracks.get(oi) else { continue };
+                if !c.spend(8 * pieces.len()) {
+                    return;
+                }
+                let mut theirs = Region::new();
+                for (a, b) in &pieces {
+                    theirs = theirs.union(&stroke_region(*a, *b, o.width / 2.0));
+                }
+                for (corner, opening) in junction_gaps(&mine, &theirs, at, r + o.width) {
+                    if opening >= lim.acute - ANGLE_SLACK || !done.insert((t.id.min(o.id), t.id.max(o.id), key(corner[0]), key(corner[1]))) {
                         continue;
                     }
-                    match line_angle(dir, sub(*b, *a)) {
-                        Some(th) => (th, 2),
-                        None => continue,
-                    }
-                };
-                let e = found.entry(*oi).or_insert((pocket, oe));
-                if pocket < e.0 {
-                    *e = (pocket, oe);
+                    let (a, b) = (DrcItem::TrackEnd(t.id, end), DrcItem::Track(o.id));
+                    let message = format!(
+                        "the gap between track {} and track {} opens at {}°: a pocket under {}° can trap etchant; join them at 90° or more",
+                        t.id,
+                        o.id,
+                        mm(opening.round()),
+                        mm(lim.acute)
+                    );
+                    f.add("acute_angle", &[a.key(), b.key()], || {
+                        Draft::new(corner, vec![a, b], message)
+                            .layer(Some(t.layer))
+                            .count(opening, lim.acute, "degrees", Bound::Min)
+                            .arg("angle", mm(opening.round()))
+                            .arg("limit", mm(lim.acute))
+                            .arg("meets", "track".into())
+                            .note(NOTE)
+                            .fix(
+                                "ecad.board.track.reshape",
+                                serde_json::Value::Null,
+                                format!("reshape track {} so it meets track {} at 90° or more", t.id, o.id),
+                            )
+                    });
                 }
-            }
-            for (oi, (pocket, oe)) in found {
-                let Some(o) = board.tracks.get(oi) else { continue };
-                if pocket >= lim.acute - ANGLE_SLACK {
-                    continue;
-                }
-                // Two ends meeting are one pocket: found from either track once.
-                if oe < 2 && !done.insert((t.id.min(o.id), if t.id < o.id { end } else { oe }, t.id.max(o.id))) {
-                    continue;
-                }
-                let a = DrcItem::TrackEnd(t.id, end);
-                let b = if oe < 2 { DrcItem::TrackEnd(o.id, oe) } else { DrcItem::Track(o.id) };
-                let message = format!(
-                    "track {} meets track {} at {}°: a pocket under {}° can trap etchant; join them at 90° or more",
-                    t.id,
-                    o.id,
-                    mm(pocket),
-                    mm(lim.acute)
-                );
-                f.add("acute_angle", &[a.key(), b.key()], || {
-                    Draft::new(at, vec![a, b], message)
-                        .layer(Some(t.layer))
-                        .count(pocket, lim.acute, "degrees", Bound::Min)
-                        .arg("angle", mm(pocket))
-                        .arg("limit", mm(lim.acute))
-                        .arg("meets", "track".into())
-                        .note(NOTE)
-                        .fix(
-                            "ecad.board.track.reshape",
-                            serde_json::Value::Null,
-                            format!("reshape track {} so it meets track {} at 90° or more", t.id, o.id),
-                        )
-                });
             }
         }
     }
+}
+
+/// A point rounded to a micrometre, for telling corners apart.
+fn key(v: f64) -> i64 {
+    (v * 1000.0).round() as i64
+}
+
+/// How far from a track's end the corners of its junction with `core` can be.
+fn near_reach(core: &crate::ecad::footprint::Core, r: f64) -> f64 {
+    let bbox = super::super::bbox(core.points.iter().copied()).unwrap_or([[0.0, 0.0], [0.0, 0.0]]);
+    let diag = (bbox[1][0] - bbox[0][0]).hypot(bbox[1][1] - bbox[0][1]);
+    diag + 2.0 * (core.radius + r)
+}
+
+/// A straight piece of track as a region.
+fn stroke_region(a: [f64; 2], b: [f64; 2], r: f64) -> Region {
+    Region::polygon(&crate::ecad::copper::hull_outline(&crate::ecad::copper::stroke(a, b, r), 0.0))
+}
+
+/// The inward corners of `mine` merged with `theirs` that neither has alone, within `reach` of
+/// `at`, each with the opening of the empty gap there in degrees: where a track's side meets a
+/// pad's edge or another track's side, the gap between their copper opens at the angle of their
+/// edges on the empty side, whatever angle the track's middle line makes.
+pub(super) fn junction_gaps(mine: &Region, theirs: &Region, at: [f64; 2], reach: f64) -> Vec<([f64; 2], f64)> {
+    let own: Vec<[f64; 2]> = inward_corners(mine).into_iter().chain(inward_corners(theirs)).map(|(p, _)| p).collect();
+    inward_corners(&mine.union(theirs))
+        .into_iter()
+        .filter(|(p, _)| len(sub(*p, at)) <= reach && !own.iter().any(|q| len(sub(*p, *q)) <= JOIN_TOLERANCE))
+        .collect()
+}
+
+/// Inward (reflex) corners of a region's outlines, with the empty gap's opening there in degrees.
+fn inward_corners(r: &Region) -> Vec<([f64; 2], f64)> {
+    let mut out = Vec::new();
+    for s in r.shapes() {
+        let s = s.simplified(JOIN_TOLERANCE / 2.0);
+        // Outer contours run counter-clockwise and holes clockwise: either way the copper is on
+        // the left, so a right turn is an inward corner.
+        for ring in std::iter::once(&s.outer).chain(s.holes.iter()) {
+            let n = ring.len();
+            if n < 3 {
+                continue;
+            }
+            for i in 0..n {
+                let (Some(prev), Some(v), Some(next)) = (ring.get((i + n - 1) % n), ring.get(i), ring.get((i + 1) % n)) else { continue };
+                let (a, b) = (sub(*v, *prev), sub(*next, *v));
+                let cross = a[0] * b[1] - a[1] * b[0];
+                if cross >= -1e-12 * len(a) * len(b) {
+                    continue;
+                }
+                if let Some(opening) = angle(sub(*prev, *v), sub(*next, *v)) {
+                    out.push((*v, opening));
+                }
+            }
+        }
+    }
+    out
 }
 
 /// Copper or gaps in each pour's fill narrower than the least track or gap (see the module

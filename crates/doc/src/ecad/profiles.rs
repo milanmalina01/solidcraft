@@ -100,11 +100,11 @@ pub struct FabProfile {
     /// The least gap from an open via's ring to a surface-mount pad's copper, so a solder mask
     /// web stays between them and the solder doesn't wick into the via (`via_near_pad`).
     pub via_to_pad: Figure,
-    /// How far, in degrees, a track may leave a surface-mount pad off square to the pad's edge
-    /// (`pad_entry`).
+    /// How far, in degrees, a track leaving a surface-mount pad off square to its edge still
+    /// counts as square to it (`pad_entry` flags a thin one leaving by the corner so).
     pub pad_entry_angle: Figure,
-    /// The least angle, in degrees, of a pocket where a track bends or meets a pad or another
-    /// track (`acute_angle`).
+    /// The least opening, in degrees, of the empty gap where a track bends or meets a pad or
+    /// another track (`acute_angle`).
     pub acute_angle: Figure,
     /// Laser micro vias; `None` when it builds none.
     pub micro: Option<Micro>,
@@ -117,7 +117,7 @@ const fn dfm(value: f64, source: &'static str) -> Figure {
 }
 
 const ENTRY: &str = "public layout guides: leave a pad square to its edge, along its long axis; 30° is the engine's tolerance";
-const ACID_TRAP: &str = "public fab DFM summaries flag copper pockets under 90° (acid traps)";
+const ACID_TRAP: &str = "public fab DFM summaries flag sharp copper pockets (acid traps); 70° is the engine's tolerance for the empty gap's opening";
 
 const EUROCIRCUITS_TOOL: &str = "Eurocircuits: drill tool = finished hole + 0.10 mm";
 const NO_SOURCE: &str = "engine default; none of the sources gives one";
@@ -144,7 +144,7 @@ pub static PROFILES: &[FabProfile] = &[
         silk_to_pad: fab(0.15, "JLCPCB legend 0.15 mm from pads"),
         via_to_pad: dfm(0.25, "public DFM summaries: about 0.25 mm of solder mask web between an open via and an SMD pad"),
         pad_entry_angle: dfm(30.0, ENTRY),
-        acute_angle: dfm(90.0, ACID_TRAP),
+        acute_angle: dfm(70.0, ACID_TRAP),
         micro: None,
     },
     FabProfile {
@@ -167,7 +167,7 @@ pub static PROFILES: &[FabProfile] = &[
         silk_to_pad: fab(0.10, "Eurocircuits legend 0.10 mm from exposed copper"),
         via_to_pad: dfm(0.2, "public DFM summaries: a mask web of 0.2 mm or more between an open via and an SMD pad at finer registration"),
         pad_entry_angle: dfm(30.0, ENTRY),
-        acute_angle: dfm(90.0, ACID_TRAP),
+        acute_angle: dfm(70.0, ACID_TRAP),
         micro: None,
     },
     FabProfile {
@@ -190,7 +190,7 @@ pub static PROFILES: &[FabProfile] = &[
         silk_to_pad: fab(0.10, "Eurocircuits legend 0.10 mm from exposed copper"),
         via_to_pad: dfm(0.15, "public DFM summaries: HDI builds hold mask registration for about 0.15 mm between an open via and an SMD pad"),
         pad_entry_angle: dfm(30.0, ENTRY),
-        acute_angle: dfm(90.0, ACID_TRAP),
+        acute_angle: dfm(70.0, ACID_TRAP),
         micro: Some(Micro {
             drill: fab(0.10, NO_SOURCE),
             aspect: ipc(1.0, "IPC-6012 / IPC-T-50 micro via at most 1:1, from NCAB's public summary"),
