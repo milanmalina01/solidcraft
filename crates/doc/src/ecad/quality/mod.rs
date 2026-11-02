@@ -431,6 +431,7 @@ impl<'a> Cx<'a> {
                 fix: d.fix,
                 section: entry.section,
                 note: d.verify,
+                span: None,
             },
             family: entry.family(),
             status: d.status,

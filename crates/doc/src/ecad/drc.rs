@@ -439,6 +439,9 @@ pub struct DrcFinding {
     pub section: &'static str,
     /// Why it is only a warning, when its figures come from public summaries of a standard.
     pub note: Option<String>,
+    /// For a gap too narrow, its two ends on the items' copper (where it is narrowest), in
+    /// millimetres.
+    pub span: Option<[[f64; 2]; 2]>,
 }
 
 /// What the check found.
@@ -516,6 +519,7 @@ struct Draft {
     note: Option<String>,
     message: String,
     args: Vec<(&'static str, String)>,
+    span: Option<[[f64; 2]; 2]>,
 }
 
 impl Draft {
@@ -536,7 +540,14 @@ impl Draft {
             note: None,
             message,
             args: Vec::new(),
+            span: None,
         }
+    }
+
+    /// The gap's two ends, on each item's copper.
+    fn span(mut self, ends: [[f64; 2]; 2]) -> Self {
+        self.span = Some(ends);
+        self
     }
 
     fn layer(mut self, layer: Option<CopperLayer>) -> Self {
@@ -698,6 +709,7 @@ impl Found<'_> {
             fix: d.fix,
             section: rule.map_or("", |r| r.section),
             note: d.note,
+            span: d.span,
         });
     }
 }
@@ -832,6 +844,13 @@ impl Ctx<'_> {
 
 /// A point between two cores where they come closest (inside both where they overlap).
 fn between(a: &Core, b: &Core) -> [f64; 2] {
+    let [p, q] = nearest_ends(a, b);
+    [(p[0] + q[0]) / 2.0, (p[1] + q[1]) / 2.0]
+}
+
+/// Where `a` and `b` come nearest: a point on each one's copper (the same point twice when they
+/// overlap or a core is empty).
+fn nearest_ends(a: &Core, b: &Core) -> [[f64; 2]; 2] {
     let segments = |c: &Core| -> Vec<([f64; 2], [f64; 2])> {
         let n = c.points.len();
         match n {
@@ -851,18 +870,17 @@ fn between(a: &Core, b: &Core) -> [f64; 2] {
     }
     let (d, p, q) = best;
     if !d.is_finite() {
-        return a.points.first().copied().unwrap_or_default();
+        let p = a.points.first().copied().unwrap_or_default();
+        return [p, p];
     }
     // Off each core's middle line by its radius, towards the other.
     let (dx, dy) = (q[0] - p[0], q[1] - p[1]);
     let l = dx.hypot(dy);
     if l <= 1e-12 {
-        return p;
+        return [p, p];
     }
     let (ux, uy) = (dx / l, dy / l);
-    let pa = [p[0] + ux * a.radius, p[1] + uy * a.radius];
-    let qb = [q[0] - ux * b.radius, q[1] - uy * b.radius];
-    [(pa[0] + qb[0]) / 2.0, (pa[1] + qb[1]) / 2.0]
+    [[p[0] + ux * a.radius, p[1] + uy * a.radius], [q[0] - ux * b.radius, q[1] - uy * b.radius]]
 }
 
 /// The closest points of segments `p0`–`p1` and `q0`–`q1`, and their distance.
@@ -1185,11 +1203,11 @@ fn clearances(c: &mut Ctx, f: &mut Found) {
     items.extend(nets.fills.iter().map(|x| DrcItem::Pour(x.pour)));
     let graphic_base = items.len();
     items.extend(board.graphics.iter().map(|g| DrcItem::Graphic(g.id)));
-    let mut worst: BTreeMap<(usize, usize), (f64, f64, [f64; 2], CopperLayer)> = BTreeMap::new();
+    let mut worst: BTreeMap<(usize, usize), (f64, f64, [[f64; 2]; 2], CopperLayer)> = BTreeMap::new();
     // What each copper drawing touches (owner → an item of it, where, the layer), and the
     // drawings' near misses (kept unless the drawing touches the other copper's owner).
     let mut touches: BTreeMap<usize, BTreeMap<Owner, (usize, [f64; 2], CopperLayer)>> = BTreeMap::new();
-    let mut drawing_near: BTreeMap<(usize, usize), (f64, f64, [f64; 2], CopperLayer, usize, Owner)> = BTreeMap::new();
+    let mut drawing_near: BTreeMap<(usize, usize), (f64, f64, [[f64; 2]; 2], CopperLayer, usize, Owner)> = BTreeMap::new();
     let mut fill_edges = 0usize;
     let max_gap =
         c.sizes.iter().map(|s| s.clearance).fold(board.rules.clearance, f64::max).max(nets.fills.iter().map(|x| x.clearance).fold(0.0, f64::max));
@@ -1280,12 +1298,12 @@ fn clearances(c: &mut Ctx, f: &mut Found) {
                     if g <= 1e-9 {
                         touches.entry(d).or_default().entry(other.owner).or_insert((other.item, between(&a.core, &b.core), layer));
                     } else if g < required - slack - 1e-6 && drawing_near.get(&pair).is_none_or(|w| g < w.0) {
-                        drawing_near.insert(pair, (g, required, between(&a.core, &b.core), layer, d, other.owner));
+                        drawing_near.insert(pair, (g, required, nearest_ends(&a.core, &b.core), layer, d, other.owner));
                     }
                     continue;
                 }
                 if g < required - slack - 1e-6 && worst.get(&pair).is_none_or(|w| g < w.0) {
-                    worst.insert(pair, (g, required, between(&a.core, &b.core), layer));
+                    worst.insert(pair, (g, required, nearest_ends(&a.core, &b.core), layer));
                 }
                 // Fills keep their gap by making it: only other copper's gaps tell how close the
                 // design comes to its limits.
@@ -1361,7 +1379,8 @@ fn clearances(c: &mut Ctx, f: &mut Found) {
             )
         });
     }
-    for ((a, b), (g, required, at, layer)) in worst {
+    for ((a, b), (g, required, span, layer)) in worst {
+        let at = [(span[0][0] + span[1][0]) / 2.0, (span[0][1] + span[1][1]) / 2.0];
         let (Some(ia), Some(ib)) = (items.get(a).cloned(), items.get(b).cloned()) else { continue };
         let mut names = item_net(a);
         for n in item_net(b) {
@@ -1389,7 +1408,7 @@ fn clearances(c: &mut Ctx, f: &mut Found) {
         } else {
             let message = format!("{ra} and {rb} are {} mm apart on {}; the clearance is {} mm", mm(g), layer.name(), mm(required));
             f.add("clearance", &keys, || {
-                let d = Draft::new(at, vec![ia, ib], message).layer(Some(layer)).nets(names).measure(g, required);
+                let d = Draft::new(at, vec![ia, ib], message).layer(Some(layer)).nets(names).measure(g, required).span(span);
                 match narrow {
                     Some((id, w)) if w >= least - 1e-9 => d.fix(
                         "ecad.board.track.edit",

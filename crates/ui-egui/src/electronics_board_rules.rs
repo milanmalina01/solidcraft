@@ -60,6 +60,31 @@ const MAX_NET_ROWS: usize = 300;
 pub struct DrcState {
     report: Option<((u64, u64), Arc<DrcReport>)>,
     changed: Option<((u64, u64), web_time::Instant)>,
+    /// The check being worked out beside the window, for a document and revision.
+    running: Option<((u64, u64), std::sync::mpsc::Receiver<DrcReport>)>,
+}
+
+/// Work the check out beside the window; the browser (and a desktop that cannot start a thread)
+/// works it out at once.
+fn spawn(job: impl FnOnce() -> DrcReport + Send + 'static) -> std::sync::mpsc::Receiver<DrcReport> {
+    let (tx, rx) = std::sync::mpsc::channel();
+    let slot = Arc::new(std::sync::Mutex::new(Some(job)));
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        let (theirs, sender) = (slot.clone(), tx.clone());
+        let started = std::thread::Builder::new().name("drc".into()).spawn(move || {
+            if let Some(job) = theirs.lock().ok().and_then(|mut j| j.take()) {
+                let _ = sender.send(job());
+            }
+        });
+        if started.is_ok() {
+            return rx;
+        }
+    }
+    if let Some(job) = slot.lock().ok().and_then(|mut j| j.take()) {
+        let _ = tx.send(job());
+    }
+    rx
 }
 
 /// The Design Rules window: the net class picked in its table, and the search of its nets.
@@ -185,7 +210,7 @@ fn report_now(app: &mut SolveApp) -> Arc<DrcReport> {
         return r.clone();
     }
     let r = Arc::new(drc::check(&app.session.doc.ecad, &stored_nets(app)));
-    app.electronics.board.drc = DrcState { report: Some((now, r.clone())), changed: None };
+    app.electronics.board.drc = DrcState { report: Some((now, r.clone())), changed: None, running: None };
     r
 }
 
@@ -215,31 +240,55 @@ pub(crate) fn message_of(app: &SolveApp, key: &str) -> Option<String> {
     cached(app)?.findings.iter().find(|f| f.key == key).map(message)
 }
 
-/// The check for the board as it is: the cached one while nothing changed; after a change, the
-/// cached one until the board has stayed the same for [`SETTLE`], then worked out again.
+/// The check for the board as it is: the cached one while nothing changed. The first time, worked
+/// out at once; after a change, the cached one until the board has stayed the same for
+/// [`SETTLE`], then worked out again beside the window (the cached one shows, marked as checking,
+/// until it is back), so an edit never waits for it.
 fn report(app: &mut SolveApp, ctx: &egui::Context) -> Arc<DrcReport> {
     let now = key(app);
     let st = &mut app.electronics.board.drc;
-    if let Some((k, r)) = &st.report {
-        if *k == now {
-            return r.clone();
-        }
-        let since = match st.changed {
-            Some((k, at)) if k == now => at,
-            _ => {
-                let at = web_time::Instant::now();
-                st.changed = Some((now, at));
-                at
-            }
-        };
-        let waited = since.elapsed();
-        if waited < SETTLE {
-            ctx.request_repaint_after(SETTLE.saturating_sub(waited));
-            return r.clone();
+    let back = match st.running.as_ref().map(|(_, rx)| rx.try_recv()) {
+        Some(Ok(r)) => Some(Some(r)),
+        Some(Err(std::sync::mpsc::TryRecvError::Disconnected)) => Some(None),
+        Some(Err(std::sync::mpsc::TryRecvError::Empty)) | None => None,
+    };
+    if let Some(back) = back {
+        let k = st.running.take().map(|(k, _)| k);
+        if let (Some(k), Some(r)) = (k, back) {
+            st.report = Some((k, Arc::new(r)));
+            st.changed = None;
         }
     }
-    let r = Arc::new(drc::check(&app.session.doc.ecad, &stored_nets(app)));
-    app.electronics.board.drc = DrcState { report: Some((now, r.clone())), changed: None };
+    if st.report.is_none() {
+        let r = Arc::new(drc::check(&app.session.doc.ecad, &stored_nets(app)));
+        app.electronics.board.drc = DrcState { report: Some((now, r.clone())), changed: None, running: None };
+        return r;
+    }
+    let st = &mut app.electronics.board.drc;
+    let Some((k, r)) = st.report.as_ref().map(|(k, r)| (*k, r.clone())) else { return Arc::new(DrcReport::default()) };
+    if k == now {
+        return r;
+    }
+    if st.running.as_ref().is_some_and(|(k, _)| *k == now) {
+        ctx.request_repaint_after(Duration::from_millis(100));
+        return r;
+    }
+    let since = match st.changed {
+        Some((k, at)) if k == now => at,
+        _ => {
+            let at = web_time::Instant::now();
+            st.changed = Some((now, at));
+            at
+        }
+    };
+    let waited = since.elapsed();
+    if waited < SETTLE {
+        ctx.request_repaint_after(SETTLE.saturating_sub(waited));
+        return r;
+    }
+    let (ecad, nets) = (app.session.doc.ecad.clone(), stored_nets(app).into_owned());
+    app.electronics.board.drc.running = Some((now, spawn(move || drc::check(&ecad, &nets))));
+    ctx.request_repaint_after(Duration::from_millis(100));
     r
 }
 
@@ -397,8 +446,15 @@ pub(crate) fn drc_window(app: &mut SolveApp, ctx: &egui::Context, mut w: DrcWind
     let stack = board(app).stack();
     let title_text = tr("electronics.drc_title");
     let mut act: Option<Act> = None;
+    // Visible findings in the order the list shows them, for Previous and Next.
+    let order: Vec<&DrcFinding> =
+        RULES.iter().flat_map(|rule| r.findings.iter().filter(move |f| f.code == rule.code && !f.approved)).filter(|f| kept(&w, f)).collect();
+    let at = order.iter().position(|f| w.picked.as_deref() == Some(f.key.as_str()));
+    // Docked beside the Inspector, from the top of the view, where it stays.
+    let offset = crate::electronics_design::beside(app, ctx) - ctx.content_rect().right_top();
     let closed = ui_kit::Window::new(egui::Id::new("electronics_board_drc"), "interference", &title_text)
-        .placed(Align2::RIGHT_TOP, crate::electronics_design::beside(app, ctx))
+        .anchor(Align2::RIGHT_TOP, offset)
+        .page_rows(32.0)
         .resizable()
         .show_body(ctx, |ui| {
             let summary = crate::i18n::format(
@@ -423,6 +479,24 @@ pub(crate) fn drc_window(app: &mut SolveApp, ctx: &egui::Context, mut w: DrcWind
                 ui_kit::text(ui, &tr("electronics.drc_truncated"), ui_kit::Text::Error("electronics.drc_truncated"));
             }
             filters(ui, &mut w, &stack, r.pending_user);
+            if !order.is_empty() {
+                let shown = at.map_or_else(
+                    || crate::i18n::format("electronics.drc_of_none", &[("n", &order.len().to_string())]),
+                    |i| crate::i18n::format("electronics.drc_of", &[("i", &(i + 1).to_string()), ("n", &order.len().to_string())]),
+                );
+                ui.horizontal(|ui| {
+                    let last = order.len() - 1;
+                    if crate::electronics_editor::button(ui, "drc-previous", &tr("electronics.drc_previous"), true) {
+                        let i = at.map_or(last, |i| if i == 0 { last } else { i - 1 });
+                        act = order.get(i).map(|f| Act::Pick(f.key.clone()));
+                    }
+                    if crate::electronics_editor::button(ui, "drc-next", &tr("electronics.drc_next"), true) {
+                        let i = at.map_or(0, |i| if i >= last { 0 } else { i + 1 });
+                        act = order.get(i).map(|f| Act::Pick(f.key.clone()));
+                    }
+                    ui_kit::text(ui, &shown, ui_kit::Text::Note("electronics.drc_of"));
+                });
+            }
             // Check Board's filters, said in words with a way back to every finding.
             if !w.codes.is_empty() || w.pending {
                 let mut what: Vec<String> = w.codes.iter().map(|c| tr(&format!("electronics.drc_code_{c}"))).collect();
@@ -651,6 +725,11 @@ pub(crate) fn paint_markers(app: &SolveApp, painter: &egui::Painter, map: PageMa
     }
     let Some(r) = cached(app) else { return };
     let font = FontId::proportional(Tokens::view().font_small);
+    // The picked one alone, with its one clear marker.
+    if let Some(f) = w.picked.as_deref().and_then(|k| r.findings.iter().find(|f| f.key == k)) {
+        paint_picked(painter, map, f, t, &font);
+        return;
+    }
     for f in r.findings.iter().filter(|f| !f.approved && kept(w, f)).take(MAX_MARKS) {
         let c = map.to_screen(f.at[0], f.at[1]);
         if !(c.x.is_finite() && c.y.is_finite()) {
@@ -663,6 +742,49 @@ pub(crate) fn paint_markers(app: &SolveApp, painter: &egui::Painter, map: PageMa
         painter.circle(c, 7.0, t.viewport_bottom.gamma_multiply(0.8), Stroke::new(2.0, ink));
         painter.text(c + vec2(0.0, 0.5), Align2::CENTER_CENTER, "!", font.clone(), ink);
     }
+}
+
+/// The picked finding's marker: a ring round it and an arrow pointing in at it, in its severity's
+/// colour; for a gap too narrow, the gap drawn across between the two items' copper with what it
+/// measures. (The finding's items show picked, in the selection colour.)
+fn paint_picked(painter: &egui::Painter, map: PageMap, f: &DrcFinding, t: &Tokens, font: &FontId) {
+    let c = map.to_screen(f.at[0], f.at[1]);
+    if !(c.x.is_finite() && c.y.is_finite()) {
+        return;
+    }
+    let ink = if f.severity == Severity::Error { t.pcb_drc_error } else { t.pcb_drc_warning };
+    let halo = t.viewport_bottom.gamma_multiply(0.8);
+    let (ring, width) = (16.0, 2.5);
+    painter.circle_stroke(c, ring + 1.5, Stroke::new(width + 2.0, halo));
+    painter.circle_stroke(c, ring, Stroke::new(width, ink));
+    // The arrow comes in from the upper left, its head on the ring.
+    let dir = vec2(1.0, 1.0).normalized();
+    let tip = c - dir * (ring + 3.0);
+    let tail = tip - dir * 36.0;
+    for (w, colour) in [(width + 2.5, halo), (width, ink)] {
+        painter.line_segment([tail, tip], Stroke::new(w, colour));
+        let side = vec2(-dir.y, dir.x) * 6.0;
+        let back = tip - dir * 10.0;
+        painter.line_segment([tip, back + side], Stroke::new(w, colour));
+        painter.line_segment([tip, back - side], Stroke::new(w, colour));
+    }
+    let Some([a, b]) = f.span else { return };
+    let (pa, pb) = (map.to_screen(a[0], a[1]), map.to_screen(b[0], b[1]));
+    if !(pa.x.is_finite() && pa.y.is_finite() && pb.x.is_finite() && pb.y.is_finite()) {
+        return;
+    }
+    painter.line_segment([pa, pb], Stroke::new(3.5, halo));
+    painter.line_segment([pa, pb], Stroke::new(1.5, ink));
+    for p in [pa, pb] {
+        painter.circle_filled(p, 2.5, ink);
+    }
+    let label = format!("{} mm", figure(f.measured));
+    let galley = painter.layout_no_wrap(label, font.clone(), ink);
+    // Centred under the ring, clear of the arrow.
+    let at = c + vec2(-galley.size().x / 2.0, ring + 6.0);
+    let back = egui::Rect::from_min_size(at - vec2(3.0, 1.0), galley.size() + vec2(6.0, 2.0));
+    painter.rect_filled(back, 2.0, halo);
+    painter.galley(at, galley, ink);
 }
 
 /// The rules the Design Rules window shows, in groups: each with its heading's and its fields'

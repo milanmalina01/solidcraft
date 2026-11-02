@@ -467,8 +467,9 @@ pub(super) fn pad_entries_and_pockets(c: &mut Ctx, f: &mut Found) {
                             Some(th) => (th, oe),
                             None => continue,
                         },
-                        // A bend of the other track: its sides make two pockets with this one.
-                        None => match line_angle(dir, sub(*b, *a)) {
+                        // A bend of the other track: each of its sides, as a ray from the bend,
+                        // makes a pocket with this one (straight on along a side leaves none).
+                        None => match angle(dir, sub(far_pt, near_pt)) {
                             Some(th) => (th, 2),
                             None => continue,
                         },

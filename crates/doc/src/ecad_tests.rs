@@ -1259,6 +1259,11 @@ fn pockets_under_90_degrees_are_acute_angles() {
     let tee = |end: [f64; 2]| json!([track(json!([[-9.2, 0], [9.2, 0]])), track(json!([[0, 0], end]))]);
     assert_eq!(dfm_case(tee([0.0, -2.0]), "acute_angle"), []);
     assert_eq!(dfm_case(tee([2.0, -2.0]), "acute_angle"), [Severity::Warning]);
+    // Onto another track's corner: 45° off its other side leaves a 45° pocket; moved to go
+    // straight on along a side (the fix), none.
+    let corner = |end: [f64; 2]| json!([track(json!([[-9.2, 0], [0, 0], [0, -3]])), track(json!([[0, 0], end]))]);
+    assert_eq!(dfm_case(corner([3.0, -3.0]), "acute_angle"), [Severity::Warning]);
+    assert_eq!(dfm_case(corner([3.0, 0.0]), "acute_angle"), []);
     // Leaving R1.2 20° off square: a 70° pocket with the pad's edge (not yet a pad entry).
     let (s, c) = 20f64.to_radians().sin_cos();
     let found = drc_case(json!([track(json!([[-9.2, 0], [-9.2 + 3.0 * c, 3.0 * s]]))]));
