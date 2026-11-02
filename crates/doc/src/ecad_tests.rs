@@ -566,7 +566,9 @@ fn return_paths_flag_a_slotted_plane_a_lone_layer_change_and_sparse_stitching() 
     // Two ground planes tied only at the corners, then stitched over the board.
     let mut sparse = vec![gnd("inner1"), gnd("inner2"), sig.clone()];
     sparse.extend([[-13, -8], [-13, 8], [13, -8], [13, 8]].map(|at| json!(["via", {"at": at, "net": "GND"}])));
-    assert_eq!(fails(&case("return", Value::Array(sparse.clone()), RETURN), "pi.stitching"), [Severity::Warning]);
+    // Two findings of their own: tied weakly (the connectivity solve), and via-free circles wider
+    // than λg/10 for SIG.
+    assert_eq!(fails(&case("return", Value::Array(sparse.clone()), RETURN), "pi.stitching"), [Severity::Warning, Severity::Warning]);
     sparse.push(json!(["stitch", {"net": "GND", "pattern": "grid", "under_parts": true}]));
     assert_eq!(case("return", Value::Array(sparse), RETURN), []);
 }
@@ -1389,9 +1391,13 @@ fn a_stitching_grid_is_staggered_inside_the_board_and_breaks_no_rule() {
     assert!(r.findings.iter().all(|f| f.code != "via_stub"), "each joins the two planes");
     let vias: Vec<&Via> = after.board.vias.iter().collect();
     assert!(stitch::under_parts(&after, &after.board.footprints.iter().map(|f| f.id).collect(), &vias).iter().all(|u| !u));
-    // pi.stitching measures how weakly the planes are tied (the ground connectivity solve), and a
-    // 5 mm grid ties them within 0.5 mV; the λg/10 via-free circle is only its fallback now.
-    assert_eq!(fails(&quality_of(&after, &["pi.stitching"]), "pi.stitching"), []);
+    // pi.stitching measures how weakly the planes are tied (the ground connectivity solve): a 5 mm
+    // grid ties them within 0.5 mV. Its via-free circles are still wider than λg/10 at 2.4 GHz, so
+    // the circle rule, a finding of its own, still asks for more.
+    assert_eq!(fails(&quality_of(&after, &["pi.stitching"]), "pi.stitching"), [Severity::Warning]);
+    let q = quality::check(&after, &after.board_nets(), Some(&BTreeSet::from(["pi.stitching"])));
+    let keys: Vec<&str> = q.findings.iter().map(|f| f.finding.key.as_str()).collect();
+    assert!(keys.iter().all(|k| !k.split('|').any(|p| p == "tie" || p == "isolated")), "the planes are tied: {keys:?}");
     // The pitch the frequency asks for, under the parts too, stitches the planes.
     let a = Ask { under_parts: true, ..ask("GND", Pattern::Grid) };
     let plan = stitch::plan(&e, &nets, &a).unwrap();
@@ -1607,9 +1613,9 @@ fn a_strip_tied_at_one_end_rises_as_worked_out_by_hand() {
     both = map;
     assert!(both.unknowns > 0);
     // Hostile asks are refused.
-    assert!(Model::build(&e, &e.board_nets(), &GroundAsk { net: Some("NOPE".into()), cell: None }).is_err());
+    assert!(Model::build(&e, &e.board_nets(), &GroundAsk { net: Some("NOPE".into()), ..Default::default() }).is_err());
     for cell in [0.0, 0.05, 0.3, f64::NAN, f64::INFINITY] {
-        assert!(Model::build(&e, &e.board_nets(), &GroundAsk { net: None, cell: Some(cell) }).is_err(), "{cell}");
+        assert!(Model::build(&e, &e.board_nets(), &GroundAsk { cell: Some(cell), ..Default::default() }).is_err(), "{cell}");
     }
 }
 
@@ -1619,7 +1625,15 @@ fn needed_stitching_ties_the_planes_where_they_are_weakest() {
     let mut e = stitched_board();
     run(&mut e, Value::Array([[-13, -8], [-13, 8], [13, -8], [13, 8]].map(|at| json!(["via", {"at": at, "net": "GND"}])).to_vec()));
     let nets = e.board_nets();
-    assert_eq!(fails(&quality_of(&e, &["pi.stitching"]), "pi.stitching"), [Severity::Warning], "tied weakly");
+    let tied = |e: &Electronics| -> Vec<String> {
+        let q = quality::check(e, &e.board_nets(), Some(&BTreeSet::from(["pi.stitching"])));
+        q.findings
+            .iter()
+            .filter(|x| x.status == Status::Fail && x.finding.key.split('|').any(|k| k == "tie"))
+            .map(|x| x.finding.message.clone())
+            .collect()
+    };
+    assert_eq!(tied(&e).len(), 1, "tied weakly");
     let a = Ask { budget: Some(40), ..ask("GND", Pattern::Needed) };
     let plan = stitch::plan(&e, &nets, &a).unwrap();
     let g = plan.ground.clone().unwrap();
@@ -1633,8 +1647,7 @@ fn needed_stitching_ties_the_planes_where_they_are_weakest() {
     let mine: BTreeSet<String> = placed.board.vias.iter().map(|v| format!("v{}", v.id)).collect();
     let r = placed.drc();
     assert!(!r.findings.iter().any(|f| f.severity == Severity::Error && f.key.split('|').any(|k| mine.contains(k))), "{:?}", r.findings);
-    let q = quality::check(&placed, &placed.board_nets(), Some(&BTreeSet::from(["pi.stitching"])));
-    assert!(q.findings.iter().all(|x| x.status != Status::Fail), "{:?}", q.findings.iter().map(|x| &x.finding.message).collect::<Vec<_>>());
+    assert_eq!(tied(&placed), Vec::<String>::new(), "the planes are tied now");
     // A budget of one stops at one; a target already met places none.
     let one = stitch::plan(&e, &nets, &Ask { budget: Some(1), ..ask("GND", Pattern::Needed) }).unwrap();
     assert!(one.spots.len() == 1 && !one.ground.unwrap().reached);

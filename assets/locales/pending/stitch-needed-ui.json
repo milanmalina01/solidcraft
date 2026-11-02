@@ -1,0 +1,26 @@
+{
+  "en": {
+    "electronics.stitch_working_for": "Working out where the vias go… ({s} s)"
+  },
+  "de": {
+    "electronics.stitch_working_for": "Via-Positionen werden berechnet… ({s} s)"
+  },
+  "ja": {
+    "electronics.stitch_working_for": "ビアの位置を計算しています…（{s} 秒）"
+  },
+  "zh": {
+    "electronics.stitch_working_for": "正在计算过孔位置…（{s} 秒）"
+  },
+  "ko": {
+    "electronics.stitch_working_for": "비아 위치를 계산하는 중…({s}초)"
+  },
+  "ar": {
+    "electronics.stitch_working_for": "جارٍ حساب مواضع الثقوب… ({s} ث)"
+  },
+  "he": {
+    "electronics.stitch_working_for": "מחשב היכן יוצבו הווייות… ({s} שנ׳)"
+  },
+  "vi": {
+    "electronics.stitch_working_for": "Đang tính vị trí via… ({s} giây)"
+  }
+}

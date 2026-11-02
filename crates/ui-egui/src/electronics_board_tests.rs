@@ -41,3 +41,52 @@ fn the_inspector_types_a_footprint_rotation_and_position() {
     h.frames(2);
     assert_eq!(h.app.session.doc.ecad.board.footprints[0].rotation, 90, "100° goes to the nearest quarter turn");
 }
+
+/// The resistor board with GND on R1.1, a 30 by 20 mm outline, GND pours on the top and the
+/// bottom tied by one via in a corner.
+fn grounded_board() -> Harness {
+    let mut h = board_with_a_resistor();
+    run(&mut h, "ecad.schematic.power", json!({"ports": [{"name": "GND", "at": "R1.1"}]}));
+    run(&mut h, "ecad.board.outline", json!({"rect": [30, 20]}));
+    for layer in ["top", "bottom"] {
+        run(&mut h, "ecad.board.pour", json!({"layer": layer, "net": "GND", "rect": [28, 18]}));
+    }
+    run(&mut h, "ecad.board.via", json!({"at": [-12, -7], "net": "GND"}));
+    h.frames(2);
+    h
+}
+
+/// Frames until `done`, giving the window's workers time (bounded).
+fn until(h: &mut Harness, done: impl Fn(&Harness) -> bool) -> bool {
+    for _ in 0..600 {
+        if done(h) {
+            return true;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(10));
+        h.frames(1);
+    }
+    done(h)
+}
+
+#[test]
+fn stitching_where_needed_previews_ghost_vias_and_numbers_then_places_them() {
+    use solidcraft_engine::doc::ecad::stitch::Pattern;
+    let mut h = grounded_board();
+    h.app.start("ecad.board.stitch");
+    h.frames(2);
+    let s = &mut h.app.electronics.board.stitch;
+    s.pattern = Pattern::Needed;
+    s.pick = Some(crate::electronics_board_stitch::StitchPick::Board);
+    h.frames(1);
+    assert!(until(&mut h, |h| h.app.electronics.board.stitch.preview.is_some()), "the dry run comes back");
+    let preview = h.app.electronics.board.stitch.preview.clone().unwrap();
+    assert!(preview.error.is_none() && !preview.spots.is_empty(), "{preview:?}");
+    let (before, after, _) = preview.ground.unwrap();
+    assert!(after.unwrap() < before.unwrap(), "{preview:?}");
+    assert!(crate::electronics_board_ground::note(&h.app).is_some(), "the heat map shows while stitching where needed");
+    let undo = h.app.session.undo.len();
+    crate::electronics_board_stitch::place(&mut h.app);
+    h.frames(2);
+    let placed = h.app.session.doc.ecad.board.vias.iter().filter(|v| v.pattern == Some(Pattern::Needed)).count();
+    assert_eq!((placed, h.app.session.undo.len()), (preview.spots.len(), undo + 1));
+}

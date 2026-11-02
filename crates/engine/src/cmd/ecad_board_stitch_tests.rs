@@ -37,8 +37,10 @@ fn a_grid_joins_the_planes_until_the_check_passes_and_takes_one_undo_step() {
     // covers the planes.
     run(&mut s, "ecad.board.delete", json!({"items": [12]}));
     let found = quality(&mut s, "pi.stitching");
-    assert_eq!(found.len(), 1, "two GND planes joined by two vias only: {found:?}");
-    assert_eq!(found[0]["fix"][0]["command"], "ecad.board.stitch", "the finding says how to fix it");
+    // Two findings of their own: tied weakly, and via-free circles wider than λg/10.
+    assert_eq!(found.len(), 2, "two GND planes joined by two vias only: {found:?}");
+    assert!(found.iter().any(|f| f["key"].as_str().is_some_and(|k| k.contains("|tie|"))), "{found:?}");
+    assert!(found.iter().all(|f| f["fix"][0]["command"] == "ecad.board.stitch"), "each says how to fix it");
     // λg/10 at 2400 MHz in εr 4.3 is 6.024 mm: staggered rows 0.678 of it apart keep every
     // via-free circle within it.
     let before = s.doc.clone();
@@ -69,7 +71,7 @@ fn a_grid_joins_the_planes_until_the_check_passes_and_takes_one_undo_step() {
     assert_eq!((again["count"].clone(), s.undo.len()), (json!(0), undo));
     assert!(again["skipped"]["near_via"].as_u64().is_some_and(|k| k as usize >= stitched.len()), "{again}");
     s.execute("edit.undo", &json!({})).unwrap();
-    assert_eq!(quality(&mut s, "pi.stitching").len(), 1, "undo takes the grid back");
+    assert_eq!(quality(&mut s, "pi.stitching").len(), 2, "undo takes the grid back");
 }
 
 #[test]

@@ -55,7 +55,7 @@ fn ground_inspect(s: &mut Session, p: &Value) -> Result<Value> {
         }
     }
     let nets = s.board_nets();
-    let mut model = Model::build(&s.doc.ecad, &nets, &ground::Ask { net: p.net.clone(), cell: p.cell }).map_err(|e| bad(CMD, e))?;
+    let mut model = Model::build(&s.doc.ecad, &nets, &ground::Ask { net: p.net.clone(), cell: p.cell, max_cells: None }).map_err(|e| bad(CMD, e))?;
     let map = model.solve();
     let spot = |x: &ground::Spot| GroundSpotOut { at: [round3(x.at[0]), round3(x.at[1])], layer: x.layer.name(), mv: round3(x.mv) };
     let worst: Vec<GroundSpotOut> = map.spots(&layers, true, spots, 1.0).iter().map(spot).collect();

@@ -65,6 +65,8 @@ struct Running {
     key: (u64, u64),
     params: Value,
     rx: Receiver<Preview>,
+    /// When it started: the note says how long it has been working.
+    started: web_time::Instant,
 }
 
 /// The stitching vias Remove Stitching takes for a pick, worked out for the document revision,
@@ -301,7 +303,11 @@ pub(crate) fn refresh(app: &mut SolveApp) {
     let mut dry = p.clone();
     dry["dry_run"] = json!(true);
     let rx = spawn(move || preview_of(key, asked, scratch.execute("ecad.board.stitch", &dry).map_err(|e| e.to_string())));
-    app.electronics.board.stitch.running = Some(Running { key, params: p, rx });
+    // Needed stitching solves the ground map several times: what it found goes to the status.
+    if app.electronics.board.stitch.pattern == Pattern::Needed {
+        app.electronics.board.stitch.announce = true;
+    }
+    app.electronics.board.stitch.running = Some(Running { key, params: p, rx, started: web_time::Instant::now() });
 }
 
 /// Whether a dry run is being worked out.
@@ -806,8 +812,14 @@ pub(crate) fn options(app: &mut SolveApp, ui: &mut Ui) -> &'static str {
         }
     }
     refresh(app);
-    if working(app) {
-        ui_kit::text(ui, crate::i18n::tr("electronics.stitch_working"), ui_kit::Text::Note("electronics.stitch_working"));
+    if let Some(r) = app.electronics.board.stitch.running.as_ref() {
+        let seconds = r.started.elapsed().as_secs();
+        let text = if seconds >= 1 {
+            crate::i18n::format("electronics.stitch_working_for", &[("s", &seconds.to_string())])
+        } else {
+            crate::i18n::tr("electronics.stitch_working").to_string()
+        };
+        ui_kit::text(ui, &text, ui_kit::Text::Note("electronics.stitch_working"));
     }
     if app.electronics.board.stitch.preview.is_some() {
         let text = summary(app);

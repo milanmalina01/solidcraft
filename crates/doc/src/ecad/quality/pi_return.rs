@@ -127,7 +127,7 @@ const CODES: &[Code] = &[
         worst: None,
         needs: "geometry and planes; intent: the ground net, the board's f_concern_mhz or radio bands",
         section: "power-ground#stitching",
-        about: "a ground net's planes tied weakly to its main ground (the connectivity solve's worst spot past tie_mv), or plane copper tied by nothing; where the solve can't finish, a via-free circle wider than λg/10 at the frequency of concern where the planes overlap; an outer ground island with no via to an inner plane; stitching along the edge only (info)",
+        about: "a ground net's planes tied weakly to its main ground (the connectivity solve's worst spot past tie_mv), or plane copper tied by nothing; and, on a board with fast signals, a via-free circle wider than λg/10 at the frequency of concern where the planes overlap (a finding of its own); an outer ground island with no via to an inner plane; stitching along the edge only (info)",
         principle: "Planes of one ground tied by vias closer than a tenth of a wavelength stay one conductor at the frequencies of concern instead of a cavity that resonates.",
         params: &[
             param("fraction", 0.1, "λg", 0.01, 1.0, "LearnEMC", "the largest via-free circle across, as a share of λg at the frequency of concern"),
@@ -982,11 +982,9 @@ fn stitching(cx: &mut Cx) {
         if ground_layers.len() < 2 {
             continue;
         }
-        // How weakly the planes are tied (see `ground`); the via-free circle below when the
-        // solve can't finish.
-        if tie(cx, g, &g_name, &ground_layers, island_min, p("tie_mv")) {
-            continue;
-        }
+        // How weakly the planes are tied (see `ground`), then, as its own finding, the via-free
+        // circle against λg/10 when the board carries fast signals.
+        tie(cx, g, &g_name, &ground_layers, island_min, p("tie_mv"));
         if !fast {
             continue;
         }
@@ -1116,18 +1114,19 @@ fn stitching(cx: &mut Cx) {
 
 /// `pi.stitching` from the ground connectivity solve (see [`super::super::ground`]): the planes'
 /// most weakly tied spot against `tie_mv`, and plane copper joined to the main ground by nothing
-/// (on inner layers only when there are any: an outer island is `outer_islands`'s). False when
-/// the solve can't be made or doesn't finish, so the older measure runs.
-fn tie(cx: &mut Cx, g: usize, g_name: &str, ground_layers: &[CopperLayer], island_min: f64, tie_mv: f64) -> bool {
+/// (on inner layers only when there are any: an outer island is `outer_islands`'s). Nothing when
+/// the solve can't be made or doesn't finish; the via-free circle is measured beside it.
+fn tie(cx: &mut Cx, g: usize, g_name: &str, ground_layers: &[CopperLayer], island_min: f64, tie_mv: f64) {
     use super::super::ground::{Ask, Model, Reference};
     let (ecad, nets, board) = (cx.ecad, cx.nets, cx.board);
-    let Ok(mut model) = Model::build(ecad, nets, &Ask { net: Some(g_name.to_string()), cell: None }) else { return false };
+    let ask = Ask { net: Some(g_name.to_string()), cell: None, max_cells: Some(super::super::ground::CHECK_CELLS) };
+    let Ok(mut model) = Model::build(ecad, nets, &ask) else { return };
     if !cx.spend(model.cells().saturating_mul(64)) {
-        return false;
+        return;
     }
     let map = model.solve();
     if !map.converged {
-        return false;
+        return;
     }
     let pours: Vec<String> =
         board.pours.iter().filter(|z| nets.fills.iter().any(|f| f.pour == z.id && f.net == Some(g))).map(|z| format!("z{}", z.id)).collect();
@@ -1161,13 +1160,15 @@ fn tie(cx: &mut Cx, g: usize, g_name: &str, ground_layers: &[CopperLayer], islan
                 "add stitching vias where the planes are weakest, solving again after each",
             )
         });
-        return true;
+        return;
     }
-    let Some(worst) = map.plane_worst(&[]) else { return true };
+    let Some(worst) = map.plane_worst(&[]) else { return };
     if worst.mv > tie_mv {
         let g_name = g_name.to_string();
         let at = worst.at;
-        cx.add(STITCHING, &pours, || {
+        let mut keys = pours.clone();
+        keys.push("tie".into());
+        cx.add(STITCHING, &keys, || {
             Draft::new(
                 at,
                 Vec::new(),
@@ -1188,7 +1189,6 @@ fn tie(cx: &mut Cx, g: usize, g_name: &str, ground_layers: &[CopperLayer], islan
             .fix("ecad.board.stitch", json!({"net": g_name, "pattern": "needed"}), "add stitching vias where the planes are weakest, solving again after each")
         });
     }
-    true
 }
 
 /// How far `p` is from the closed outline `ring`.

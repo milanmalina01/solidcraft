@@ -33,8 +33,12 @@ pub struct GroundView {
     pub error: Option<String>,
 }
 
+/// Shown from the Layers tab or the ribbon, and while the Stitch Vias tool works where needed.
 fn shown(app: &SolveApp) -> bool {
-    !app.electronics.board.hidden.contains(&Layer::Ground)
+    let b = &app.electronics.board;
+    !b.hidden.contains(&Layer::Ground)
+        || (matches!(b.tool, Some(crate::electronics_board::Tool::Stitch))
+            && b.stitch.pattern == solidcraft_engine::doc::ecad::stitch::Pattern::Needed)
 }
 
 /// Run the solve beside the window; the browser (and a desktop that cannot start a thread) runs
@@ -103,7 +107,7 @@ pub(crate) fn refresh(app: &mut SolveApp, ctx: &egui::Context) {
     let ecad = app.session.doc.ecad.clone();
     let rx = spawn(move || {
         let nets = ecad.board_nets();
-        Model::build(&ecad, &nets, &ground::Ask::default()).map(|mut m| m.solve())
+        Model::build(&ecad, &nets, &ground::Ask { max_cells: Some(ground::VIEW_CELLS), ..Default::default() }).map(|mut m| m.solve())
     });
     app.electronics.board.ground.running = Some((key, rx));
     ctx.request_repaint_after(std::time::Duration::from_millis(100));

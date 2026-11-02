@@ -74,6 +74,10 @@ use super::stackup::surroundings;
 /// Needed stitching's most vias when no budget is given, and the most it takes.
 pub const DEFAULT_NEEDED_BUDGET: usize = 20;
 pub const MAX_NEEDED_BUDGET: usize = 200;
+/// The most vias needed stitching places between two solves, and how far apart those are, in
+/// millimetres.
+pub const NEEDED_PER_ROUND: usize = 4;
+pub const NEEDED_SPACING: f64 = 4.0;
 /// How many of the weakest spots needed stitching tries for each via, worst first.
 const NEEDED_TRIES: usize = 256;
 /// Spots near these weigh more when needed stitching picks where to go: an RF net's copper, a
@@ -2107,7 +2111,7 @@ fn needed(ecad: &Electronics, nets: &BoardNets, ask: &Ask, mut site: Site, area:
     if budget == 0 || budget > MAX_NEEDED_BUDGET {
         return Err(format!("`budget` must be 1 to {MAX_NEEDED_BUDGET} vias"));
     }
-    let mut model = Model::build(ecad, nets, &ground::Ask { net: Some(ask.net.clone()), cell: None })?;
+    let mut model = Model::build(ecad, nets, &ground::Ask { net: Some(ask.net.clone()), cell: None, max_cells: Some(ground::PLAN_CELLS) })?;
     let mut out = Plan::default();
     out.why.push(format!(
         "a via at a time at the most weakly tied legal spot of {}'s planes (millivolts each rises to when every mm² of its copper draws 10 mA into {}), solved again after each, until none is past {} mV or {budget} vias are placed; spots near RF lines, switching regulators, layer changes and connectors weigh more",
@@ -2162,8 +2166,17 @@ fn needed(ecad: &Electronics, nets: &BoardNets, ask: &Ask, mut site: Site, area:
             None => vec![true; points.len()],
         };
         let looks = site.look(&points);
-        let mut chosen = None;
+        // Up to [`NEEDED_PER_ROUND`] vias a round, each far enough from the others of the round
+        // that the solve between them would not have moved it: fewer solves on a large board.
+        let room = budget - out.spots.len();
+        let mut chosen: Vec<[f64; 2]> = Vec::new();
         for ((p, h), look) in points.iter().zip(held).zip(looks) {
+            if chosen.len() >= NEEDED_PER_ROUND.min(room) {
+                break;
+            }
+            if chosen.iter().any(|q| (q[0] - p[0]).hypot(q[1] - p[1]) < NEEDED_SPACING) {
+                continue;
+            }
             out.looked_at += 1;
             if !h {
                 out.skip("outside");
@@ -2172,8 +2185,9 @@ fn needed(ecad: &Electronics, nets: &BoardNets, ask: &Ask, mut site: Site, area:
             }
             match try_spot(&mut site, *p, look) {
                 Ok(()) => {
-                    chosen = Some(*p);
-                    break;
+                    // The next spot of the round sees this via's drill and copper.
+                    site.add(*p);
+                    chosen.push(*p);
                 }
                 Err(reason) => {
                     out.skip(reason);
@@ -2184,13 +2198,14 @@ fn needed(ecad: &Electronics, nets: &BoardNets, ask: &Ask, mut site: Site, area:
                 return Err(TOO_MUCH.into());
             }
         }
-        let Some(p) = chosen else {
+        if chosen.is_empty() {
             out.why.push("no legal spot is left where the planes are weakly tied".into());
             break;
-        };
-        site.add(p);
-        model.add_via(p, ask.via.diameter, ask.via.drill, span);
-        out.spots.push(p);
+        }
+        for p in chosen {
+            model.add_via(p, ask.via.diameter, ask.via.drill, span);
+            out.spots.push(p);
+        }
         map = model.solve();
         solves += 1;
     }

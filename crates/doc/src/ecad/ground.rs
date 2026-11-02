@@ -23,7 +23,8 @@
 //!   steps: a solve cut short says so (`converged`), and the checks that rest on it fall back to
 //!   their older measure. A re-solve after a via is added starts from the last answer.
 //! - **Bounded.** Cells are [`DEFAULT_CELL`] across (a finer one, down to [`MIN_CELL`], when
-//!   asked), and larger when the board's layers would need more than [`MAX_CELLS`] of them
+//!   asked), and larger when the board's layers would need more than [`MAX_CELLS`] of them (or
+//!   the fewer a caller asks for: [`CHECK_CELLS`], [`PLAN_CELLS`], [`VIEW_CELLS`])
 //!   (`coarse`), so the work grows with the board up to a cap, never past it.
 //! - **Planes.** The checks and the stitching that rest on this ([`GroundMap::plane_worst`]) look
 //!   at the net's fill copper only: an unrouted pad or a stray track is the design rule check's
@@ -56,7 +57,7 @@ pub const MAX_CELL: f64 = 0.25;
 /// The most cells of the grid, all layers together.
 pub const MAX_CELLS: usize = 400_000;
 /// The solve's least relative residual, and its most steps.
-pub const TOLERANCE: f64 = 1e-7;
+pub const TOLERANCE: f64 = 1e-6;
 pub const MAX_ITERATIONS: usize = 4000;
 /// How weakly tied a plane may be before `pi.stitching` warns and needed stitching works on it,
 /// in millivolts at [`DENSITY`].
@@ -68,7 +69,16 @@ pub const DEFAULT_TARGET_MV: f64 = 0.5;
 pub struct Ask {
     pub net: Option<String>,
     pub cell: Option<f64>,
+    /// The most cells, all layers together (at most [`MAX_CELLS`], that when left out): a check
+    /// run after every edit or a plan solving many times asks for fewer and gets a coarser grid.
+    pub max_cells: Option<usize>,
 }
+
+/// The cell budgets of the solve's users: the quality check (after every edit), needed
+/// stitching's plan (solved once per round), and the board view's heat map.
+pub const CHECK_CELLS: usize = 40_000;
+pub const PLAN_CELLS: usize = 100_000;
+pub const VIEW_CELLS: usize = 150_000;
 
 /// What the potentials are measured from.
 #[derive(Clone, Debug, PartialEq)]
@@ -187,7 +197,8 @@ impl Model {
         let layers = board.stack();
         let nl = layers.len().max(1);
         let asked = ask.cell.unwrap_or(DEFAULT_CELL);
-        let least = (w * h * nl as f64 / MAX_CELLS as f64).sqrt();
+        let most = ask.max_cells.unwrap_or(MAX_CELLS).clamp(1000, MAX_CELLS);
+        let least = (w * h * nl as f64 / most as f64).sqrt();
         let coarse = least > asked;
         let cell = asked.max(least);
         let nx = ((w / cell).ceil() as usize).max(1);
