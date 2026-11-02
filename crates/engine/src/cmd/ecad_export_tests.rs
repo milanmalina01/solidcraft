@@ -165,3 +165,116 @@ fn the_title_block_keeps_what_is_set_and_never_the_clock() {
     let e = refused(&mut s, "ecad.design.info", json!({"notes": "line\u{0}break"}));
     assert!(e.contains("notes"), "{e}");
 }
+
+#[test]
+fn the_fab_files_read_back_as_the_board_and_the_assembly_lists_match_its_parts() {
+    use solidcraft_io::fab;
+    let mut s = board();
+    run(&mut s, "ecad.component.edit", json!({"component": "R0603", "lcsc": "C25804"}));
+    let r = run(&mut s, "ecad.board.cpl_rotation", json!({"footprint": "R0603", "offset": 90}));
+    assert_eq!(r["offsets"], json!({"R0603": 90.0}));
+    let dir = temp_dir("jlc");
+    let zip = dir.join("board.zip");
+    let (doc, undo) = (s.doc.clone(), s.undo.len());
+    let r = run(&mut s, "ecad.board.export.jlc", json!({"path": zip.to_string_lossy()}));
+    assert!(Arc::ptr_eq(&doc, &s.doc) && s.undo.len() == undo, "exporting changes nothing");
+    assert_eq!(r["verified"]["ok"], true, "{r}");
+    // The zip, read back with the readers: four copper layers, the masks, pastes, legends and
+    // profile, and every hole.
+    let files = fab::unzip(&std::fs::read(&zip).unwrap(), 64, 1 << 28).unwrap();
+    let mut functions = Vec::new();
+    for f in files.iter().filter(|f| !f.name.ends_with(".drl")) {
+        let image = fab::read::gerber(std::str::from_utf8(&f.bytes).unwrap()).unwrap_or_else(|e| panic!("{}: {e}", f.name));
+        functions.push(image.function.clone());
+        if image.function.starts_with("Copper") || image.function.starts_with("Profile") {
+            assert!(image.objects > 0 && !image.region.is_empty(), "{} draws something", f.name);
+        }
+    }
+    functions.sort();
+    let expected = [
+        "Copper,L1,Top",
+        "Copper,L2,Inr",
+        "Copper,L3,Inr",
+        "Copper,L4,Bot",
+        "Legend,Bot",
+        "Legend,Top",
+        "Paste,Bot",
+        "Paste,Top",
+        "Profile,NP",
+        "Soldermask,Bot",
+        "Soldermask,Top",
+    ];
+    assert_eq!(functions, expected);
+    let nets = s.board_nets();
+    let (plated, _) = fab::drill::holes(&s.doc.ecad, &nets);
+    let drilled: usize = files
+        .iter()
+        .filter(|f| f.name.ends_with("-PTH.drl"))
+        .map(|f| fab::read::excellon(std::str::from_utf8(&f.bytes).unwrap()).unwrap().len())
+        .sum();
+    assert!(drilled == plated.len() && drilled > 0, "{drilled} of {}", plated.len());
+    // The profile is the 30 x 20 mm outline, stroked 0.1 mm.
+    let profile = files.iter().find(|f| f.name.ends_with(".GKO")).unwrap();
+    let [lo, hi] = fab::read::gerber(std::str::from_utf8(&profile.bytes).unwrap()).unwrap().region.bbox().unwrap();
+    assert!((hi[0] - lo[0] - 30.1).abs() < 0.01 && (hi[1] - lo[1] - 20.1).abs() < 0.01, "{lo:?} {hi:?}");
+    // The parts list: a row per value, footprint and LCSC part; every placed part once.
+    let bom = std::fs::read_to_string(dir.join("board-bom.csv")).unwrap();
+    let mut lines = bom.lines();
+    assert_eq!(lines.next(), Some("Comment,Designator,Footprint,LCSC Part #"));
+    let rows: Vec<&str> = lines.collect();
+    assert!(rows.contains(&"10k,\"R1,R2\",R0603,C25804"), "{bom}");
+    assert_eq!(r["bom_rows"].as_u64(), Some(rows.len() as u64));
+    let placed: Vec<String> = s.doc.ecad.board.footprints.iter().filter_map(|f| s.doc.ecad.placed(f)).map(|p| p.part.designator.clone()).collect();
+    let mut listed: Vec<String> = Vec::new();
+    for row in &rows {
+        let designators = if let Some(rest) = row.split_once(",\"") {
+            rest.1.split('"').next().unwrap().to_string()
+        } else {
+            row.split(',').nth(1).unwrap().to_string()
+        };
+        listed.extend(designators.split(',').map(str::to_string));
+    }
+    listed.sort();
+    let mut want = placed.clone();
+    want.sort();
+    assert_eq!(listed, want, "each placed part once");
+    let missing: Vec<String> = serde_json::from_value(r["missing_lcsc"].clone()).unwrap();
+    assert!(!missing.is_empty() && missing.iter().all(|d| !d.starts_with('R')), "{missing:?}");
+    // The placement list: a row per footprint, at its origin, its rotation plus the offset.
+    let cpl = std::fs::read_to_string(dir.join("board-cpl.csv")).unwrap();
+    let rows: Vec<Vec<&str>> = cpl.lines().skip(1).map(|l| l.split(',').collect()).collect();
+    assert_eq!(cpl.lines().next(), Some("Designator,Mid X,Mid Y,Layer,Rotation"));
+    assert_eq!(rows.len(), placed.len());
+    let r1 = rows.iter().find(|r| r[0] == "R1").unwrap();
+    assert_eq!(r1[1..], ["-10mm", "0mm", "Top", "90"], "R1 at (-10, 0), turned 0° plus R0603's 90°");
+    // A zip short of a copper layer doesn't pass.
+    let short: Vec<fab::FabFile> = files.into_iter().filter(|f| !f.name.ends_with(".G1")).collect();
+    std::fs::write(dir.join("short.zip"), fab::zip(&short).unwrap()).unwrap();
+    let v = run(&mut s, "ecad.board.verify_outputs", json!({"path": dir.join("short.zip").to_string_lossy()}));
+    assert_eq!((v["ok"].clone(), v["copper_layers"].clone(), v["expected_layers"].clone()), (json!(false), json!(3), json!(4)), "{v}");
+    // Clearing the offset is one undo step; an unknown footprint is refused.
+    let undo = s.undo.len();
+    let r = run(&mut s, "ecad.board.cpl_rotation", json!({"footprint": "R0603"}));
+    assert_eq!((r["offsets"].clone(), s.undo.len()), (json!({}), undo + 1));
+    assert!(refused(&mut s, "ecad.board.cpl_rotation", json!({"footprint": "NOPE", "offset": 90})).contains("NOPE"));
+    assert!(refused(&mut s, "ecad.board.export.jlc", json!({"path": dir.join("x.txt").to_string_lossy()})).contains(".zip"));
+}
+
+#[test]
+fn copper_the_files_join_that_the_board_keeps_apart_is_a_short() {
+    use solidcraft_io::fab;
+    let mut s = board();
+    let nets = s.board_nets();
+    let o = fab::Options::default();
+    let mut files = fab::gerbers(&s.doc.ecad, &nets, &o).unwrap();
+    files.extend(fab::drills(&s.doc.ecad, &nets, &o).unwrap());
+    assert!(fab::verify(&s.doc.ecad, &nets, &files).ok(), "as made, the files match the board");
+    // A dark rectangle over the whole top copper joins every top pad.
+    let top = files.iter_mut().find(|f| f.name.ends_with(".GTL")).unwrap();
+    let text = String::from_utf8(top.bytes.clone()).unwrap();
+    let flood = "%LPD*%\nG36*\nX-15000000Y-10000000D02*\nX15000000Y-10000000D01*\nX15000000Y10000000D01*\nX-15000000Y10000000D01*\nX-15000000Y-10000000D01*\nG37*\nM02*\n";
+    top.bytes = text.replace("M02*\n", flood).into_bytes();
+    let v = fab::verify(&s.doc.ecad, &nets, &files);
+    assert!(!v.ok() && !v.shorts.is_empty() && v.opens.is_empty(), "{v:?}");
+    let _ = &mut s;
+}

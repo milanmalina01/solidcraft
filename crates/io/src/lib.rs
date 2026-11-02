@@ -12,6 +12,7 @@ pub mod design_lock;
 mod design_metadata;
 mod dxf;
 mod dxf_out;
+pub mod fab;
 pub mod formats;
 pub use design::{
     DesignCompression, DesignContainerReader, DesignPreview, THUMBNAIL_SIZE, is_design_container, read_design_file, read_design_geometry,

@@ -160,6 +160,19 @@ impl Region {
         Region { shapes: overlay.overlay(OverlayRule::Subject, FillRule::NonZero) }
     }
 
+    /// What the polygons cover by the even-odd rule, whichever way each runs: a contour inside
+    /// another cuts a hole in it (a letter's counter in its outline).
+    pub fn even_odd<'a>(polygons: impl IntoIterator<Item = &'a [[f64; 2]]>) -> Self {
+        let contours: Vec<IntContour<i32>> = polygons.into_iter().filter_map(contour).collect();
+        if contours.is_empty() {
+            return Region::new();
+        }
+        let capacity = contours.iter().map(Vec::len).sum();
+        let mut overlay = Overlay::new(capacity);
+        overlay.add_source(&contours, ShapeType::Subject);
+        Region { shapes: overlay.overlay(OverlayRule::Subject, FillRule::EvenOdd) }
+    }
+
     /// One polygon, filled (see [`Region::polygons`]).
     pub fn polygon(points: &[[f64; 2]]) -> Self {
         Region::polygons([points])

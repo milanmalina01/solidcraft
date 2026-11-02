@@ -156,6 +156,9 @@ pub struct ElectronicComponent {
     pub manufacturer: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub description: String,
+    /// The part's number at LCSC (`C356849`), for an assembly order's parts list.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub lcsc: String,
     /// The library symbol's id.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub symbol: Option<u64>,
@@ -474,6 +477,7 @@ impl ElectronicComponent {
         for (what, text, max) in [
             ("value", &self.value, MAX_TEXT),
             ("mpn", &self.mpn, MAX_TEXT),
+            ("lcsc", &self.lcsc, MAX_TEXT),
             ("manufacturer", &self.manufacturer, MAX_TEXT),
             ("description", &self.description, MAX_DESCRIPTION),
         ] {

@@ -133,8 +133,8 @@ fn first_keys(s: &mut Session) -> [String; 3] {
     [key(s, "ecad.erc.inspect"), key(s, "ecad.drc.inspect"), key(s, "ecad.quality.inspect")]
 }
 
-/// One call of each electronics command that works on [`board`] (but `ecad.export.pages`, which
-/// writes a file, and `ecad.view.board_3d`, which is to come). `keys` are [`first_keys`].
+/// One call of each electronics command that works on [`board`] (but `ecad.export.pages` and the
+/// board's `ecad.board.export.*`, which write files, and `ecad.view.board_3d`, which is to come). `keys` are [`first_keys`].
 fn calls(keys: &[String; 3]) -> Vec<(&'static str, Value)> {
     vec![
         ("ecad.inspect", json!({})),
@@ -216,6 +216,8 @@ fn calls(keys: &[String; 3]) -> Vec<(&'static str, Value)> {
         ("ecad.design.info", json!({"company": "Example", "revisions": [{"rev": "A", "date": "2026-10-30", "note": "first"}]})),
         ("ecad.design.info.inspect", json!({})),
         ("ecad.export.pages.inspect", json!({"format": "pdf"})),
+        ("ecad.board.verify_outputs", json!({})),
+        ("ecad.board.cpl_rotation", json!({"footprint": "R0603", "offset": 90})),
         ("ecad.board.outline", json!({"rect": [32, 22], "corner_radius": 1})),
         ("ecad.board.sync", json!({})),
         ("ecad.board.move", json!({"items": ["C1"], "by": [0, 1]})),
@@ -291,7 +293,11 @@ fn every_electronics_command_has_its_schemas_and_a_call_here() {
     let mut s = board();
     let keys = first_keys(&mut s);
     assert!(keys.iter().all(|k| !k.is_empty()), "the board has a finding of each check: {keys:?}");
-    let called: Vec<&str> = calls(&keys).iter().map(|(id, _)| *id).chain(["ecad.export.pages", "ecad.view.board_3d"]).collect();
+    let called: Vec<&str> = calls(&keys)
+        .iter()
+        .map(|(id, _)| *id)
+        .chain(["ecad.export.pages", "ecad.view.board_3d", "ecad.board.export.gerber", "ecad.board.export.drill", "ecad.board.export.jlc"])
+        .collect();
     for id in ecad_ids() {
         let spec = crate::find_command(id).unwrap();
         assert!(spec.contract.is_some() && spec.output.is_some(), "{id} has an input and an output schema");

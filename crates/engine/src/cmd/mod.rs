@@ -47,6 +47,7 @@ mod ecad_draw;
 mod ecad_drc;
 mod ecad_erc;
 mod ecad_export;
+mod ecad_fab;
 mod ecad_footprint;
 mod ecad_frame;
 mod ecad_generate;
@@ -382,6 +383,7 @@ pub fn command_specs() -> Vec<&'static CommandSpec> {
     v.extend(ecad_board_stitch::COMMANDS.iter());
     v.extend(ecad_board_ground::COMMANDS.iter());
     v.extend(ecad_board_marking::COMMANDS.iter());
+    v.extend(ecad_fab::COMMANDS.iter());
     v.extend(ecad_drc::COMMANDS.iter());
     v.extend(ecad_board_check::COMMANDS.iter());
     v.extend(ecad_intent::COMMANDS.iter());

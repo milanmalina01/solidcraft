@@ -97,6 +97,7 @@ fn resistor(id: u64, name: &str) -> ElectronicComponent {
         mpn: "RC0603FR-0710KL".into(),
         manufacturer: "Example Resistors".into(),
         description: "Thick film resistor, 0603, 1%".into(),
+        lcsc: String::new(),
         symbol: None,
         variants: Vec::new(),
     }
@@ -1834,7 +1835,7 @@ fn fab_profiles_are_complete_and_their_ids_stable() {
         assert!(h.len() == 8 && h.chars().all(|c| c.is_ascii_hexdigit()), "{h}");
         assert!(hashes.insert(h), "{} shares a hash", p.id);
     }
-    assert!(FabChoice { id: "cheap".into(), version: 1 }.validate().unwrap_err().contains("not one of standard, fine, hdi"));
+    assert!(FabChoice { id: "cheap".into(), version: 1 }.validate().unwrap_err().contains("not one of standard, jlcpcb_2layer, fine, hdi"));
     assert!(FabChoice { id: "standard".into(), version: 0 }.validate().is_err());
     // Rings measured on the finished hole, or on the drill tool (the hole plus the plating).
     assert_eq!(profiles::find("standard").unwrap().hole(0.3), 0.3);

@@ -350,14 +350,19 @@ fn save(app: &mut SolveApp, mut params: Value) {
 
 /// Write the pages from a copy of the design beside the window; in the browser, here.
 fn write(app: &mut SolveApp, params: Value) {
+    write_with(app, "ecad.export.pages", params);
+}
+
+/// Run the export command `cmd` on a copy of the design beside the window; in the browser, here.
+fn write_with(app: &mut SolveApp, cmd: &'static str, params: Value) {
     #[cfg(not(target_arch = "wasm32"))]
     {
         let session = copy(app);
         let (tx, rx) = std::sync::mpsc::channel();
         let given = params.clone();
-        let job = std::thread::Builder::new().name("export-pages-write".into()).spawn(move || {
+        let job = std::thread::Builder::new().name("export-write".into()).spawn(move || {
             let mut session = session;
-            let _ = tx.send(session.execute("ecad.export.pages", &given).map_err(|e| e.to_string()));
+            let _ = tx.send(session.execute(cmd, &given).map_err(|e| e.to_string()));
         });
         if job.is_ok() {
             app.electronics.design.export.saving = Some(rx);
@@ -365,9 +370,21 @@ fn write(app: &mut SolveApp, params: Value) {
         }
     }
     // A refusal says why on the status line.
-    if let Ok(reply) = app.run("ecad.export.pages", params) {
+    if let Ok(reply) = app.run(cmd, params) {
         saved(app, Ok(reply));
     }
+}
+
+/// Save JLCPCB Order Files…: where to put the zip (the parts and placement lists go beside it),
+/// then `ecad.board.export.jlc` writes them and reads them back.
+fn save_jlc(app: &mut SolveApp) {
+    let name = format!("{}-jlcpcb.zip", file_stem(app));
+    app.pick_save(&name, &["zip"], move |app, path| {
+        let Some(path) = path else { return };
+        if !saving(app) {
+            write_with(app, "ecad.board.export.jlc", json!({"path": path}));
+        }
+    });
 }
 
 /// Say what a save wrote, or why it could not.
@@ -387,6 +404,14 @@ fn saved(app: &mut SolveApp, reply: Result<Value, String>) {
         crate::i18n::format("electronics.export_size_kb", &[("n", &bytes.div_ceil(1024).to_string())])
     };
     let first = files.first().and_then(|f| f.get("path")).and_then(Value::as_str).unwrap_or_default().to_string();
+    // The order files are read back: say so when they don't match the board.
+    if let Some(v) = reply.get("verified").filter(|v| v.get("ok").and_then(Value::as_bool) == Some(false)) {
+        let count = |k: &str| v.get(k).and_then(Value::as_array).map_or(0, Vec::len).to_string();
+        let text =
+            crate::i18n::format("electronics.export_jlc_unverified", &[("path", &first), ("opens", &count("opens")), ("shorts", &count("shorts"))]);
+        app.set_status(text, true);
+        return;
+    }
     let rows = files.first().and_then(|f| f.get("rows")).and_then(Value::as_u64);
     let text = match (files.as_slice(), rows) {
         // The parts list's CSV: its rows, not pages.
@@ -439,6 +464,8 @@ enum Act {
     Revisions(Vec<Revision>, Option<usize>, Vec<(&'static str, String)>),
     PickRevision(usize),
     Save(Value),
+    /// Save JLCPCB Order Files….
+    SaveJlc,
     /// Work the pages out again for the design as it is now (the browser).
     Refresh,
 }
@@ -528,6 +555,15 @@ pub(crate) fn window(app: &mut SolveApp, ctx: &egui::Context) {
             {
                 acts.push(Act::Save(p));
             }
+            // The board's order files for an assembled board, beside the pages.
+            if !app.session.doc.ecad.board.outline.is_empty() {
+                ui.add_space(Tokens::get().space_8);
+                ui_kit::text(ui, &tr("electronics.export_jlc_note"), ui_kit::Text::Note("electronics.export_jlc_note"));
+                let can = !busy && !app.file_picker_busy();
+                if crate::electronics_editor::button(ui, "export-jlc", &tr("electronics.export_jlc"), can) {
+                    acts.push(Act::SaveJlc);
+                }
+            }
         });
     let e = &mut app.electronics.design.export;
     if e.settings != settings {
@@ -555,6 +591,7 @@ pub(crate) fn window(app: &mut SolveApp, ctx: &egui::Context) {
             }
             Act::PickRevision(k) => app.electronics.design.export.revision = Some(k),
             Act::Save(params) => save(app, params),
+            Act::SaveJlc => save_jlc(app),
             Act::Refresh => app.electronics.design.export.composed = None,
         }
     }

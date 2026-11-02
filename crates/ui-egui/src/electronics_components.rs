@@ -37,6 +37,7 @@ static NO_COMPONENT: ElectronicComponent = ElectronicComponent {
     mpn: String::new(),
     manufacturer: String::new(),
     description: String::new(),
+    lcsc: String::new(),
     symbol: None,
     variants: Vec::new(),
 };

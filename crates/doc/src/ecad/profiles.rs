@@ -119,6 +119,15 @@ const fn dfm(value: f64, source: &'static str) -> Figure {
 const ENTRY: &str = "public layout guides: leave a pad square to its edge, along its long axis; 30° is the engine's tolerance";
 const ACID_TRAP: &str = "public fab DFM summaries flag sharp copper pockets (acid traps); 70° is the engine's tolerance for the empty gap's opening";
 
+/// A fab figure read from a search engine's summary of the fab's capability pages, not from the
+/// page itself: marked to verify.
+const fn summary(value: f64, source: &'static str) -> Figure {
+    Figure { value, source, verify: true }
+}
+
+const JLC_SUMMARY: &str =
+    "jlcpcb.com capabilities and copper-weight guide, as search summaries gave them on 2026-11-02 (the pages themselves not read): verify";
+
 const EUROCIRCUITS_TOOL: &str = "Eurocircuits: drill tool = finished hole + 0.10 mm";
 const NO_SOURCE: &str = "engine default; none of the sources gives one";
 
@@ -142,6 +151,32 @@ pub static PROFILES: &[FabProfile] = &[
         drill_to_copper: fab(0.2, "JLCPCB inner layers: 0.2 mm from via holes"),
         drill_to_copper_pth: fab(0.3, "JLCPCB inner layers: 0.3 mm from plated through holes"),
         silk_to_pad: fab(0.15, "JLCPCB legend 0.15 mm from pads"),
+        via_to_pad: dfm(0.25, "public DFM summaries: about 0.25 mm of solder mask web between an open via and an SMD pad"),
+        pad_entry_angle: dfm(30.0, ENTRY),
+        acute_angle: dfm(70.0, ACID_TRAP),
+        micro: None,
+    },
+    FabProfile {
+        id: "jlcpcb_2layer",
+        name: "JLCPCB 2-layer standard",
+        version: 1,
+        read: "2026-11",
+        about: "JLCPCB's 2-layer 1 oz FR-4 board at its standard price: 0.10/0.10 mm track and gap, 0.3 mm via holes, rings on the finished hole; every figure from a summary of their pages, to verify",
+        track: summary(0.10, JLC_SUMMARY),
+        gap: summary(0.10, JLC_SUMMARY),
+        drill: summary(0.3, "jlcpcb.com: 0.3 mm via hole at the standard price on 1-2 layers (0.15 mm costs extra); from search summaries, verify"),
+        ring: summary(
+            0.15,
+            "jlcpcb.com: 0.13 mm least via ring on 1-2 layers, 0.18 mm least and 0.25 mm advised for a plated hole; 0.15 kept, verify",
+        ),
+        ring_convention: RingConvention::Hole,
+        plating_allowance: summary(0.10, "jlcpcb.com: the drill tool is about 0.1 mm over the finished hole; verify"),
+        aspect_ratio: summary(8.0, NO_SOURCE),
+        hole_to_hole: summary(0.5, "jlcpcb.com: 0.5 mm between plated holes; verify"),
+        copper_to_edge: summary(0.3, "jlcpcb.com: 0.2 mm least from copper to a routed edge, 0.3 mm advised; verify"),
+        drill_to_copper: summary(0.2, "only for inner layers, which a 2-layer board hasn't"),
+        drill_to_copper_pth: summary(0.3, "only for inner layers, which a 2-layer board hasn't"),
+        silk_to_pad: summary(0.15, "jlcpcb.com: legend 0.15 mm from pads; verify"),
         via_to_pad: dfm(0.25, "public DFM summaries: about 0.25 mm of solder mask web between an open via and an SMD pad"),
         pad_entry_angle: dfm(30.0, ENTRY),
         acute_angle: dfm(70.0, ACID_TRAP),

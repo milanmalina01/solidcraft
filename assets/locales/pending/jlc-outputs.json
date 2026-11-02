@@ -1,0 +1,90 @@
+{
+  "en": {
+    "cmd.ecad_board_cpl_rotation": "Placement Rotation",
+    "cmd.ecad_board_export_drill": "Export Drill",
+    "cmd.ecad_board_export_gerber": "Export Gerber",
+    "cmd.ecad_board_export_jlc": "Export for JLCPCB",
+    "cmd.ecad_board_verify_outputs": "Verify Outputs",
+    "electronics.export_jlc": "Save JLCPCB Order Files…",
+    "electronics.export_jlc_note": "For an assembled board: a zip of the Gerber and drill files for the fab, with the parts list and the placement list beside it.",
+    "electronics.export_jlc_unverified": "Wrote {path}, but reading the files back found {opens} opens and {shorts} shorts against the board.",
+    "electronics.profile_jlcpcb_2layer": "JLCPCB 2-layer standard"
+  },
+  "de": {
+    "cmd.ecad_board_cpl_rotation": "Bestückungsdrehung",
+    "cmd.ecad_board_export_drill": "Bohrdaten exportieren",
+    "cmd.ecad_board_export_gerber": "Gerber exportieren",
+    "cmd.ecad_board_export_jlc": "Für JLCPCB exportieren",
+    "cmd.ecad_board_verify_outputs": "Ausgaben prüfen",
+    "electronics.export_jlc": "JLCPCB-Bestelldateien speichern…",
+    "electronics.export_jlc_note": "Für eine bestückte Platine: ein Zip der Gerber- und Bohrdateien für den Fertiger, daneben die Stückliste und die Bestückungsliste.",
+    "electronics.export_jlc_unverified": "{path} geschrieben, aber beim Zurücklesen fanden sich {opens} Unterbrechungen und {shorts} Kurzschlüsse gegenüber der Platine.",
+    "electronics.profile_jlcpcb_2layer": "JLCPCB 2-Lagen Standard"
+  },
+  "ja": {
+    "cmd.ecad_board_cpl_rotation": "実装回転",
+    "cmd.ecad_board_export_drill": "ドリルを書き出し",
+    "cmd.ecad_board_export_gerber": "ガーバーを書き出し",
+    "cmd.ecad_board_export_jlc": "JLCPCB 用に書き出し",
+    "cmd.ecad_board_verify_outputs": "出力を検証",
+    "electronics.export_jlc": "JLCPCB 発注ファイルを保存…",
+    "electronics.export_jlc_note": "実装済み基板用：製造用のガーバーとドリルファイルの zip と、その横に部品表と実装位置リスト。",
+    "electronics.export_jlc_unverified": "{path} を書き出しましたが、読み戻すと基板と比べて断線 {opens} 件、短絡 {shorts} 件がありました。",
+    "electronics.profile_jlcpcb_2layer": "JLCPCB 2 層スタンダード"
+  },
+  "zh": {
+    "cmd.ecad_board_cpl_rotation": "贴装旋转",
+    "cmd.ecad_board_export_drill": "导出钻孔",
+    "cmd.ecad_board_export_gerber": "导出 Gerber",
+    "cmd.ecad_board_export_jlc": "为 JLCPCB 导出",
+    "cmd.ecad_board_verify_outputs": "校验输出",
+    "electronics.export_jlc": "保存 JLCPCB 订单文件…",
+    "electronics.export_jlc_note": "用于贴片板：给工厂的 Gerber 和钻孔文件 zip，旁边是物料清单和坐标文件。",
+    "electronics.export_jlc_unverified": "已写入 {path}，但读回文件后与电路板相比发现 {opens} 处开路和 {shorts} 处短路。",
+    "electronics.profile_jlcpcb_2layer": "JLCPCB 双层标准"
+  },
+  "ko": {
+    "cmd.ecad_board_cpl_rotation": "배치 회전",
+    "cmd.ecad_board_export_drill": "드릴 내보내기",
+    "cmd.ecad_board_export_gerber": "거버 내보내기",
+    "cmd.ecad_board_export_jlc": "JLCPCB용 내보내기",
+    "cmd.ecad_board_verify_outputs": "출력 검증",
+    "electronics.export_jlc": "JLCPCB 주문 파일 저장…",
+    "electronics.export_jlc_note": "조립 기판용: 제조사에 보낼 거버와 드릴 파일 zip, 그 옆에 부품 목록과 배치 목록.",
+    "electronics.export_jlc_unverified": "{path}를 썼지만 다시 읽어 보니 기판과 비교해 개방 {opens}개, 단락 {shorts}개가 있습니다.",
+    "electronics.profile_jlcpcb_2layer": "JLCPCB 2층 표준"
+  },
+  "ar": {
+    "cmd.ecad_board_cpl_rotation": "دوران التركيب",
+    "cmd.ecad_board_export_drill": "تصدير الثقوب",
+    "cmd.ecad_board_export_gerber": "تصدير Gerber",
+    "cmd.ecad_board_export_jlc": "تصدير لـ JLCPCB",
+    "cmd.ecad_board_verify_outputs": "التحقق من المخرجات",
+    "electronics.export_jlc": "حفظ ملفات طلب JLCPCB…",
+    "electronics.export_jlc_note": "للوحة المجمّعة: ملف zip بملفات Gerber والثقوب للمصنع، وبجانبه قائمة القطع وقائمة المواضع.",
+    "electronics.export_jlc_unverified": "كُتب {path}، لكن قراءة الملفات مجددًا وجدت {opens} انقطاعًا و{shorts} قصرًا مقارنة باللوحة.",
+    "electronics.profile_jlcpcb_2layer": "JLCPCB ثنائية الطبقة القياسية"
+  },
+  "he": {
+    "cmd.ecad_board_cpl_rotation": "סיבוב השמה",
+    "cmd.ecad_board_export_drill": "ייצוא קידוח",
+    "cmd.ecad_board_export_gerber": "ייצוא Gerber",
+    "cmd.ecad_board_export_jlc": "ייצוא ל־JLCPCB",
+    "cmd.ecad_board_verify_outputs": "אימות הפלטים",
+    "electronics.export_jlc": "שמירת קובצי הזמנה ל־JLCPCB…",
+    "electronics.export_jlc_note": "ללוח מורכב: zip של קובצי Gerber והקידוח ליצרן, ולצדו רשימת החלקים ורשימת המיקומים.",
+    "electronics.export_jlc_unverified": "{path} נכתב, אך קריאת הקבצים מחדש מצאה {opens} נתקים ו־{shorts} קצרים לעומת הלוח.",
+    "electronics.profile_jlcpcb_2layer": "JLCPCB דו־שכבתי סטנדרטי"
+  },
+  "vi": {
+    "cmd.ecad_board_cpl_rotation": "Xoay vị trí lắp",
+    "cmd.ecad_board_export_drill": "Xuất tệp khoan",
+    "cmd.ecad_board_export_gerber": "Xuất Gerber",
+    "cmd.ecad_board_export_jlc": "Xuất cho JLCPCB",
+    "cmd.ecad_board_verify_outputs": "Kiểm tra đầu ra",
+    "electronics.export_jlc": "Lưu tệp đặt hàng JLCPCB…",
+    "electronics.export_jlc_note": "Cho bo mạch đã lắp ráp: một zip gồm tệp Gerber và tệp khoan cho xưởng, bên cạnh là danh sách linh kiện và danh sách vị trí.",
+    "electronics.export_jlc_unverified": "Đã ghi {path}, nhưng đọc lại các tệp thấy {opens} chỗ hở và {shorts} chỗ chập so với bo mạch.",
+    "electronics.profile_jlcpcb_2layer": "JLCPCB 2 lớp tiêu chuẩn"
+  }
+}

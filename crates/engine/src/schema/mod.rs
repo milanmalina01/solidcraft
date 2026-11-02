@@ -69,6 +69,7 @@ pub mod ecad_draw;
 pub mod ecad_drc;
 pub mod ecad_erc;
 pub mod ecad_export;
+pub mod ecad_fab;
 pub mod ecad_footprint;
 pub mod ecad_frame;
 pub mod ecad_generate;

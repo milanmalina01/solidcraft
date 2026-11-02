@@ -271,6 +271,8 @@ pub struct CreateParams {
     pub value: Option<String>,
     /// The manufacturer part number.
     pub mpn: Option<String>,
+    /// The LCSC part number (`C356849`), for an assembly order's parts list.
+    pub lcsc: Option<String>,
     pub manufacturer: Option<String>,
     /// Up to 256 characters.
     pub description: Option<String>,
@@ -294,6 +296,8 @@ pub struct EditParams {
     pub prefix: Option<String>,
     pub value: Option<String>,
     pub mpn: Option<String>,
+    /// The LCSC part number (`C356849`), for an assembly order's parts list.
+    pub lcsc: Option<String>,
     pub manufacturer: Option<String>,
     pub description: Option<String>,
     /// Another library symbol (`null`: none). A placed component keeps what is on pins the new
@@ -454,6 +458,7 @@ pub struct ComponentRecord {
     pub prefix: String,
     pub value: String,
     pub mpn: String,
+    pub lcsc: String,
     pub manufacturer: String,
     pub description: String,
     /// The library symbol; null without one (`ecad.symbol.inspect` has the rest).

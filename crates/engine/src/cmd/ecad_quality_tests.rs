@@ -261,7 +261,7 @@ fn a_fab_profile_sets_the_rules_it_needs_and_never_loosens_the_users() {
     let mut s = board();
     let p = run(&mut s, "ecad.board.profile.inspect", json!({}));
     let ids: Vec<&str> = p["profiles"].as_array().unwrap().iter().filter_map(|x| x["id"].as_str()).collect();
-    assert_eq!(ids, ["standard", "fine", "hdi"]);
+    assert_eq!(ids, ["standard", "jlcpcb_2layer", "fine", "hdi"]);
     assert_eq!(p["current"]["id"], "standard", "the board's");
     run(&mut s, "ecad.board.rules", json!({"min_drill": 0.4}));
     let r = run(&mut s, "ecad.board.profile", json!({"fab": "hdi"}));

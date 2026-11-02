@@ -27,7 +27,7 @@ pub static COMMANDS: &[CommandSpec] = &[
         .contract(&CREATE_CONTRACT)
         .output(output_schema_for::<CreateResult>)
         .params(
-            "name (unique, such as R0603); prefix? (designator letters, U when left out); value?, mpn?, manufacturer?, description?; symbol?: id|name (a library symbol); footprint?: id|name (a library footprint: the first variant, named after it); package?: id|name (a library 3D package for that variant) → {component: {id, name}}",
+            "name (unique, such as R0603); prefix? (designator letters, U when left out); value?, mpn?, manufacturer?, description?, lcsc? (the LCSC part number, C356849, for an assembly order); symbol?: id|name (a library symbol); footprint?: id|name (a library footprint: the first variant, named after it); package?: id|name (a library 3D package for that variant) → {component: {id, name}}",
         ),
     CommandSpec::new("ecad.component.edit", "Edit Electronic Component", crate::checked!("ecad.component.edit", edit))
         .icon("edit")
@@ -35,7 +35,7 @@ pub static COMMANDS: &[CommandSpec] = &[
         .contract(&EDIT_CONTRACT)
         .output(output_schema_for::<EditResult>)
         .params(
-            "component: id|name; name?, prefix?, value?, mpn?, manufacturer?, description? (an empty text clears it); symbol?: id|name|null (another library symbol: on the schematic, what is on pins it numbers alike, or names alike where the number went, stays on them, wires following a pin that moved with a jog; the rest lets go where it was; a pin map naming pins it lacks is dropped; parts' moved designators and values go back to where a symbol with another box puts them) → {component, changed: [keys], detached?, netlist_changed?: [{net, lost, gained, more?}] (the nets whose pins the edit changed on the schematic, should a moved pin land on another wire or leave its own), texts_reset?: [designators]}",
+            "component: id|name; name?, prefix?, value?, mpn?, manufacturer?, description?, lcsc? (an empty text clears it); symbol?: id|name|null (another library symbol: on the schematic, what is on pins it numbers alike, or names alike where the number went, stays on them, wires following a pin that moved with a jog; the rest lets go where it was; a pin map naming pins it lacks is dropped; parts' moved designators and values go back to where a symbol with another box puts them) → {component, changed: [keys], detached?, netlist_changed?: [{net, lost, gained, more?}] (the nets whose pins the edit changed on the schematic, should a moved pin land on another wire or leave its own), texts_reset?: [designators]}",
         ),
     CommandSpec::new("ecad.component.copy", "Copy Component", crate::checked!("ecad.component.copy", copy))
         .icon("copy")
@@ -57,7 +57,7 @@ pub static COMMANDS: &[CommandSpec] = &[
         .contract(&INSPECT_CONTRACT)
         .output(output_schema_for::<InspectResult>)
         .params(
-            "component: id|name → {component: {id, name, prefix, value, mpn, manufacturer, description, symbol: {id, name}|null, pins, variants: [{name, footprint: {id, name}|null, pads, package, pin_map, connections, unconnected_pins, unconnected_pads, problems, ready}], problems, ready}}. Read-only",
+            "component: id|name → {component: {id, name, prefix, value, mpn, manufacturer, description, lcsc, symbol: {id, name}|null, pins, variants: [{name, footprint: {id, name}|null, pads, package, pin_map, connections, unconnected_pins, unconnected_pads, problems, ready}], problems, ready}}. Read-only",
         ),
     CommandSpec::new("ecad.component.map_pins", "Connect", crate::checked!("ecad.component.map_pins", map_pins))
         .icon("chain")
@@ -119,6 +119,7 @@ fn create(s: &mut Session, p: &Value) -> Result<Value> {
         mpn: p.mpn.unwrap_or_default(),
         manufacturer: p.manufacturer.unwrap_or_default(),
         description: p.description.unwrap_or_default(),
+        lcsc: p.lcsc.unwrap_or_default(),
         symbol,
         variants,
     };
@@ -143,7 +144,13 @@ fn edit(s: &mut Session, p: &Value) -> Result<Value> {
         check_prefix(&prefix).map_err(|e| bad(CMD, e))?;
         c.prefix = prefix;
     }
-    for (field, new) in [(&mut c.value, p.value), (&mut c.mpn, p.mpn), (&mut c.manufacturer, p.manufacturer), (&mut c.description, p.description)] {
+    for (field, new) in [
+        (&mut c.value, p.value),
+        (&mut c.mpn, p.mpn),
+        (&mut c.manufacturer, p.manufacturer),
+        (&mut c.description, p.description),
+        (&mut c.lcsc, p.lcsc),
+    ] {
         if let Some(new) = new {
             *field = new;
         }
@@ -156,6 +163,7 @@ fn edit(s: &mut Session, p: &Value) -> Result<Value> {
         ("prefix", old.prefix != c.prefix),
         ("value", old.value != c.value),
         ("mpn", old.mpn != c.mpn),
+        ("lcsc", old.lcsc != c.lcsc),
         ("manufacturer", old.manufacturer != c.manufacturer),
         ("description", old.description != c.description),
         ("symbol", old.symbol != c.symbol),
@@ -354,6 +362,7 @@ pub(super) fn record(s: &Session, c: &ElectronicComponent) -> ComponentRecord {
         prefix: c.prefix.clone(),
         value: c.value.clone(),
         mpn: c.mpn.clone(),
+        lcsc: c.lcsc.clone(),
         manufacturer: c.manufacturer.clone(),
         description: c.description.clone(),
         symbol: c.symbol.map(|_| item_id(first.symbol.id, &first.symbol.name)),

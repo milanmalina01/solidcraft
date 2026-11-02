@@ -37,6 +37,7 @@ fn resistor(id: u64, name: &str) -> ElectronicComponent {
         mpn: String::new(),
         manufacturer: String::new(),
         description: String::new(),
+        lcsc: String::new(),
         symbol: Some(SYMBOL),
         variants: Vec::new(),
     }
