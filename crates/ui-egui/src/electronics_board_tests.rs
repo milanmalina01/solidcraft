@@ -95,11 +95,11 @@ fn stitching_where_needed_previews_ghost_vias_and_numbers_then_places_them() {
     use solidcraft_engine::doc::ecad::stitch::Pattern;
     let mut h = grounded_board();
     h.app.start("ecad.board.stitch");
-    h.frames(2);
-    let s = &mut h.app.electronics.board.stitch;
-    s.pattern = Pattern::Needed;
-    s.pick = Some(crate::electronics_board_stitch::StitchPick::Board);
-    h.frames(1);
+    h.frames(3);
+    // As the user does it: the Pattern dropdown in the tool's options, then "Where needed".
+    click(&mut h, "dialog:row:Pattern");
+    click(&mut h, "dialog:Pattern:Where needed");
+    assert_eq!(h.app.electronics.board.stitch.pattern, Pattern::Needed);
     assert!(until(&mut h, |h| h.app.electronics.board.stitch.preview.is_some()), "the dry run comes back");
     let preview = h.app.electronics.board.stitch.preview.clone().unwrap();
     assert!(preview.error.is_none() && !preview.spots.is_empty(), "{preview:?}");
@@ -111,6 +111,11 @@ fn stitching_where_needed_previews_ghost_vias_and_numbers_then_places_them() {
     h.frames(2);
     let placed = h.app.session.doc.ecad.board.vias.iter().filter(|v| v.pattern == Some(Pattern::Needed)).count();
     assert_eq!((placed, h.app.session.undo.len()), (preview.spots.len(), undo + 1));
+    // Place lets the pick go but the pattern stays: the preview comes back for the board as it is
+    // now (it once stayed empty until the pattern was chosen again).
+    assert_eq!(h.app.electronics.board.stitch.pattern, Pattern::Needed);
+    let now = (h.app.session.uid, h.app.session.revision);
+    assert!(until(&mut h, |h| h.app.electronics.board.stitch.preview.as_ref().is_some_and(|p| p.key == now)), "a new preview after Place");
 }
 
 #[test]

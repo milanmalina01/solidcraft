@@ -46,7 +46,7 @@ pub enum StitchPick {
 /// spots were skipped by why and why the rest is as it is, or why the call was refused.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Preview {
-    key: (u64, u64),
+    pub(crate) key: (u64, u64),
     params: Value,
     pub spots: Vec<[f64; 2]>,
     pub skipped: Vec<(String, usize)>,
@@ -165,12 +165,24 @@ fn via_size(app: &SolveApp) -> [f64; 2] {
     [sizes.via_diameter, sizes.via_drill]
 }
 
+/// What the tool works on: the pick, else, for the patterns that work on the whole board, the
+/// whole board ("Where needed") or every layer change. The pick goes after Place, a net change
+/// or a part picked and let go, while the pattern stays: the preview must not go with it.
+fn effective_pick(app: &SolveApp) -> Option<StitchPick> {
+    let o = &app.electronics.board.stitch;
+    o.pick.clone().or(match o.pattern {
+        Pattern::Needed => Some(StitchPick::Board),
+        Pattern::LayerChange => Some(StitchPick::LayerChanges),
+        Pattern::Grid | Pattern::Fence => None,
+    })
+}
+
 /// `ecad.board.stitch`'s parameters for the pick (without `dry_run`); `None` with nothing picked
 /// or no net. The via's size goes only when typed, so the command picks the class's or the micro
 /// via and grows a ring the fab profile would not pass.
 fn params(app: &SolveApp) -> Option<Value> {
     let o = &app.electronics.board.stitch;
-    let pick = o.pick.as_ref()?;
+    let pick = &effective_pick(app)?;
     let net = net(app)?;
     let mut via = json!({});
     if let Some([diameter, drill]) = o.via {

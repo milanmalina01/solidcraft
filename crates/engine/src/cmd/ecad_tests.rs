@@ -500,4 +500,8 @@ fn a_board_marking_is_one_step_and_follows_the_design_info() {
         assert!(s.execute("ecad.board.marking", &bad).is_err(), "{bad}");
         assert!(Arc::ptr_eq(&doc, &s.doc) && s.undo.len() == undo);
     }
+    // Only the stamped region is checked: a block whose first line covers a top pad is warned of.
+    let pad = s.board_nets().pads.iter().find(|p| p.top).map(|p| p.at()).unwrap();
+    let over = run(&mut s, "ecad.board.marking", json!({"side": "top", "at": [pad[0] - 0.5, pad[1] + 2.0], "dry_run": true}));
+    assert!(over["warnings"].as_array().is_some_and(|w| w.iter().any(|x| x.as_str().is_some_and(|t| t.contains("pad")))), "{over}");
 }

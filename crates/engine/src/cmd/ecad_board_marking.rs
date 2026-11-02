@@ -6,7 +6,6 @@
 
 use serde_json::Value;
 use solidcraft_doc::ecad::Electronics;
-use solidcraft_doc::ecad::checks::Severity;
 use solidcraft_doc::ecad::footprint::Side as DocSide;
 use solidcraft_doc::ecad::marking::{self, Fields, MAX_MARKINGS, Marking, MarkingTemplate};
 use solidcraft_doc::metadata;
@@ -26,7 +25,7 @@ pub static COMMANDS: &[CommandSpec] = &[CommandSpec::new("ecad.board.marking", "
     .contract(&CONTRACT)
     .output(output_schema_for::<MarkingResult>)
     .params(
-        "side: top|bottom; at: [x, y] (the block's top left, mm); template? {title?, revision?, date? (shown by default), part_number? (pattern: {project}/{title}, {number}, {revision}, {date}, {company}, {author}), serial_box?, qr? (of the part number and revision), made_by?, order_placeholder? (the text the fab replaces with its order number), height? (mm, 0.5–5, 1.5)}; number? (the pattern's {number}); layer_marks? (copper TOP/BOT, or 1..n, side by side below the block, each in a keepout pours stay out of, on no net); dry_run? → {marking, lines, part_number, graphics, keepouts, bbox, warnings, created, …}: one grouped block on the side's silkscreen (mirrored on the bottom) from the design info the print export uses; ecad.design.info makes it again when the title, revision or date changes. Refused when it reaches off the board or its copper breaks a design rule (clearance to other copper, the edge). One undo step",
+        "side: top|bottom; at: [x, y] (the block's top left, mm); template? {title?, revision?, date? (shown by default), part_number? (pattern: {project}/{title}, {number}, {revision}, {date}, {company}, {author}), serial_box?, qr? (of the part number and revision), made_by?, order_placeholder? (the text the fab replaces with its order number), height? (mm, 0.5–5, 1.5)}; number? (the pattern's {number}); layer_marks? (copper TOP/BOT, or 1..n, side by side below the block, each in a keepout pours stay out of, on no net); dry_run? → {marking, lines, part_number, graphics, keepouts, bbox, warnings (its silkscreen nearer a pad than silk_to_pad), created, …}: one grouped block on the side's silkscreen (mirrored on the bottom) from the design info the print export uses; ecad.design.info makes it again when the title, revision or date changes. Refused when it reaches off the board or its copper marks come nearer other copper than the clearance; only the stamped region is checked, so it is quick on any board (the full design rule check covers the rest). One undo step",
     )];
 
 const CONTRACT: TypedContract<MarkingParams> = TypedContract::new();
@@ -98,13 +97,6 @@ fn place(s: &mut Session, p: &Value) -> Result<Value> {
     let m = Marking { id, side, at, number, template, layer_marks: p.layer_marks.unwrap_or(false) };
     marking::stamp(&mut board, &m, &f).map_err(|e| bad(CMD, e))?;
     board.markings.push(m.clone());
-    let mine: Vec<u64> = board
-        .graphics
-        .iter()
-        .filter(|g| g.marking == Some(id))
-        .map(|g| g.id)
-        .chain(board.keepouts.iter().filter(|k| k.marking == Some(id)).map(|k| k.id))
-        .collect();
     let (graphics, keepouts) =
         (board.graphics.iter().filter(|g| g.marking == Some(id)).count(), board.keepouts.iter().filter(|k| k.marking == Some(id)).count());
     let bbox = solidcraft_doc::ecad::bbox(board.graphics.iter().filter(|g| g.marking == Some(id)).filter_map(|g| g.graphic.bbox()).flatten())
@@ -115,16 +107,55 @@ fn place(s: &mut Session, p: &Value) -> Result<Value> {
     if !corners.iter().all(|c| solidcraft_doc::ecad::copper::inside(*c, &ring)) {
         return Err(bad(CMD, "the marking reaches off the board there: give another `at`, or leave out what it doesn't need"));
     }
-    let mut probe = s.doc.ecad.clone();
-    probe.board = board.clone();
-    let drc = probe.drc();
-    let keys: Vec<String> = mine.iter().map(|i| format!("g{i}")).collect();
-    let ours = |key: &str| key.split('|').skip(1).any(|k| keys.iter().any(|m| m == k));
-    let errors: Vec<String> = drc.findings.iter().filter(|x| x.severity == Severity::Error && ours(&x.key)).map(|x| x.message.clone()).collect();
-    if let Some(first) = errors.first() {
-        return Err(bad(CMD, format!("its copper marks break a design rule there ({first}): give another `at`")));
+    // Only the stamped region is checked, so placing stays quick on any board: its copper marks
+    // against the copper round them (the clearance), and its silkscreen against the pads on its
+    // side (silk_to_pad).
+    let nets = s.board_nets();
+    let ours: Vec<&solidcraft_doc::ecad::board::BoardGraphic> = board.graphics.iter().filter(|g| g.marking == Some(id)).collect();
+    let rect = |g: &solidcraft_doc::ecad::board::BoardGraphic| {
+        g.graphic.bbox().map(|[a, b]| solidcraft_doc::ecad::footprint::Core { points: vec![a, [b[0], a[1]], b, [a[0], b[1]]], radius: 0.0 })
+    };
+    let pieces: Vec<(solidcraft_doc::ecad::CopperLayer, solidcraft_doc::ecad::footprint::Core)> = ours
+        .iter()
+        .filter_map(|g| match g.layer {
+            solidcraft_doc::ecad::layers::DrawLayer::Copper(l) => rect(g).map(|c| (l, c)),
+            _ => None,
+        })
+        .collect();
+    let (clashes, _) = solidcraft_doc::ecad::drc::clashes(&board, &nets, None, &pieces);
+    if let Some(c) = clashes.first() {
+        let what = c.item.reference();
+        return Err(bad(
+            CMD,
+            format!(
+                "its copper marks break a design rule there ({} mm from {what} on {}, the clearance is {} mm): give another `at`",
+                round3(c.gap),
+                c.layer.name(),
+                round3(c.required)
+            ),
+        ));
     }
-    let warnings: Vec<String> = drc.findings.iter().filter(|x| x.severity == Severity::Warning && ours(&x.key)).map(|x| x.message.clone()).collect();
+    let mut warnings: Vec<String> = Vec::new();
+    let silk_side = if side == DocSide::Bottom {
+        solidcraft_doc::ecad::layers::DrawLayer::SilkscreenBottom
+    } else {
+        solidcraft_doc::ecad::layers::DrawLayer::SilkscreenTop
+    };
+    let limit = board.rules.silk_to_pad;
+    for g in ours.iter().filter(|g| g.layer == silk_side) {
+        let Some(core) = rect(g) else { continue };
+        for p in nets.pads.iter().filter(|p| if side == DocSide::Bottom { p.bottom } else { p.top }) {
+            let gap = solidcraft_doc::ecad::checks::gap(&core, &solidcraft_doc::ecad::copper::pad_core(p));
+            if gap < limit - 1e-9 && warnings.len() < 16 {
+                warnings.push(format!(
+                    "the marking's silkscreen comes {} mm from pad {} (keep {} mm)",
+                    round3(gap.max(0.0)),
+                    p.reference(),
+                    round3(limit)
+                ));
+            }
+        }
+    }
     let lines: Vec<String> = board
         .graphics
         .iter()
