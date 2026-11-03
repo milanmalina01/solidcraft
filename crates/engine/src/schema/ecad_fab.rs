@@ -8,7 +8,6 @@ use serde::{Deserialize, Serialize};
 
 /// `ecad.board.export.gerber` and `ecad.board.export.drill`: write the files into a folder.
 #[derive(Debug, Deserialize, JsonSchema)]
-#[serde(deny_unknown_fields)]
 #[schemars(deny_unknown_fields)]
 pub struct FabExportParams {
     /// A folder; it is made when missing.
@@ -19,7 +18,6 @@ pub struct FabExportParams {
 
 /// `ecad.board.export.jlc`: the fab zip, the parts list and the placement list.
 #[derive(Debug, Deserialize, JsonSchema)]
-#[serde(deny_unknown_fields)]
 #[schemars(deny_unknown_fields)]
 pub struct JlcExportParams {
     /// The zip (`out/board.zip`); the parts and placement lists go beside it
@@ -33,7 +31,6 @@ pub struct JlcExportParams {
 
 /// `ecad.board.verify_outputs`: read the files back and compare them with the board.
 #[derive(Debug, Default, Deserialize, JsonSchema)]
-#[serde(deny_unknown_fields)]
 #[schemars(deny_unknown_fields)]
 pub struct VerifyOutputsParams {
     /// A zip or a folder of the files; left out, they are made in memory as an export would.
@@ -43,7 +40,6 @@ pub struct VerifyOutputsParams {
 /// `ecad.board.cpl_rotation`: set or clear a library footprint's rotation offset for the
 /// placement list.
 #[derive(Debug, Deserialize, JsonSchema)]
-#[serde(deny_unknown_fields)]
 #[schemars(deny_unknown_fields)]
 pub struct CplRotationParams {
     /// The library footprint's name.

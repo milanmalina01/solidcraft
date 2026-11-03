@@ -413,8 +413,13 @@ fn hostile_electronics_params_never_panic() {
                                 _ => {}
                             }
                         };
+                        // The fab exports write files: a whole hostile list such as ["origin", "origin"]
+                        // reads as their path and stem, so they get the hostile values key by key only.
+                        let writes = matches!(*id, "ecad.board.export.gerber" | "ecad.board.export.drill" | "ecad.board.export.jlc");
                         for junk in crate::tests::hostile_values() {
-                            try_one(&junk);
+                            if !writes {
+                                try_one(&junk);
+                            }
                             for k in names.iter().filter(|k| k.as_str() != "path") {
                                 try_one(&Value::Object([(k.clone(), junk.clone())].into_iter().collect()));
                             }
