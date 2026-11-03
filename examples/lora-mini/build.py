@@ -35,7 +35,7 @@ PLACE = {
     "U1": ([-16.6, -1.0], 270),  # the antenna end 0.4 mm in from the left edge
     "U2": ([5.0, 1.0], 0),
     "J3": ([-4.4, -11.6], 180),  # below the E22, the signal pin up
-    "C5": ([-5.3, -0.4], 0),
+    "C5": ([-6.0, -0.4], 90),  # beside U1.19, upright to leave the channel free
     "C6": ([-3.6, 5.0], 90),
     "C7": ([14.6, 5.6], 270),
     "C8": ([14.6, 2.6], 90),
@@ -49,7 +49,7 @@ PLACE = {
     "R4": ([15.6, 7.8], 0),
     "D1": ([18.6, 7.8], 0),
     "J2": ([21.5, 13.0], 0),  # the battery plug from the top edge
-    "C2": ([21.9, 7.8], 0),
+    "C2": ([21.8, 7.8], 0),
     "SW1": ([24.0, 3.0], 270),  # the lever out of the right edge
     "U3": ([19.0, 3.0], 0),
     "C3": ([19.0, 6.0], 0),

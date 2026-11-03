@@ -23,8 +23,9 @@ SIGNAL_MARGIN = CLEARANCE + 0.1 + G / 2
 EDGE = 0.3 + WIDEST / 2 + G
 # A signal track's centre from an unplated hole: the edge clearance, half the width, half a cell.
 HOLE_SIG = 0.3 + 0.1 + G / 2
-# The ground-only band beside the RF line, past max(2W, 3h) = 4.59 mm.
-RF_ZONE = 4.7
+# The ground-only band beside the RF line, wide enough for the pour to fill it (the 0.25 mm
+# coplanar gap, a strip of pour, the clearance), so the line's nearest neighbour is ground.
+RF_ZONE = 1.5
 VIA_COST = 50.0
 # The cells round a via that must be free: its 0.3 mm radius and a 0.15 mm hair past a pad.
 VIA_REACH = range(-int(0.45 / G), int(0.45 / G) + 1)
