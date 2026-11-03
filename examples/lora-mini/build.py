@@ -57,7 +57,7 @@ PLACE = {
     "R6": ([15.5, -2.1], 90),
     "R7": ([15.5, -5.1], 90),
     "C9": ([17.1, -3.6], 90),
-    "J4": ([-14.35, -14.5], 270),  # 6 pins along the bottom edge, under U1's GPS pins
+    "J4": ([-14.75, -14.5], 270),  # 6 pins along the bottom edge, under U1's GPS pins
     "Q1": ([-9.0, -10.3], 0),
     "R8": ([-11.6, -10.4], 90),
     "C10": ([-6.1, -14.5], 90),
@@ -264,6 +264,22 @@ def main():
         ("ecad.board.labels", {"mode": "fit"}),
         ("ecad.board.marking", {"side": "bottom", "at": [-12.0, 8.0], "number": "01",
                                 "template": {"part_number": "LMN-MINI-{number}-{revision}", "serial_box": True, "qr": True}}),
+    ]
+    # A first rule check; the clearance errors it can fix by narrowing a track (the router's
+    # corners inside a pad) are fixed with the check's own suggestion, then everything is checked.
+    mid = os.path.join(OUT, "phase2.sc")
+    first = results_of(run(script + [("ecad.drc.inspect", {})], "phase2a", start=phase1_sc, save=mid))[-1]
+    first = first.get("result", first) if isinstance(first, dict) else first
+    fixes = []
+    for f in first.get("findings", []):
+        if f.get("severity") == "error" and f.get("code") == "clearance":
+            for fx in f.get("fix", []):
+                if fx.get("command") == "ecad.board.track.edit" and fx.get("params"):
+                    fixes.append(("ecad.board.track.edit", fx["params"]))
+                    break
+    if fixes:
+        print("fixing", len(fixes), "clearance errors with the check's own suggestion")
+    script = fixes + [
         ("ecad.drc.inspect", {}),
         ("ecad.quality.inspect", {}),
         ("ecad.erc.inspect", {}),
@@ -273,7 +289,7 @@ def main():
         ("ecad.export.pages", {"format": "pdf", "path": os.path.join(OUT, "lora-mini.pdf")}),
     ]
     final = os.path.join(HERE, "lora-mini.sc")
-    res2 = results_of(run(script, "phase2", start=phase1_sc, save=final))
+    res2 = results_of(run(script, "phase2", start=mid, save=final))
     tail = [r.get("result", r) if isinstance(r, dict) else r for r in res2[-8:]]
     names = ["drc", "quality", "erc", "check", "jlc", "verify", "pdf"]
     report = dict(zip(names, tail[-7:]))

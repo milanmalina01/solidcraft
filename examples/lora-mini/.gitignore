@@ -2,6 +2,7 @@
 out/*.json
 !out/report.json
 out/phase1.sc*
+out/phase2.sc*
 out/routes-*.json
 *.sc.bak
 __pycache__/

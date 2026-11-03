@@ -217,7 +217,7 @@ def route_board(board, footprints, rf_width, circuit):
             d = q.get("drill", 0.6)
             d = max(d) if isinstance(d, list) else d
             for l in (0, 1):
-                b.mark(l, seg_test(at, at, d / 2), ((at[0] - d, at[1] - d), (at[0] + d, at[1] + d)), MULTI, 0.6, HOLE_SIG)
+                b.mark(l, seg_test(at, at, d / 2), ((at[0] - d, at[1] - d), (at[0] + d, at[1] + d)), MULTI, 0.6, HOLE_SIG if q.get("kind") == "hole" else None)
     for hole in board.get("holes", []):
         at, d = hole["at"], hole["drill"]
         for l in (0, 1):
