@@ -9,9 +9,9 @@ use crate::schema::{ParamCheck, input_schema_for, output_schema_for};
 fn schemas_and_the_key_check_agree() {
     assert_keys(
         input_schema_for::<CreateParams>(),
-        &["description", "footprint", "manufacturer", "mpn", "name", "package", "prefix", "symbol", "value"],
+        &["description", "footprint", "lcsc", "manufacturer", "mpn", "name", "package", "prefix", "symbol", "value"],
     );
-    assert_keys(input_schema_for::<EditParams>(), &["component", "description", "manufacturer", "mpn", "name", "prefix", "symbol", "value"]);
+    assert_keys(input_schema_for::<EditParams>(), &["component", "description", "lcsc", "manufacturer", "mpn", "name", "prefix", "symbol", "value"]);
     assert_keys(input_schema_for::<CopyParams>(), &["component", "name"]);
     assert_keys(input_schema_for::<DeleteParams>(), &["components", "with_parts"]);
     assert_keys(input_schema_for::<InspectParams>(), &["component"]);
