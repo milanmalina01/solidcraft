@@ -57,7 +57,7 @@ pub static COMMANDS: &[CommandSpec] = &[
             "path? (the .zip ecad.board.export.jlc wrote; left out, the files are made in memory) → {ok, copper_layers, expected_layers, pads, opens, shorts, plated: [board, files], unplated, problems}: the Gerber copper and the drill files read back; every two pads the board joins must be joined by the files' copper and plated holes, no two it keeps apart may be, and every layer and hole must be there. Read-only",
         ),
     CommandSpec::new("ecad.board.cpl_rotation", "Placement Rotation", crate::checked!("ecad.board.cpl_rotation", cpl_rotation))
-        .icon("rotate")
+        .icon("spin")
         .doc_only()
         .contract(&ROTATION_CONTRACT)
         .output(output_schema_for::<CplRotationResult>)
