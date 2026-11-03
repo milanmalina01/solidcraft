@@ -854,7 +854,20 @@ fn hostile_params_never_panic() {
     let ids: Vec<&str> = command_specs()
         .iter()
         .map(|spec| spec.id)
-        .filter(|id| !matches!(*id, "doc.open" | "file.save" | "file.save_as" | "file.export" | "file.save_mesh" | "sketch.export_dxf")) // file system side effects are covered by their own tests
+        .filter(|id| {
+            !matches!(
+                *id,
+                "doc.open"
+                    | "file.save"
+                    | "file.save_as"
+                    | "file.export"
+                    | "file.save_mesh"
+                    | "sketch.export_dxf"
+                    | "ecad.board.export.gerber"
+                    | "ecad.board.export.drill"
+                    | "ecad.board.export.jlc"
+            )
+        }) // file system side effects are covered by their own tests
         .collect();
     let next = std::sync::atomic::AtomicUsize::new(0);
     let threads = std::thread::available_parallelism().map_or(4, |n| n.get());
