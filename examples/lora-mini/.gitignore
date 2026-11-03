@@ -1,0 +1,7 @@
+# build.py's working files; the outputs it keeps are listed in ATTRIBUTION.md.
+out/*.json
+!out/report.json
+out/phase1.sc*
+out/routes-*.json
+*.sc.bak
+__pycache__/
