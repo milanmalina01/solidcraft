@@ -263,7 +263,7 @@ def route_board(board, footprints, rf_width, circuit):
     base = (b, list(commands))
     best = None
     order = None
-    for attempt in range(6):
+    for attempt in range(10):
         b = copy_board(base[0])
         commands = list(base[1])
         failed, order = route_nets(b, nets, pad_at, circuit, commands, order)
