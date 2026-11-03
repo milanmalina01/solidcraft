@@ -187,6 +187,8 @@ fn generators_refuse_what_they_cannot_draw() {
         (json!({"package": "header", "pins": 6, "rows": 3}), "1 or 2"),
         (json!({"package": "sot23", "pitch": -1}), "`pitch`"),
         (json!({"package": "sot23", "toe": 9}), "`toe`"),
+        (json!({"package": "sot23", "pins": 5}), "`pins` 5"),
+        (json!({"package": "chip", "size": "0603", "pins": 3}), "`pins` 3"),
         (json!({"package": "chip", "size": "0603", "lead": 1.0}), "shorter than half"),
         (json!({"package": "dip", "pins": 4000}), "1 to 1024"),
     ] {

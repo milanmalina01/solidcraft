@@ -87,6 +87,14 @@ fn land(cmd: &str, p: &FootprintParams, [toe, heel, side]: [f64; 3]) -> Result<L
 }
 
 fn drawn(cmd: &str, p: &FootprintParams) -> Result<Drawn> {
+    // A chip has two terminals and the SOT-23 three: another count was a different package.
+    match (p.package, p.pins) {
+        (Package::Chip, Some(n)) if n != 2 => return Err(bad(cmd, format!("a chip has 2 terminals, not `pins` {n}"))),
+        (Package::Sot23, Some(n)) if n != 3 => {
+            return Err(bad(cmd, format!("sot23 draws the 3-lead SOT-23, not `pins` {n}: give a SOT-23-5 or -6 its pads with ecad.pad.add")));
+        }
+        _ => {}
+    }
     Ok(match p.package {
         Package::Chip => {
             let code = p.size.as_deref().unwrap_or_default();
