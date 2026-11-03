@@ -15,7 +15,7 @@ EU868 LoRa, USB-C charging of a single-cell LiPo, and a header for a GPS module.
   for the assembly order; `out/lora-mini.pdf` every printed page; `out/report.json` the checks'
   results.
 
-Build it again (about a quarter of an hour, most of it routing):
+Build it again (20 to 40 minutes, most of it routing):
 
 ```bash
 cargo build --profile ci -p solidcraft-cli
@@ -53,6 +53,15 @@ waveguide, 0.25 mm gaps). Design intent: the EU868 band (863-870 MHz) and 2.4 GH
 
 The LCSC numbers came from search results on 2026-11-02; stock and the basic/extended class
 change, so check each before ordering.
+
+## Where it stands
+
+The last build (`out/report.json`): the rule check has 0 errors, the quality checks no critical
+finding, the electrical check 0 errors, and `ecad.board.verify_outputs` rebuilds the same nets
+from the written Gerber and drill files. The small router in `route.py` leaves 4 connections
+unrouted: SWDIO (J5.3), VBUS at C1.1 and USB D+ (J1.B6 and U1.31). They show as unrouted in
+the rule check and the release gate; route them in the board editor (or improve `route.py`)
+before ordering: without USB D+ the board cannot be programmed over USB.
 
 ## Check before ordering
 
