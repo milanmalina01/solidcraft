@@ -254,10 +254,11 @@ def route_board(board, footprints, circuit, passes=10):
     for attempt in range(passes):
         b = copy_board(base[0])
         commands = list(base[1])
-        failed, order = route_nets(b, nets, pad_at, circuit, commands, order)
+        records, fails = [], []
+        failed, order = route_nets(b, nets, pad_at, circuit, commands, order, records, fails)
         print(f"pass {attempt + 1}: {len(failed)} connections unrouted")
         if best is None or len(failed) < len(best[0]):
-            best = (failed, commands)
+            best = (failed, commands, b, records, fails)
         if not failed:
             break
         # Rip up and route again, what failed first; when a pass did no better than the best, the
@@ -271,7 +272,13 @@ def route_board(board, footprints, circuit, passes=10):
         if len(failed) >= len(best[0]) and attempt % 2 == 1:
             rest = rest[::-1]
         order = bad + rest
-    failed, commands = best
+    failed, commands, b, records, fails = best
+    if fails:
+        # What the passes left: rip up what blocks each, route it, route the ripped ones again,
+        # kept only when fewer connections are left unrouted.
+        b, records, fails = rescue(base[0], b, records, fails, pad_at)
+        commands = list(base[1]) + [r["cmd"] for r in records]
+        failed = [f"{f['name']}: {f['src']}" for f in fails] + [f for f in failed if f.startswith("GND")]
     if failed:
         print("unrouted:", ", ".join(failed))
     return commands
@@ -289,7 +296,11 @@ def copy_board(b0):
     return b
 
 
-def route_nets(b, nets, pad_at, circuit, commands, order):
+def route_nets(b, nets, pad_at, circuit, commands, order, records=None, fails=None):
+    """Route every net in `order`; each route made goes to `records` (to replay or rip up), each
+    connection that failed to `fails`."""
+    records = [] if records is None else records
+    fails = [] if fails is None else fails
     def span(pins):
         pts = [pad_at[p][1] for p in pins if p in pad_at]
         return max((math.dist(a, c) for a in pts for c in pts), default=0)
@@ -312,12 +323,13 @@ def route_nets(b, nets, pad_at, circuit, commands, order):
         legs = tidy(b, g, path)
         commands.append(track_command(b, legs, 0.3))
         commit(b, legs, 0.3, g)
+        records.append({"kind": "link", "name": "GND", "src": a_ref, "goals": [z_ref], "width": 0.3, "legs": legs, "cmd": commands[-1]})
     escaped = False
     for name in order:
         # The ground escapes once the USB-C's own lines are in, before the rest crowd them.
         if not escaped and name not in ("USB_DP", "USB_DN", "CC1", "CC2"):
             escaped = True
-            ground_escapes(b, pad_at, circuit, commands, failed)
+            ground_escapes(b, pad_at, circuit, commands, failed, records)
         pins = [p for p in nets[name] if p in pad_at]
         width = circuit.POWER_WIDTH if name in circuit.RAILS else circuit.SIGNAL_WIDTH
         b.signal = width <= circuit.SIGNAL_WIDTH
@@ -333,18 +345,20 @@ def route_nets(b, nets, pad_at, circuit, commands, order):
             path = search(b, n, pad_at[src], width, [pad_at[d][1] for d in done], attract=attract)
             if path is None:
                 failed.append(f"{name}: {src}")
+                fails.append({"name": name, "src": src, "goals": list(done), "width": width})
                 done.append(src)
                 continue
             legs = tidy(b, n, path)
             commands.append(track_command(b, legs, width))
             commit(b, legs, width, n)
+            records.append({"kind": "conn", "name": name, "src": src, "goals": list(done), "width": width, "legs": legs, "cmd": commands[-1]})
             done.append(src)
     if not escaped:
-        ground_escapes(b, pad_at, circuit, commands, failed)
+        ground_escapes(b, pad_at, circuit, commands, failed, records)
     return failed, order
 
 
-def ground_escapes(b, pad_at, circuit, commands, failed):
+def ground_escapes(b, pad_at, circuit, commands, failed, records=None):
     """Ground pads the pours may not reach between tracks: a short track to a via each."""
     g = b.net("GND")
     signal = b.signal
@@ -361,17 +375,27 @@ def ground_escapes(b, pad_at, circuit, commands, failed):
         cmd[1]["via"] = {}
         commands.append(cmd)
         commit(b, legs, 0.3, g)
-        end = b.xy(path[-1][1], path[-1][2])
-        b.vias.append((path[-1][1], path[-1][2]))
-        for ll in (0, 1):
-            add_track(b, ll, end, end, 0.6, g)
+        end_via(b, (path[-1][1], path[-1][2]), g)
+        if records is not None:
+            records.append({"kind": "escape", "name": "GND", "src": ref, "goals": [], "width": 0.3, "legs": legs, "cmd": cmd})
     b.signal = signal
 
 
-def search(b, net, src, width, goals, only=None, attract=None):
+def end_via(b, cell, net):
+    """A via at the cell, ending an escape."""
+    end = b.xy(*cell)
+    b.vias.append(tuple(cell))
+    for ll in (0, 1):
+        add_track(b, ll, end, end, 0.6, net)
+
+
+def search(b, net, src, width, goals, only=None, attract=None, fixed=None):
     """A path from the pad `src` to copper of `net`, as [(layer, i, j)]; None when there is none.
     With `attract`, cells hugging that net's keep-out cost less (a pair's second line)."""
     _, at, half, angle, layers, shape = src
+    # The board whose cells are open: the fixed one in a rip-up search, where cells routes hold
+    # on `b` cost RIP_COST more.
+    P = fixed if fixed is not None else b
     starts = []
     test = pad_test(at, [max(half[0] - G, G / 2), max(half[1] - G, G / 2)], angle, shape)
     i0, j0 = b.cell(at[0], at[1])
@@ -379,7 +403,7 @@ def search(b, net, src, width, goals, only=None, attract=None):
     for l in layers:
         for j in range(j0 - r, j0 + r + 1):
             for i in range(i0 - r, i0 + r + 1):
-                if b.inside(i, j) and test(*b.xy(i, j), 0.0) and b.passable(l, b.idx(i, j), net):
+                if b.inside(i, j) and test(*b.xy(i, j), 0.0) and P.passable(l, b.idx(i, j), net):
                     starts.append((l, i, j))
     if not starts:
         return None
@@ -430,11 +454,13 @@ def search(b, net, src, width, goals, only=None, attract=None):
             if not (lo_i <= ni <= hi_i and lo_j <= nj <= hi_j and b.inside(ni, nj)):
                 continue
             nk = b.idx(ni, nj)
-            if not b.passable(l, nk, net):
+            if not P.passable(l, nk, net):
                 continue
             # A diagonal step may not cut a blocked corner.
-            if di and dj and not (b.passable(l, b.idx(i + di, j), net) and b.passable(l, b.idx(i, j + dj), net)):
+            if di and dj and not (P.passable(l, b.idx(i + di, j), net) and P.passable(l, b.idx(i, j + dj), net)):
                 continue
+            if fixed is not None and not b.passable(l, nk, net):
+                dc += RIP_COST
             t = (l, ni, nj)
             h0 = heading.get(s)
             if h0 is not None and h0 != (di, dj):
@@ -453,12 +479,13 @@ def search(b, net, src, width, goals, only=None, attract=None):
         if b.own[0][k] == 0 and b.own[1][k] == 0:
             # Clear of every pad (its own too: no via in a pad), of other nets on both layers and
             # of other vias' holes.
-            ok = via_ok(b, i, j, net)
+            ok = via_ok(P, i, j, net)
+            vc = VIA_COST + (RIP_COST * 4 if fixed is not None and ok and not via_ok(b, i, j, net) else 0.0)
             t = (o, i, j)
-            if ok and c + VIA_COST < cost.get(t, 1e18):
-                cost[t] = c + VIA_COST
+            if ok and c + vc < cost.get(t, 1e18):
+                cost[t] = c + vc
                 prev[t] = s
-                heapq.heappush(openq, (c + VIA_COST + heur(i, j), t))
+                heapq.heappush(openq, (c + vc + heur(i, j), t))
     return None
 
 
@@ -629,3 +656,125 @@ def track_command(b, legs, width):
                 entry["via"] = {}
             cmd["legs"].append(entry)
     return ("ecad.board.track", cmd)
+
+
+# A cell another route holds costs this many steps in the rip-up search (pads and the rest of the
+# fixed board stay closed).
+RIP_COST = 40.0
+
+
+def replay(b, r):
+    """A recorded route's copper on the board `b` (made from the fixed board)."""
+    n = b.net(r["name"])
+    b.signal = r["width"] <= 0.2
+    commit(b, r["legs"], r["width"], n)
+    if r["kind"] == "escape":
+        l, pts = r["legs"][-1]
+        end_via(b, pts[-1], n)
+
+
+def rebuild(fixed, records):
+    b = copy_board(fixed)
+    for r in records:
+        replay(b, r)
+    return b
+
+
+def route_one(b, pad_at, f, fixed=None):
+    """One connection on `b` as a searched path, or None. With `fixed` (the board before any
+    route), cells other routes hold are open at a cost: the rip-up search."""
+    n = b.net(f["name"])
+    b.signal = f["width"] <= 0.2
+    if fixed is not None:
+        fixed.signal = b.signal
+    attract = b.nets.get(PAIRS[f["name"]]) if f["name"] in PAIRS else None
+    return search(b, n, pad_at[f["src"]], f["width"], [pad_at[d][1] for d in f["goals"]], attract=attract, fixed=fixed)
+
+
+def hits(b, path, net, records):
+    """The recorded routes whose copper holds a cell of `path` that `net` may not use on `b`."""
+    out = set()
+    cells = [(l, b.xy(i, j)) for l, i, j in path if not b.passable(l, b.idx(i, j), net)]
+    for k, r in enumerate(records):
+        if r["name"] == "GND" and r["kind"] == "link":
+            continue
+        reach = r["width"] / 2 + MARGIN + G
+        for l, pts in r["legs"]:
+            seg = [b.xy(*p) for p in pts]
+            for lc, (x, y) in cells:
+                if lc != l and not (len(seg) == 1):
+                    continue
+                for a, c in zip(seg, seg[1:] or seg):
+                    if seg_test(a, c, reach)(x, y, 0.0):
+                        out.add(k)
+                        break
+                if k in out:
+                    break
+            if k in out:
+                break
+        # Its vias, on both layers.
+        if k not in out:
+            vs = [b.xy(*pts[0]) for l, pts in r["legs"][1:]] + ([b.xy(*r["legs"][-1][1][-1])] if r["kind"] == "escape" else [])
+            for v in vs:
+                if any(math.dist(v, (x, y)) <= 0.3 + MARGIN + G for _, (x, y) in cells):
+                    out.add(k)
+                    break
+    return out
+
+
+def rescue(fixed, b, records, fails, pad_at, rounds=3):
+    for _ in range(rounds):
+        better = False
+        for f in list(fails):
+            n = b.net(f["name"])
+            path = route_one(b, pad_at, f, fixed=fixed)
+            if path is None:
+                continue
+            victims = hits(b, path, n, records)
+            if not victims:
+                continue
+            kept = [r for k, r in enumerate(records) if k not in victims]
+            ripped = [r for k, r in enumerate(records) if k in victims]
+            b2 = rebuild(fixed, kept)
+            new_records = list(kept)
+            path2 = route_one(b2, pad_at, f)
+            if path2 is None:
+                continue
+            legs = tidy(b2, n, path2)
+            new_records.append({"kind": "conn", "name": f["name"], "src": f["src"], "goals": f["goals"], "width": f["width"],
+                                "legs": legs, "cmd": track_command(b2, legs, f["width"])})
+            commit(b2, legs, f["width"], n)
+            lost = []
+            for r in ripped:
+                if r["kind"] == "escape":
+                    g = b2.net("GND")
+                    b2.signal = False
+                    p = escape(b2, g, pad_at[r["src"]], 0.3)
+                    if p is None:
+                        lost.append(r)
+                        continue
+                    lg = tidy(b2, g, p)
+                    cmd = track_command(b2, lg, 0.3)
+                    cmd[1]["via"] = {}
+                    commit(b2, lg, 0.3, g)
+                    end_via(b2, (p[-1][1], p[-1][2]), g)
+                    new_records.append({**r, "legs": lg, "cmd": cmd})
+                    continue
+                p = route_one(b2, pad_at, r)
+                if p is None:
+                    lost.append(r)
+                    continue
+                rn = b2.net(r["name"])
+                lg = tidy(b2, rn, p)
+                commit(b2, lg, r["width"], rn)
+                new_records.append({**r, "legs": lg, "cmd": track_command(b2, lg, r["width"])})
+            # Escapes lost count less than connections: a pad still has the pour.
+            lost_conns = [r for r in lost if r["kind"] != "escape"]
+            if not lost_conns and len(lost) <= 1:
+                fails = [x for x in fails if x is not f] + [{k: r[k] for k in ("name", "src", "goals", "width")} for r in lost_conns]
+                b, records = b2, new_records
+                better = True
+                print(f"rescued {f['name']}: {f['src']} (ripped {len(ripped)} routes)")
+        if not better or not fails:
+            break
+    return b, records, fails
