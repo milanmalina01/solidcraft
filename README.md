@@ -1,3 +1,17 @@
+> [!NOTE]
+> **This is a work-in-progress fork of [SolidCraft](https://github.com/tangency-labs/solidcraft) that adds an electronics (PCB) workspace.**
+> It was built by Milan Malina directing AI coding agents (Claude Code), and it is still rough in places. Nothing here has been built as a physical board yet. The original project's README follows below.
+>
+> **What this fork adds so far:**
+> - Schematic capture with component libraries, standard symbols, electrical checks and section frames
+> - PCB layout: multilayer routing, copper pours, keepouts, net classes, a current-capacity calculator and impedance tools
+> - Ground stitching vias, including a ground connectivity heat map that places vias where ground is weakest
+> - Design rule checks, manufacturability checks and PCB design-quality checks (return paths, decoupling, RF, crystals, ESD and more), which AI agents can also run and act on
+> - Print-ready PDF export: cover page, schematic sections with cross-references, block diagram, power tree, parts list and board pages
+> - JLCPCB ordering files: Gerber, drill, BOM and placement lists
+>
+> **See it:** the [LoRa Mesh Node Mini](examples/lora-mini/) example and its [PDF](examples/lora-mini/out/lora-mini.pdf). This test board is not finished: 4 connections are still unrouted, and its footprints and parts have not been fully verified.
+
 <p align="center">
   <img src="assets/icons/app/linux/exports/hicolor/256x256/apps/io.tangencylabs.solidcraft.png" width="96" height="96" alt="SolidCraft" />
 </p>
