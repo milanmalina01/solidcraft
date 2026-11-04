@@ -344,18 +344,18 @@ def route_nets(b, nets, pad_at, circuit, commands, order, records=None, fails=No
         while rest:
             src = min(rest, key=lambda p: min(math.dist(pad_at[p][1], pad_at[d][1]) for d in done))
             rest.remove(src)
-            path = search(b, n, pad_at[src], width, [pad_at[d][1] for d in done], attract=attract)
+            avoid = [pad_at[p] for p in rest]
+            path = search(b, n, pad_at[src], width, [pad_at[d][1] for d in done], attract=attract, avoid=avoid)
             if path is None and fixed is not None:
-                path = free_path(b, fixed, n, search(b, n, pad_at[src], width, [pad_at[d][1] for d in done], attract=attract, fixed=fixed))
+                path = free_path(b, fixed, n, search(b, n, pad_at[src], width, [pad_at[d][1] for d in done], attract=attract, fixed=fixed, avoid=avoid))
             if path is None:
                 failed.append(f"{name}: {src}")
-                fails.append({"name": name, "src": src, "goals": list(done), "width": width})
-                done.append(src)
+                fails.append({"name": name, "src": src, "goals": list(done), "width": width, "unjoined": list(rest)})
                 continue
             legs = tidy(b, n, path)
             commands.append(track_command(b, legs, width))
             commit(b, legs, width, n)
-            records.append({"kind": "conn", "name": name, "src": src, "goals": list(done), "width": width, "legs": legs, "cmd": commands[-1]})
+            records.append({"kind": "conn", "name": name, "src": src, "goals": list(done), "width": width, "unjoined": list(rest), "legs": legs, "cmd": commands[-1]})
             done.append(src)
     if not escaped:
         ground_escapes(b, pad_at, circuit, commands, failed, records)
@@ -393,7 +393,7 @@ def end_via(b, cell, net):
         add_track(b, ll, end, end, 0.6, net)
 
 
-def search(b, net, src, width, goals, only=None, attract=None, fixed=None):
+def search(b, net, src, width, goals, only=None, attract=None, fixed=None, avoid=()):
     """A path from the pad `src` to copper of `net`, as [(layer, i, j)]; None when there is none.
     With `attract`, cells hugging that net's keep-out cost less (a pair's second line)."""
     _, at, half, angle, layers, shape = src
@@ -422,6 +422,19 @@ def search(b, net, src, width, goals, only=None, attract=None, fixed=None):
         return min(max(abs(i - gi), abs(j - gj)) + 0.414 * min(abs(i - gi), abs(j - gj)) for gi, gj in goal_cells)
 
     own_start = set((l, b.idx(i, j)) for l, i, j in starts)
+    # The net's pads not joined yet are its copper but not a goal: ending there would leave the
+    # net in two pieces.
+    unjoined = set()
+    for pad in avoid:
+        _, pat, phalf, pangle, players, pshape = pad
+        ptest = pad_test(pat, phalf, pangle, pshape)
+        pr = int(math.hypot(*phalf) / G) + 2
+        pi, pj = b.cell(*pat)
+        for jj in range(pj - pr, pj + pr + 1):
+            for ii in range(pi - pr, pi + pr + 1):
+                if b.inside(ii, jj) and ptest(*b.xy(ii, jj), 0.0):
+                    for pl in players:
+                        unjoined.add((pl, b.idx(ii, jj)))
     openq = []
     cost = {}
     prev = {}
@@ -447,7 +460,7 @@ def search(b, net, src, width, goals, only=None, attract=None, fixed=None):
             continue
         l, i, j = s
         k = b.idx(i, j)
-        if b.own[l][k] == net and (l, k) not in own_start and (only is None or in_pad(b, only, i, j, l)):
+        if b.own[l][k] == net and (l, k) not in own_start and (l, k) not in unjoined and (only is None or in_pad(b, only, i, j, l)):
             path = [s]
             while path[-1] in prev:
                 path.append(prev[path[-1]])
@@ -724,7 +737,8 @@ def route_one(b, pad_at, f, fixed=None):
     if fixed is not None:
         fixed.signal = b.signal
     attract = b.nets.get(PAIRS[f["name"]]) if f["name"] in PAIRS else None
-    return search(b, n, pad_at[f["src"]], f["width"], [pad_at[d][1] for d in f["goals"]], attract=attract, fixed=fixed)
+    avoid = [pad_at[p] for p in f.get("unjoined", ())]
+    return search(b, n, pad_at[f["src"]], f["width"], [pad_at[d][1] for d in f["goals"]], attract=attract, fixed=fixed, avoid=avoid)
 
 
 def hits(b, path, net, records):
@@ -779,14 +793,14 @@ def route_net(b, name, pins, width, pad_at, fixed):
     while rest:
         src = min(rest, key=lambda p: min(math.dist(pad_at[p][1], pad_at[d][1]) for d in done))
         rest.remove(src)
-        f = {"name": name, "src": src, "goals": list(done), "width": width}
+        f = {"name": name, "src": src, "goals": list(done), "width": width, "unjoined": list(rest)}
         path = route_valid(b, pad_at, f, fixed)
         if path is None:
             failed.append(f)
-        else:
-            legs = tidy(b, n, path)
-            commit(b, legs, width, n)
-            recs.append({"kind": "conn", **f, "legs": legs, "cmd": track_command(b, legs, width)})
+            continue
+        legs = tidy(b, n, path)
+        commit(b, legs, width, n)
+        recs.append({"kind": "conn", **f, "legs": legs, "cmd": track_command(b, legs, width)})
         done.append(src)
     return recs, failed
 
