@@ -310,7 +310,7 @@ def route_nets(b, nets, pad_at, circuit, commands, order, records=None, fails=No
     # The 3V3 trunk first (it reaches both modules), then the other rails, then the signals,
     # shortest first; on a later pass, what failed before goes first.
     if order is None:
-        first = ["USB_DP", "USB_DN", "CC1", "CC2", "3V3", "VBUS", "VBAT", "VSYS", "3V3_GPS"]
+        first = ["USB_DP", "USB_DN", "VBUS", "CC1", "CC2", "3V3", "VBAT", "VSYS", "3V3_GPS"]
         order = [n for n in first if n in nets] + sorted((n for n in nets if n not in first), key=lambda n: span(nets[n]))
     # The ground links (see circuit.GND_LINKS) before anything else.
     g = b.net("GND")

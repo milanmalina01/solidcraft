@@ -34,7 +34,7 @@ BOARD_W, BOARD_H = 52.0, 34.0
 PLACE = {
     "U1": ([-16.6, -1.0], 270),  # the antenna end 0.4 mm in from the left edge
     "U2": ([5.0, 1.0], 0),
-    "C5": ([-6.0, -0.4], 90),  # beside U1.19, upright to leave the channel free
+    "C5": ([-6.05, 1.9], 90),  # beside U1.19, between U1.21 and U1.23, clear of the SPI lines
     "C6": ([-3.6, 5.0], 90),
     "C7": ([14.6, 5.6], 270),
     "C8": ([14.6, 2.6], 90),
