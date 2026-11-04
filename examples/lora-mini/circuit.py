@@ -227,7 +227,8 @@ GND_ESCAPES = ["U1.5", "U1.21", "J5.4", "U2.1", "U2.11", "U2.12", "U2.20", "U2.2
 GND_LINKS = [("J1.A1", "R1.2"), ("J1.B1", "R2.2")]
 
 POWER_WIDTH = 0.4
-SIGNAL_WIDTH = 0.2
+SIGNAL_WIDTH = 0.15
+CLEARANCE = 0.15
 
 
 def section_of(pin):

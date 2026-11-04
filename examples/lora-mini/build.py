@@ -139,6 +139,9 @@ def board_setup_commands():
         ("ecad.board.profile", {"fab": "jlcpcb_2layer"}),
         ("ecad.board.outline", {"rect": [BOARD_W, BOARD_H]}),
         ("ecad.board.stack", {"copper_layers": 2, "thickness": 1.6}),
+        # 0.15 mm signal tracks and gaps (6/6 mil, inside JLCPCB's 2-layer standard of 0.10/0.10 at
+        # no extra cost): the room the two modules' fanouts need on two layers.
+        ("ecad.board.rules", {"track_width": circuit.SIGNAL_WIDTH, "clearance": circuit.CLEARANCE}),
         ("ecad.board.netclass", {"name": "Power", "nets": list(circuit.RAILS.keys() - {"GND"}), "track_width": circuit.POWER_WIDTH}),
         ("ecad.board.sync", {}),
     ]

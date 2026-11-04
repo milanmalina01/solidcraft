@@ -17,14 +17,14 @@ import heapq
 import math
 
 G = 0.05  # grid step, mm
-CLEARANCE = 0.2
+CLEARANCE = 0.15
 WIDEST = 0.4
 MARGIN = CLEARANCE + WIDEST / 2 + G / 2
-# What a signal track (0.2 mm) needs round other copper: the clearance, its half width, a hair.
-SIGNAL_MARGIN = CLEARANCE + 0.1 + G / 2
+# What a signal track (0.15 mm) needs round other copper: the clearance, its half width, a hair.
+SIGNAL_MARGIN = CLEARANCE + 0.075 + G / 2
 EDGE = 0.3 + WIDEST / 2 + G
 # A signal track's centre from an unplated hole: the edge clearance, half the width, half a cell.
-HOLE_SIG = 0.3 + 0.1 + G / 2
+HOLE_SIG = 0.3 + 0.075 + G / 2
 VIA_COST = 50.0
 # A 45 degree turn and a sharper one, in cells: enough to prefer long straight runs.
 TURN_45 = 3.0
@@ -680,7 +680,7 @@ RIP_COST = 40.0
 def replay(b, r):
     """A recorded route's copper on the board `b` (made from the fixed board)."""
     n = b.net(r["name"])
-    b.signal = r["width"] <= 0.2
+    b.signal = r["width"] <= 0.15 + 1e-9
     commit(b, r["legs"], r["width"], n)
     if r["kind"] == "escape":
         l, pts = r["legs"][-1]
@@ -720,7 +720,7 @@ def route_one(b, pad_at, f, fixed=None):
     """One connection on `b` as a searched path, or None. With `fixed` (the board before any
     route), cells other routes hold are open at a cost: the rip-up search."""
     n = b.net(f["name"])
-    b.signal = f["width"] <= 0.2
+    b.signal = f["width"] <= 0.15 + 1e-9
     if fixed is not None:
         fixed.signal = b.signal
     attract = b.nets.get(PAIRS[f["name"]]) if f["name"] in PAIRS else None
