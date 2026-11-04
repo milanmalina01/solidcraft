@@ -27,56 +27,95 @@ python3 examples/lora-mini/build.py
 
 ## The board
 
-52 x 34 mm, 2 layers, 1.6 mm, the "JLCPCB 2-layer standard" fab profile, four 2.2 mm holes for
-M2 screws, ground poured on both sides and stitched where the ground map says it is weak, plus a
-fence along the RF line. The E73's ceramic antenna sits at the left edge over a keep-out with no
-copper on either layer. The E22's antenna pin feeds a U.FL through a short coplanar line of the
-width `ecad.board.impedance.inspect` gives for 50 ohm (Wadell's conductor-backed coplanar
-waveguide, 0.25 mm gaps). Design intent: the EU868 band (863-870 MHz) and 2.4 GHz BLE.
+52 x 34 mm, 2 layers, 1.6 mm, the "JLCPCB 2-layer standard" fab profile (its figures read from
+jlcpcb.com's PCB capabilities page on 2026-11-04), 0.15 mm signal tracks and gaps and 0.4 mm power
+tracks, four 2.2 mm holes for M2 screws, ground poured on both sides and stitched where the ground
+map says it is weak. The E73's ceramic antenna sits at the left edge over a keep-out with no copper
+on either layer, the module 0.4 mm inside the edge (Ebyte asks only for the antenna to be clear, not
+to overhang). The E22 carries its own IPEX antenna socket (Ebyte's manual: "IPEX and stamp hole are
+optional"), so the antenna cable plugs into the module: the board has no RF line and no U.FL, and
+the module's ANT stamp pad is left unconnected. Design intent: the EU868 band (863-870 MHz) and
+2.4 GHz BLE.
 
-| Ref | Part | LCSC |
-|---|---|---|
-| U1 | Ebyte E73-2G4M08S1C (nRF52840) | C356849 |
-| U2 | Ebyte E22-900M22S (SX1262, 850-930 MHz) | C411293 |
-| U3 | ME6217C33M5G, 3.3 V LDO, 800 mA | C427602 |
-| U4 | TP4054, 1S Li-ion charger, about 300 mA (RPROG 3.3 kOhm) | C668215 |
-| J1 | TYPE-C-31-M-12 USB-C receptacle | C165948 |
-| J2 | JST S2B-PH-SM4-TB battery connector | C295747 |
-| J3 | Hirose U.FL-R-SMT-1(10) | C88373 |
-| J4 | 1x6 2.54 mm GPS header (3V3 switched, GND, TX, RX, PPS, EN) | none: fit by hand or leave out |
-| J5 | SWD test pads (3V3, SWCLK, SWDIO, GND) | none |
-| SW1 | MSK12C02 slide switch (power) | C431540 |
-| SW2, SW3 | TS-1187A tact switches (user, reset) | C318884 |
-| Q1 | AO3401A P-MOSFET, GPS power | C15127 |
-| D1, D2 | 0603 LEDs, red (charging) and green (status) | C2286, C72043 |
-| R, C | 0603 resistors and capacitors | see the parts list |
+## Parts
 
-The LCSC numbers came from search results on 2026-11-02; stock and the basic/extended class
-change, so check each before ordering.
+Each LCSC number below was checked against JLCPCB's parts library on 2026-11-04 (its parts search;
+class, stock and the price for one): every one is in stock. The cost is for 5 assembled boards: the
+quantity JLCPCB buys (5 per board plus its attrition) at its price break.
 
-## Where it stands
+| Ref | Part | LCSC | Class | Stock | 5 boards |
+|---|---|---|---|---|---|
+| U1 | Ebyte E73-2G4M08S1C (nRF52840) | C356849 | extended | 491 | $38.56 |
+| U2 | Ebyte E22-900M22S (SX1262, 850-930 MHz) | C411293 | extended | 591 | $36.83 |
+| J2 | JST S2B-PH-SM4-TB battery connector | C295747 | extended | 27,567 | $1.13 |
+| J1 | TYPE-C-31-M-12 USB-C receptacle | C165948 | extended | 160,065 | $0.94 |
+| U3 | ME6217C33M5G, 3.3 V LDO, 800 mA | C427602 | extended | 66,389 | $0.88 |
+| Q1 | AO3401A P-MOSFET, GPS power | C15127 | basic | 1,638,203 | $0.87 |
+| SW1 | MSK12C02 slide switch (power) | C431540 | extended | 182,833 | $0.60 |
+| C4, C6, C8 | 10 uF 0603 | C19702 | basic | 10,924,804 | $0.51 |
+| C1, C2, C3 | 4.7 uF 0603 | C19666 | basic | 4,240,572 | $0.38 |
+| SW2, SW3 | TS-1187A tact switches (user, reset) | C318884 | basic | 1,000,870 | $0.37 |
+| U4 | TP4054, 1S Li-ion charger, about 300 mA (RPROG 3.3 kOhm) | C668215 | extended | 22,096 | $0.35 |
+| C10 | 1 uF 0603 | C15849 | basic | 12,109,134 | $0.29 |
+| D2 | KT-0603G green LED (status) | C12624 | extended | 365,366 | $0.25 |
+| C5, C7, C9 | 100 nF 0603 | C14663 | basic | 37,529,957 | $0.23 |
+| D1 | KT-0603R red LED (charging) | C2286 | basic | 6,729,148 | $0.15 |
+| R1-R8 | 0603 resistors (5.1k, 3.3k, 1k, 1M, 100k) | C23186, C22978, C21190, C22935, C25803 | basic | millions | $0.20 |
+| J4 | 1x6 2.54 mm GPS header (3V3 switched, GND, TX, RX, PPS, EN) | none | not assembled | | |
+| J5 | SWD test pads (3V3, SWCLK, SWDIO, GND) | none | not assembled | | |
 
-The last build (`out/report.json`): the rule check has 0 errors, the quality checks no critical
-finding, the electrical check 0 errors, and `ecad.board.verify_outputs` rebuilds the same nets
-from the written Gerber and drill files. The small router in `route.py` leaves 4 connections
-unrouted: SWDIO (J5.3), VBUS at C1.1 and USB D+ (J1.B6 and U1.31). They show as unrouted in
-the rule check and the release gate; route them in the board editor (or improve `route.py`)
-before ordering: without USB D+ the board cannot be programmed over USB.
+Parts: about $82.50 for 5 boards, $75.40 of it the two modules. JLCPCB's assembly fees come on top
+(its price page, updated 2026-10-22: Economic $8.18 setup, $1.53 stencil, $3.07 per extended part;
+Standard $25.56 setup, $8.21 stencil, $1.53 per part; $0.0016 per joint).
 
-## Check before ordering
+The green LED changed: C72043 (19-217/GHC) is out of stock and no longer offered. JLCPCB's basic
+library has no green 0603 LED (its basic LEDs: red and white 0603, green 0805 C2297), so D2 is the
+extended KT-0603G, the red LED's own family.
 
-- The footprints of J1 (USB-C), J2 (JST PH), J3 (U.FL), SW1 and SW2/SW3 are marked VERIFY in
-  `parts.py`: their datasheets could not be read while this was built. Compare each land pattern
-  with the manufacturer's drawing (or the assembler's footprint check) and correct `parts.py`.
-- The E73's 15 inner pads are scaled from Ebyte's drawing (it gives no dimensions for them):
-  about +-0.1 mm. Only its outer pads are used here.
-- The fab profile's figures are search summaries of JLCPCB's capability pages, each marked to
-  verify.
+Cheaper parts that keep the function, not applied: the basic green 0805 LED C2297 or the basic white
+0603 C2290 save D2's extended-part fee (a new footprint for C2297); the SX1262 module Ra-01SH
+(C2764087, $4.58, 2,573 in stock) would save about $2.80 a board but needs its own footprint and
+pinout, and its TCXO and RF switch are not checked here. No basic part keeps the function of the
+modules, the LDO (the basic XC6206 gives 200 mA, the basic AMS1117 drops 1.1 V), the charger, the
+USB-C, the JST or the slide switch.
+
+## Assembly placement
+
+The placement list gives each part at the middle of its pads, which is what the assembler places
+by: the E73's own origin is its body's middle, and its antenna end has no pads, so the module came
+out about 2 mm over the board's edge in JLCPCB's preview while it was placed by its origin. The
+footprints drawn turned from JLCPCB's reference for the part carry a rotation offset, kept with the
+library footprint (`ecad.board.cpl_rotation`, in `parts.py`): USB-C, JST and slide switch 180
+degrees, SOT-23 and SOT-23-5 -90 degrees, taken from JLCPCB's preview of the first order (pin-1
+marks and bodies against the pads). The LEDs, the tact switches and the modules matched. Check the
+preview again after each upload.
+
+J4 and J5 are marked do-not-populate: they are in neither list.
+
+## Checked against datasheets, and what is not
+
+Read from the makers' drawings (LCSC's datasheets): the USB-C land pattern (the old one had the
+receptacle turned round, its body into the board), the slide switch (its pins are not evenly
+spaced, and it has two peg holes), the tact switch (pins 1-2 and 3-4 joined), the E22 and E73 outer
+pads and outlines, the LEDs' polarity (the KT-0603 datasheet calls the anode pin 1; our footprint calls the
+cathode pad 1, on the side of its silk mark, and JLCPCB's preview put the part's anode on our anode
+pad), and the pinouts of the ME6217, TP4054 and
+AO3401A.
+
+Not verified:
+- J2's land pattern (JST S2B-PH-SM4-TB): the catalogue page with JST's PCB layout could not be
+  fetched where this was built; the outline page gives 7.9 x 6 mm only. The lands are JST's
+  pattern as remembered: compare them with JST's drawing before ordering.
+- The E73's 15 inner pads (Ebyte gives no dimensions; none is connected here).
+- The rotation offsets: from JLCPCB's preview, not from its footprint data.
+- The USB-C shell slots have the maker's 0.15 mm ring; JLCPCB lists 0.18 mm as the least ring for
+  a plated hole (0.25 mm advised). JLCPCB stocks and places this part; check their DFM report.
+- The fab profile's plating allowance (not on JLCPCB's capabilities page).
 - Firmware: P0.00/P0.01 are used as GPIO (no 32.768 kHz crystal: the internal RC is the
   low-frequency clock), and P0.10 (NFC2) as GPIO, so NFCPINS in UICR must be set.
 
 ## Ordering
 
 Upload `lora-mini-jlcpcb.zip` as the board, choose assembly on the top side, and give the BOM and
-CPL files. Check the placement preview: the rotation offsets of footprints drawn turned from the
-assembler's reference are set with `ecad.board.cpl_rotation`.
+CPL files. Check the placement preview: pin 1 of each part, the USB-C and battery openings at the
+board's edges, the slide switch's lever out of the right edge. This example never places an order.
