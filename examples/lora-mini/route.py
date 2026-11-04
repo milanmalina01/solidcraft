@@ -191,6 +191,10 @@ def pad_shapes(board, footprints):
 
 
 def route_board(board, footprints, circuit, passes=10):
+    global SENSE_WIDTH
+    SENSE_PINS.clear()
+    SENSE_PINS.update(p for pins in getattr(circuit, "SENSE", {}).values() for p in pins)
+    SENSE_WIDTH = circuit.SIGNAL_WIDTH
     w, h = board["size"] if isinstance(board.get("size"), list) else (52.0, 34.0)
     b = Board(w, h)
     pads = pad_shapes(board, footprints)
@@ -333,7 +337,8 @@ def route_nets(b, nets, pad_at, circuit, commands, order, records=None, fails=No
         if not escaped and name not in ("USB_DP", "USB_DN", "VBUS", "CC1", "CC2") and not name.startswith("LORA_") and name not in ("SWDIO", "SWCLK"):
             escaped = True
             ground_escapes(b, pad_at, circuit, commands, failed, records)
-        pins = [p for p in nets[name] if p in pad_at]
+        sense = getattr(circuit, "SENSE", {}).get(name, [])
+        pins = [p for p in nets[name] if p in pad_at and p not in sense] + [p for p in sense if p in pad_at]
         width = circuit.POWER_WIDTH if name in circuit.RAILS else circuit.SIGNAL_WIDTH
         b.signal = width <= circuit.SIGNAL_WIDTH
         if fixed is not None:
@@ -341,24 +346,34 @@ def route_nets(b, nets, pad_at, circuit, commands, order, records=None, fails=No
         n = b.net(name)
         # USB D- runs beside D+ (routed just before it) as a pair.
         attract = b.nets.get(PAIRS[name]) if name in PAIRS else None
-        # Each pin joins the copper the net already has, nearest first.
+        # Each pin joins the copper the net already has, nearest first; a pin that failed stays
+        # unjoined, so no later route ends on it.
         done = [pins[0]]
         rest = pins[1:]
+        lost = []
         while rest:
-            src = min(rest, key=lambda p: min(math.dist(pad_at[p][1], pad_at[d][1]) for d in done))
+            # The rail's own pins first, then its sense pins at the signal width.
+            main = [p for p in rest if p not in sense] or rest
+            src = min(main, key=lambda p: min(math.dist(pad_at[p][1], pad_at[d][1]) for d in done))
             rest.remove(src)
-            avoid = [pad_at[p] for p in rest]
+            if src in sense:
+                width = circuit.SIGNAL_WIDTH
+                b.signal = True
+                if fixed is not None:
+                    fixed.signal = True
+            avoid = [pad_at[p] for p in rest + lost]
             path = search(b, n, pad_at[src], width, [pad_at[d][1] for d in done], attract=attract, avoid=avoid)
             if path is None and fixed is not None:
                 path = free_path(b, fixed, n, search(b, n, pad_at[src], width, [pad_at[d][1] for d in done], attract=attract, fixed=fixed, avoid=avoid))
             if path is None:
                 failed.append(f"{name}: {src}")
-                fails.append({"name": name, "src": src, "goals": list(done), "width": width, "unjoined": list(rest)})
+                fails.append({"name": name, "src": src, "goals": list(done), "width": width, "unjoined": list(rest + lost)})
+                lost.append(src)
                 continue
             legs = tidy(b, n, path)
             commands.append(track_command(b, legs, width))
             commit(b, legs, width, n)
-            records.append({"kind": "conn", "name": name, "src": src, "goals": list(done), "width": width, "unjoined": list(rest), "legs": legs, "cmd": commands[-1]})
+            records.append({"kind": "conn", "name": name, "src": src, "goals": list(done), "width": width, "unjoined": list(rest + lost), "legs": legs, "cmd": commands[-1]})
             done.append(src)
     if not escaped:
         ground_escapes(b, pad_at, circuit, commands, failed, records)
@@ -688,6 +703,10 @@ def track_command(b, legs, width):
     return ("ecad.board.track", cmd)
 
 
+# Sense pins (see circuit.SENSE): joined at the signal width, after the rest of their rail.
+SENSE_PINS = set()
+SENSE_WIDTH = 0.15
+
 # A cell another route holds costs this many steps in the rip-up search (pads and the rest of the
 # fixed board stay closed).
 RIP_COST = 40.0
@@ -793,17 +812,21 @@ def route_net(b, name, pins, width, pad_at, fixed):
     recs, failed = [], []
     done = [pins[0]]
     rest = list(pins[1:])
+    lost = []
     while rest:
-        src = min(rest, key=lambda p: min(math.dist(pad_at[p][1], pad_at[d][1]) for d in done))
+        main = [p for p in rest if p not in SENSE_PINS] or rest
+        src = min(main, key=lambda p: min(math.dist(pad_at[p][1], pad_at[d][1]) for d in done))
         rest.remove(src)
-        f = {"name": name, "src": src, "goals": list(done), "width": width, "unjoined": list(rest)}
+        w = SENSE_WIDTH if src in SENSE_PINS else width
+        f = {"name": name, "src": src, "goals": list(done), "width": w, "unjoined": list(rest + lost)}
         path = route_valid(b, pad_at, f, fixed)
         if path is None:
             failed.append(f)
+            lost.append(src)
             continue
         legs = tidy(b, n, path)
-        commit(b, legs, width, n)
-        recs.append({"kind": "conn", **f, "legs": legs, "cmd": track_command(b, legs, width)})
+        commit(b, legs, w, n)
+        recs.append({"kind": "conn", **f, "legs": legs, "cmd": track_command(b, legs, w)})
         done.append(src)
     return recs, failed
 
@@ -819,6 +842,8 @@ def rescue(fixed, b, records, fails, pad_at, nets, rounds=4):
             if f not in fails:
                 continue
             n = b.net(f["name"])
+            # Every pin of the net but its goals is unjoined as far as this connection knows.
+            f["unjoined"] = [p for p in nets[f["name"]] if p in pad_at and p not in f["goals"] and p != f["src"]]
             path = route_one(b, pad_at, f, fixed=fixed)
             if path is None:
                 continue
@@ -849,8 +874,8 @@ def rescue(fixed, b, records, fails, pad_at, nets, rounds=4):
                                 "legs": legs, "cmd": track_command(b2, legs, f["width"])})
             new_fails = []
             for name in sorted(whole):
-                width = next((r["width"] for r in records if r["name"] == name), 0.15)
-                pins = [p for p in nets[name] if p in pad_at]
+                width = next((r["width"] for r in records if r["name"] == name and r["src"] not in SENSE_PINS), 0.15)
+                pins = [p for p in nets[name] if p in pad_at and p not in SENSE_PINS] + [p for p in nets[name] if p in pad_at and p in SENSE_PINS]
                 recs, failed = route_net(b2, name, pins, width, pad_at, fixed)
                 new_records += recs
                 new_fails += failed

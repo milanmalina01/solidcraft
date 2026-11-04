@@ -226,6 +226,10 @@ GND_ESCAPES = ["U1.5", "U1.21", "J5.4", "U2.1", "U2.11", "U2.12", "U2.20", "U2.2
 # short track to the ground pad of the CC resistor beside it, which has one (B1 has room for its own).
 GND_LINKS = [("J1.A1", "R1.2")]
 
+# Pins of a rail that take only a sense current, joined at the signal width after the rest of
+# the rail: the nRF52840's VBUS pin only detects USB (microamps).
+SENSE = {"VBUS": ["U1.27"]}
+
 POWER_WIDTH = 0.4
 SIGNAL_WIDTH = 0.15
 CLEARANCE = 0.15
