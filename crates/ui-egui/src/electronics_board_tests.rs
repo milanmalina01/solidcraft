@@ -205,7 +205,7 @@ fn a_route_ends_on_a_via_of_no_net_and_undo_takes_back_its_clicks_before_any_edi
     let start = h.app.session.board_nets().pads.iter().find(|p| p.pad.number == "1").unwrap().at();
     let rect = crate::scenario::rect_of("electronics:board").unwrap();
     let map = crate::electronics_workspace::PageMap::new(&h.app.electronics.page.cam, rect).unwrap();
-    let mut click_at = |h: &mut Harness, x: f64, y: f64| {
+    let click_at = |h: &mut Harness, x: f64, y: f64| {
         let p = map.to_screen(x, y);
         h.step(&json!({"click": [p.x, p.y]})).unwrap();
         h.frames(2);
