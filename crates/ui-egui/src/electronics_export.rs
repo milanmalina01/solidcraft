@@ -502,6 +502,16 @@ pub(crate) fn window(app: &mut SolveApp, ctx: &egui::Context) {
         .cards(1.75)
         .resizable()
         .show_body(ctx, |ui| {
+            // A board with an outline can be ordered: its order files come first, above the pages.
+            if !app.session.doc.ecad.board.outline.is_empty() {
+                ui_kit::text(ui, &tr("electronics.export_order_heading"), ui_kit::Text::Heading("electronics.export_order_heading"));
+                ui_kit::text(ui, &tr("electronics.export_jlc_note"), ui_kit::Text::Note("electronics.export_jlc_note"));
+                let can = app.electronics.design.export.saving.is_none() && !app.file_picker_busy();
+                if crate::electronics_editor::button(ui, "export-jlc", &tr("electronics.export_jlc"), can) {
+                    acts.push(Act::SaveJlc);
+                }
+                ui.add_space(Tokens::get().space_8);
+            }
             choices(ui, &mut settings, &frames);
             ui.add_space(Tokens::get().space_8);
             title_block(app, ui, &info, &printed, &mut acts);
@@ -554,15 +564,6 @@ pub(crate) fn window(app: &mut SolveApp, ctx: &egui::Context) {
                 && let Some(p) = params.clone()
             {
                 acts.push(Act::Save(p));
-            }
-            // The board's order files for an assembled board, beside the pages.
-            if !app.session.doc.ecad.board.outline.is_empty() {
-                ui.add_space(Tokens::get().space_8);
-                ui_kit::text(ui, &tr("electronics.export_jlc_note"), ui_kit::Text::Note("electronics.export_jlc_note"));
-                let can = !busy && !app.file_picker_busy();
-                if crate::electronics_editor::button(ui, "export-jlc", &tr("electronics.export_jlc"), can) {
-                    acts.push(Act::SaveJlc);
-                }
             }
         });
     let e = &mut app.electronics.design.export;

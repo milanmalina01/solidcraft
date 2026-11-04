@@ -35,6 +35,8 @@ pub const LINE: f64 = 1.5;
 pub const QR_MODULE: f64 = 0.4;
 /// The most characters a template's text or pattern holds.
 pub const MAX_TEXT: usize = 64;
+/// The most characters the QR code's own contents hold (a link fits).
+pub const MAX_QR_TEXT: usize = 256;
 /// The most markings a board holds.
 pub const MAX_MARKINGS: usize = 16;
 /// The text height when the template gives none, in millimetres.
@@ -54,6 +56,9 @@ pub struct MarkingTemplate {
     pub part_number: String,
     pub serial_box: bool,
     pub qr: bool,
+    /// What the QR code holds; empty for the part number and the revision.
+    #[serde(skip_serializing_if = "String::is_empty")]
+    pub qr_text: String,
     /// A short "made by" text; empty for none.
     pub made_by: String,
     /// What the fab replaces with its order number (as its order form asks); empty for none.
@@ -71,6 +76,7 @@ impl Default for MarkingTemplate {
             part_number: String::new(),
             serial_box: false,
             qr: false,
+            qr_text: String::new(),
             made_by: String::new(),
             order_placeholder: String::new(),
             height: DEFAULT_HEIGHT,
@@ -86,11 +92,41 @@ impl MarkingTemplate {
                 return Err(format!("the template's `{name}` must be at most {MAX_TEXT} characters, with no control characters"));
             }
         }
+        if self.qr_text.chars().count() > MAX_QR_TEXT || self.qr_text.chars().any(char::is_control) {
+            return Err(format!("the template's `qr_text` must be at most {MAX_QR_TEXT} characters, with no control characters"));
+        }
         if !(self.height.is_finite() && (0.5..=5.0).contains(&self.height)) {
             return Err("the template's `height` must be 0.5 to 5 mm".into());
         }
         Ok(())
     }
+
+    /// The same template holding only its QR code, with the contents it has now (so a QR code
+    /// stamped on its own still says the part number and revision when nothing else is given).
+    pub fn qr_only(&self, f: &Fields, number: &str) -> MarkingTemplate {
+        MarkingTemplate {
+            title: false,
+            revision: false,
+            date: false,
+            part_number: String::new(),
+            serial_box: false,
+            qr: true,
+            qr_text: qr_contents(self, f, number),
+            made_by: String::new(),
+            order_placeholder: String::new(),
+            height: self.height,
+        }
+    }
+}
+
+/// What a marking's QR code holds: the template's own text, else the part number (its pattern
+/// filled in, `{number}` from `number`) and the revision.
+pub fn qr_contents(t: &MarkingTemplate, f: &Fields, number: &str) -> String {
+    if !t.qr_text.trim().is_empty() {
+        return t.qr_text.trim().to_string();
+    }
+    let pn = part_number(&t.part_number, f, number);
+    format!("{} {}", pn.trim(), f.revision).trim().to_string()
 }
 
 /// A marking placed on the board (see the module notes).
@@ -206,7 +242,7 @@ pub fn shapes(m: &Marking, f: &Fields, copper_layers: u8) -> (Vec<BoardGraphic>,
         widest = widest.max(lw + 8.0);
     }
     if t.qr
-        && let Some(cells) = qr_cells(format!("{} {}", pn.trim(), f.revision).trim())
+        && let Some(cells) = qr_cells(&qr_contents(t, f, &m.number))
     {
         let n = cells.len();
         let side = n as f64 * QR_MODULE;

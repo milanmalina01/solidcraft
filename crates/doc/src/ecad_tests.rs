@@ -1589,10 +1589,24 @@ fn a_marking_stamps_its_lines_qr_and_layer_marks_and_follows_the_revision() {
     e.board.graphics.retain(|g| g.marking != Some(id));
     marking::refresh(&mut e, &fields).unwrap();
     assert!(e.board.markings.is_empty() && !e.board.keepouts.iter().any(|k| k.marking == Some(id)));
+    // A QR code on its own: it keeps the contents the block's would have; its own text wins.
+    assert_eq!(marking::qr_contents(&m.template, &fields, "7"), "MM-Sensor-7 B");
+    let only = m.template.qr_only(&fields, "7");
+    assert!(only.qr && !only.title && !only.revision && !only.date && only.part_number.is_empty() && !only.serial_box);
+    assert_eq!(only.qr_text, "MM-Sensor-7 B");
+    let id2 = e.board.take_id().unwrap();
+    let q = Marking { id: id2, side: Side::Top, at: [8.0, 9.5], number: String::new(), template: only, layer_marks: false };
+    let (shapes, keepouts) = marking::shapes(&q, &fields, e.board.copper_layers);
+    assert!(!shapes.is_empty() && keepouts.is_empty() && shapes.iter().all(|g| g.graphic.fill), "only the code's squares");
+    let link = MarkingTemplate { qr: true, qr_text: "https://example.org/n/7".into(), ..MarkingTemplate::default() };
+    assert_eq!(marking::qr_contents(&link, &fields, "7"), "https://example.org/n/7");
     // Hostile templates are refused.
-    for bad in
-        [MarkingTemplate { height: 0.0, ..MarkingTemplate::default() }, MarkingTemplate { made_by: "x".repeat(65), ..MarkingTemplate::default() }]
-    {
+    for bad in [
+        MarkingTemplate { height: 0.0, ..MarkingTemplate::default() },
+        MarkingTemplate { made_by: "x".repeat(65), ..MarkingTemplate::default() },
+        MarkingTemplate { qr_text: "x".repeat(257), ..MarkingTemplate::default() },
+        MarkingTemplate { qr_text: "a\u{0}b".into(), ..MarkingTemplate::default() },
+    ] {
         assert!(bad.validate().is_err());
     }
 }

@@ -1,0 +1,50 @@
+{
+  "en": {
+    "electronics.marking_qr_heading": "QR code",
+    "electronics.marking_qr_only": "Only the QR code",
+    "electronics.marking_qr_text": "Contents",
+    "electronics.marking_qr_text_note": "What the code holds. Cleared, it holds the part number and revision again."
+  },
+  "de": {
+    "electronics.marking_qr_heading": "QR-Code",
+    "electronics.marking_qr_only": "Nur den QR-Code",
+    "electronics.marking_qr_text": "Inhalt",
+    "electronics.marking_qr_text_note": "Was der Code enthält. Geleert, enthält er wieder Teilenummer und Revision."
+  },
+  "ja": {
+    "electronics.marking_qr_heading": "QR コード",
+    "electronics.marking_qr_only": "QR コードのみ",
+    "electronics.marking_qr_text": "内容",
+    "electronics.marking_qr_text_note": "コードに入れる内容。空にすると、部品番号とリビジョンに戻ります。"
+  },
+  "zh": {
+    "electronics.marking_qr_heading": "二维码",
+    "electronics.marking_qr_only": "仅二维码",
+    "electronics.marking_qr_text": "内容",
+    "electronics.marking_qr_text_note": "二维码包含的内容。清空后，恢复为零件号和版本。"
+  },
+  "ko": {
+    "electronics.marking_qr_heading": "QR 코드",
+    "electronics.marking_qr_only": "QR 코드만",
+    "electronics.marking_qr_text": "내용",
+    "electronics.marking_qr_text_note": "코드에 담을 내용입니다. 비우면 다시 부품 번호와 리비전을 담습니다."
+  },
+  "ar": {
+    "electronics.marking_qr_heading": "رمز QR",
+    "electronics.marking_qr_only": "رمز QR فقط",
+    "electronics.marking_qr_text": "المحتوى",
+    "electronics.marking_qr_text_note": "ما يحمله الرمز. عند مسحه، يحمل رقم القطعة والمراجعة من جديد."
+  },
+  "he": {
+    "electronics.marking_qr_heading": "קוד QR",
+    "electronics.marking_qr_only": "רק קוד ה-QR",
+    "electronics.marking_qr_text": "תוכן",
+    "electronics.marking_qr_text_note": "מה שהקוד מכיל. כשמנקים אותו, הוא מכיל שוב את מספר הפריט והגרסה."
+  },
+  "vi": {
+    "electronics.marking_qr_heading": "Mã QR",
+    "electronics.marking_qr_only": "Chỉ mã QR",
+    "electronics.marking_qr_text": "Nội dung",
+    "electronics.marking_qr_text_note": "Nội dung của mã. Khi xóa trống, mã lại chứa mã linh kiện và phiên bản."
+  }
+}

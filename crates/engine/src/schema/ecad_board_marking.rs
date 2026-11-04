@@ -22,6 +22,8 @@ pub struct MarkingTemplateParam {
     pub serial_box: Option<bool>,
     /// A QR code of the part number and revision.
     pub qr: Option<bool>,
+    /// What the QR code holds instead (a link, a serial…); at most 256 characters.
+    pub qr_text: Option<String>,
     /// A short "made by" text.
     pub made_by: Option<String>,
     /// The text the fab replaces with its order number, as its order form asks.

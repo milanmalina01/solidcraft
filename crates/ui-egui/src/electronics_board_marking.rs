@@ -27,6 +27,8 @@ pub struct MarkingOptions {
     /// The part number's `{number}`.
     pub number: String,
     pub layer_marks: bool,
+    /// A click stamps only the template's QR code (with the contents it has now).
+    pub qr_only: bool,
     /// The block laid out with its top left at the origin, and what it was laid out for.
     pub(crate) ghost: Option<(String, Vec<BoardGraphic>)>,
 }
@@ -36,6 +38,17 @@ fn side(app: &SolveApp) -> Side {
     if active_layer(app) == CopperLayer::Bottom { Side::Bottom } else { Side::Top }
 }
 
+/// The template a click stamps: the preferences' own, or only its QR code.
+fn template(app: &SolveApp) -> marking::MarkingTemplate {
+    let t = app.preferences.board_marking.clone();
+    let o = &app.electronics.board.marking;
+    if !o.qr_only {
+        return t;
+    }
+    let fields = solidcraft_engine::cmd::marking_fields(&app.session, &app.session.doc.ecad);
+    t.qr_only(&fields, &o.number)
+}
+
 /// Lay the block out again when the design, the template or the options changed (looked at each
 /// frame the board view draws while the tool is armed); nothing otherwise.
 pub(crate) fn refresh(app: &mut SolveApp) {
@@ -43,8 +56,8 @@ pub(crate) fn refresh(app: &mut SolveApp) {
         app.electronics.board.marking.ghost = None;
         return;
     }
+    let template = template(app);
     let o = &app.electronics.board.marking;
-    let template = app.preferences.board_marking.clone();
     let side = side(app);
     let key = format!(
         "{}/{}/{side:?}/{}/{}/{}",
@@ -104,7 +117,7 @@ pub(crate) fn paint(app: &SolveApp, painter: &egui::Painter, map: PageMap, at: [
 pub(crate) fn click(app: &mut SolveApp, map: PageMap, p: Pos2, free: bool) {
     let at = snap(app, map, p, free);
     let side = if side(app) == Side::Bottom { "bottom" } else { "top" };
-    let template = serde_json::to_value(&app.preferences.board_marking).unwrap_or(Value::Null);
+    let template = serde_json::to_value(template(app)).unwrap_or(Value::Null);
     let o = &app.electronics.board.marking;
     let mut params = json!({"side": side, "at": at, "template": template, "layer_marks": o.layer_marks});
     if !o.number.is_empty() {
@@ -132,15 +145,13 @@ pub(crate) fn options(app: &mut SolveApp, ui: &mut Ui) -> &'static str {
         ("marking:revision", "electronics.marking_revision", t.revision),
         ("marking:date", "electronics.marking_date", t.date),
         ("marking:serial", "electronics.marking_serial_box", t.serial_box),
-        ("marking:qr", "electronics.marking_qr", t.qr),
     ] {
         if ui_kit::checkbox_row(ui, key, &tr(label), on) {
             match key {
                 "marking:title" => next.title = !on,
                 "marking:revision" => next.revision = !on,
                 "marking:date" => next.date = !on,
-                "marking:serial" => next.serial_box = !on,
-                _ => next.qr = !on,
+                _ => next.serial_box = !on,
             }
         }
     }
@@ -161,6 +172,7 @@ pub(crate) fn options(app: &mut SolveApp, ui: &mut Ui) -> &'static str {
             _ => app.set_status(tr("electronics.marking_bad_height"), true),
         }
     }
+    qr_block(app, ui, &t, &mut next);
     if next != t {
         match next.validate() {
             Ok(()) => app.preferences.board_marking = next,
@@ -176,4 +188,30 @@ pub(crate) fn options(app: &mut SolveApp, ui: &mut Ui) -> &'static str {
         app.electronics.board.marking.layer_marks = !on;
     }
     "electronics.marking_help"
+}
+
+/// The QR code's own block: on or off, what it holds (shown, and editable: cleared, it holds the
+/// part number and revision again), and whether a click stamps it on its own.
+fn qr_block(app: &mut SolveApp, ui: &mut Ui, t: &marking::MarkingTemplate, next: &mut marking::MarkingTemplate) {
+    ui.add_space(crate::theme::Tokens::get().space_6);
+    ui_kit::text(ui, &tr("electronics.marking_qr_heading"), ui_kit::Text::Heading("electronics.marking_qr_heading"));
+    if ui_kit::checkbox_row(ui, "marking:qr", &tr("electronics.marking_qr"), t.qr) {
+        next.qr = !t.qr;
+    }
+    let fields = solidcraft_engine::cmd::marking_fields(&app.session, &app.session.doc.ecad);
+    let number = app.electronics.board.marking.number.clone();
+    let auto = marking::qr_contents(&marking::MarkingTemplate { qr_text: String::new(), ..t.clone() }, &fields, &number);
+    let shown = marking::qr_contents(t, &fields, &number);
+    if let Some(v) = crate::electronics_editor::field(app, ui, "marking:qr_text", &tr("electronics.marking_qr_text"), &shown) {
+        let v = v.trim().to_string();
+        next.qr_text = if v == auto { String::new() } else { v };
+    }
+    ui_kit::text(ui, &tr("electronics.marking_qr_text_note"), ui_kit::Text::Note("electronics.marking_qr_text_note"));
+    let only = app.electronics.board.marking.qr_only;
+    if ui_kit::checkbox_row(ui, "marking:qr_only", &tr("electronics.marking_qr_only"), only) {
+        app.electronics.board.marking.qr_only = !only;
+        if !only && !t.qr {
+            next.qr = true;
+        }
+    }
 }

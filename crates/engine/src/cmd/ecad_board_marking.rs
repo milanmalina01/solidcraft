@@ -25,7 +25,7 @@ pub static COMMANDS: &[CommandSpec] = &[CommandSpec::new("ecad.board.marking", "
     .contract(&CONTRACT)
     .output(output_schema_for::<MarkingResult>)
     .params(
-        "side: top|bottom; at: [x, y] (the block's top left, mm); template? {title?, revision?, date? (shown by default), part_number? (pattern: {project}/{title}, {number}, {revision}, {date}, {company}, {author}), serial_box?, qr? (of the part number and revision), made_by?, order_placeholder? (the text the fab replaces with its order number), height? (mm, 0.5–5, 1.5)}; number? (the pattern's {number}); layer_marks? (copper TOP/BOT, or 1..n, side by side below the block, each in a keepout pours stay out of, on no net); dry_run? → {marking, lines, part_number, graphics, keepouts, bbox, warnings (its silkscreen nearer a pad than silk_to_pad), created, …}: one grouped block on the side's silkscreen (mirrored on the bottom) from the design info the print export uses; ecad.design.info makes it again when the title, revision or date changes. Refused when it reaches off the board or its copper marks come nearer other copper than the clearance; only the stamped region is checked, so it is quick on any board (the full design rule check covers the rest). One undo step",
+        "side: top|bottom; at: [x, y] (the block's top left, mm); template? {title?, revision?, date? (shown by default), part_number? (pattern: {project}/{title}, {number}, {revision}, {date}, {company}, {author}), serial_box?, qr? (of the part number and revision, or of qr_text), qr_text? (what the QR code holds instead, at most 256 characters; a template with only qr makes a QR code on its own), made_by?, order_placeholder? (the text the fab replaces with its order number), height? (mm, 0.5–5, 1.5)}; number? (the pattern's {number}); layer_marks? (copper TOP/BOT, or 1..n, side by side below the block, each in a keepout pours stay out of, on no net); dry_run? → {marking, lines, part_number, graphics, keepouts, bbox, warnings (its silkscreen nearer a pad than silk_to_pad), created, …}: one grouped block on the side's silkscreen (mirrored on the bottom) from the design info the print export uses; ecad.design.info makes it again when the title, revision or date changes. Refused when it reaches off the board or its copper marks come nearer other copper than the clearance; only the stamped region is checked, so it is quick on any board (the full design rule check covers the rest). One undo step",
     )];
 
 const CONTRACT: TypedContract<MarkingParams> = TypedContract::new();
@@ -60,6 +60,7 @@ pub fn template_of(p: Option<MarkingTemplateParam>) -> MarkingTemplate {
         part_number: p.part_number.unwrap_or(d.part_number),
         serial_box: p.serial_box.unwrap_or(d.serial_box),
         qr: p.qr.unwrap_or(d.qr),
+        qr_text: p.qr_text.unwrap_or(d.qr_text),
         made_by: p.made_by.unwrap_or(d.made_by),
         order_placeholder: p.order_placeholder.unwrap_or(d.order_placeholder),
         height: p.height.unwrap_or(d.height),
