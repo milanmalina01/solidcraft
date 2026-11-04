@@ -2,222 +2,72 @@
  "drc": {
   "counts": {
    "approved": 0,
-   "at_limit": 1,
+   "at_limit": 3,
    "by_class": {
     "cosmetic": 0,
-    "critical": 6,
-    "practical": 46
+    "critical": 9,
+    "practical": 39
    },
    "by_code": {
-    "acute_angle": 25,
-    "courtyard_overlap": 4,
+    "acute_angle": 16,
+    "copper_to_edge": 1,
     "fab_class": 2,
-    "pad_entry": 10,
+    "pad_entry": 9,
     "silk_over_pad": 1,
-    "unrouted": 2,
-    "via_near_pad": 8
+    "unrouted": 8,
+    "via_near_pad": 11
    },
-   "errors": 4,
+   "errors": 1,
    "infos": 0,
    "pending_user": 0,
    "stale": 0,
-   "warnings": 48
+   "warnings": 47
   },
   "findings": [
    {
     "approved": false,
     "args": {
-     "a": "D1",
-     "b": "R4",
-     "required": "0",
-     "value": "-0.35"
+     "a": "R4.2",
+     "layer": "top",
+     "required": "0.2",
+     "value": "0"
     },
     "at": [
-     11.0,
-     13.7
+     9.1466,
+     13.8946
     ],
     "class": "critical",
-    "code": "courtyard_overlap",
+    "code": "copper_to_edge",
     "fix": [
      {
       "command": "ecad.board.move",
-      "says": "move D1 or R4 0.35 mm apart"
+      "says": "move it 0.2 mm further in"
      }
     ],
     "items": [
-     {
-      "id": 11,
-      "kind": "footprint",
-      "ref": "D1"
-     },
      {
       "id": 21,
-      "kind": "footprint",
-      "ref": "R4"
+      "kind": "pad",
+      "pad": "2",
+      "ref": "R4.2"
      }
     ],
-    "key": "courtyard_overlap|f11|f21",
+    "key": "copper_to_edge|p21.2",
+    "layer": "top",
     "limit": {
      "bound": "min",
-     "param": "courtyard.gap",
+     "param": "rules.copper_to_edge",
      "units": "mm",
-     "value": 0.0
+     "value": 0.2
     },
-    "margin": -0.35,
+    "margin": -0.4861,
     "measured": {
      "units": "mm",
-     "value": -0.35
+     "value": -0.2861
     },
-    "message": "the courtyards of D1 and R4 overlap",
-    "message_key": "electronics.drc_msg_courtyard_overlap",
-    "section": "placement#spacing",
-    "severity": "error"
-   },
-   {
-    "approved": false,
-    "args": {
-     "a": "D1",
-     "b": "U4",
-     "required": "0",
-     "value": "-0.05"
-    },
-    "at": [
-     13.3,
-     13.7
-    ],
-    "class": "critical",
-    "code": "courtyard_overlap",
-    "fix": [
-     {
-      "command": "ecad.board.move",
-      "says": "move D1 or U4 0.05 mm apart"
-     }
-    ],
-    "items": [
-     {
-      "id": 11,
-      "kind": "footprint",
-      "ref": "D1"
-     },
-     {
-      "id": 32,
-      "kind": "footprint",
-      "ref": "U4"
-     }
-    ],
-    "key": "courtyard_overlap|f11|f32",
-    "limit": {
-     "bound": "min",
-     "param": "courtyard.gap",
-     "units": "mm",
-     "value": 0.0
-    },
-    "margin": -0.05,
-    "measured": {
-     "units": "mm",
-     "value": -0.05
-    },
-    "message": "the courtyards of D1 and U4 overlap",
-    "message_key": "electronics.drc_msg_courtyard_overlap",
-    "section": "placement#spacing",
-    "severity": "error"
-   },
-   {
-    "approved": false,
-    "args": {
-     "a": "J1",
-     "b": "R2",
-     "required": "0",
-     "value": "-0.07"
-    },
-    "at": [
-     -12.0,
-     9.03
-    ],
-    "class": "critical",
-    "code": "courtyard_overlap",
-    "fix": [
-     {
-      "command": "ecad.board.move",
-      "says": "move J1 or R2 0.07 mm apart"
-     }
-    ],
-    "items": [
-     {
-      "id": 13,
-      "kind": "footprint",
-      "ref": "J1"
-     },
-     {
-      "id": 19,
-      "kind": "footprint",
-      "ref": "R2"
-     }
-    ],
-    "key": "courtyard_overlap|f13|f19",
-    "limit": {
-     "bound": "min",
-     "param": "courtyard.gap",
-     "units": "mm",
-     "value": 0.0
-    },
-    "margin": -0.07,
-    "measured": {
-     "units": "mm",
-     "value": -0.07
-    },
-    "message": "the courtyards of J1 and R2 overlap",
-    "message_key": "electronics.drc_msg_courtyard_overlap",
-    "section": "placement#spacing",
-    "severity": "error"
-   },
-   {
-    "approved": false,
-    "args": {
-     "a": "R3",
-     "b": "U4",
-     "required": "0",
-     "value": "-0.05"
-    },
-    "at": [
-     13.3,
-     16.1
-    ],
-    "class": "critical",
-    "code": "courtyard_overlap",
-    "fix": [
-     {
-      "command": "ecad.board.move",
-      "says": "move R3 or U4 0.05 mm apart"
-     }
-    ],
-    "items": [
-     {
-      "id": 20,
-      "kind": "footprint",
-      "ref": "R3"
-     },
-     {
-      "id": 32,
-      "kind": "footprint",
-      "ref": "U4"
-     }
-    ],
-    "key": "courtyard_overlap|f20|f32",
-    "limit": {
-     "bound": "min",
-     "param": "courtyard.gap",
-     "units": "mm",
-     "value": 0.0
-    },
-    "margin": -0.05,
-    "measured": {
-     "units": "mm",
-     "value": -0.05
-    },
-    "message": "the courtyards of R3 and U4 overlap",
-    "message_key": "electronics.drc_msg_courtyard_overlap",
-    "section": "placement#spacing",
+    "message": "R4.2 is 0 mm from the board's edge or an unplated hole; the least is 0.2 mm",
+    "message_key": "electronics.drc_msg_copper_to_edge",
+    "section": "routing-dfm#copper",
     "severity": "error"
    },
    {
@@ -273,135 +123,7 @@
    {
     "approved": false,
     "args": {
-     "a": "via 65",
-     "b": "U1.10",
-     "layer": "top",
-     "protection": "open",
-     "required": "0.25",
-     "value": "0.2"
-    },
-    "at": [
-     -9.3,
-     -7.55
-    ],
-    "class": "practical",
-    "code": "via_near_pad",
-    "fix": [
-     {
-      "command": "ecad.board.move",
-      "says": "move via 65 0.05 mm further from the pad, joined to it by a short track"
-     },
-     {
-      "command": "ecad.board.via.edit",
-      "params": {
-       "protection": "tented",
-       "vias": [
-        65
-       ]
-      },
-      "says": "or tent or plug it, if your fab does: then solder can't reach the hole"
-     }
-    ],
-    "items": [
-     {
-      "id": 65,
-      "kind": "via",
-      "ref": "via 65"
-     },
-     {
-      "id": 29,
-      "kind": "pad",
-      "pad": "10",
-      "ref": "U1.10"
-     }
-    ],
-    "key": "via_near_pad|p29.10|v65",
-    "layer": "top",
-    "limit": {
-     "bound": "min",
-     "param": "profile.via_to_pad",
-     "units": "mm",
-     "value": 0.25
-    },
-    "margin": -0.05,
-    "measured": {
-     "units": "mm",
-     "value": 0.2
-    },
-    "message": "via 65 (open) is 0.2 mm from pad U1.10; keep 0.25 mm, so a solder mask web stays between them and the solder doesn't wick into the via",
-    "message_key": "electronics.drc_msg_via_near_pad",
-    "section": "routing-dfm#vias",
-    "severity": "warning",
-    "verify": "the limit comes from public summaries of fab DFM guides, not from a standard: verify it with your fab"
-   },
-   {
-    "approved": false,
-    "args": {
-     "a": "via 67",
-     "b": "U2.13",
-     "layer": "top",
-     "protection": "open",
-     "required": "0.25",
-     "value": "0.2"
-    },
-    "at": [
-     -3.1,
-     7.9
-    ],
-    "class": "practical",
-    "code": "via_near_pad",
-    "fix": [
-     {
-      "command": "ecad.board.move",
-      "says": "move via 67 0.05 mm further from the pad, joined to it by a short track"
-     },
-     {
-      "command": "ecad.board.via.edit",
-      "params": {
-       "protection": "tented",
-       "vias": [
-        67
-       ]
-      },
-      "says": "or tent or plug it, if your fab does: then solder can't reach the hole"
-     }
-    ],
-    "items": [
-     {
-      "id": 67,
-      "kind": "via",
-      "ref": "via 67"
-     },
-     {
-      "id": 30,
-      "kind": "pad",
-      "pad": "13",
-      "ref": "U2.13"
-     }
-    ],
-    "key": "via_near_pad|p30.13|v67",
-    "layer": "top",
-    "limit": {
-     "bound": "min",
-     "param": "profile.via_to_pad",
-     "units": "mm",
-     "value": 0.25
-    },
-    "margin": -0.05,
-    "measured": {
-     "units": "mm",
-     "value": 0.2
-    },
-    "message": "via 67 (open) is 0.2 mm from pad U2.13; keep 0.25 mm, so a solder mask web stays between them and the solder doesn't wick into the via",
-    "message_key": "electronics.drc_msg_via_near_pad",
-    "section": "routing-dfm#vias",
-    "severity": "warning",
-    "verify": "the limit comes from public summaries of fab DFM guides, not from a standard: verify it with your fab"
-   },
-   {
-    "approved": false,
-    "args": {
-     "a": "via 81",
+     "a": "via 52",
      "b": "U2.20",
      "layer": "top",
      "protection": "open",
@@ -417,14 +139,14 @@
     "fix": [
      {
       "command": "ecad.board.move",
-      "says": "move via 81 0.01 mm further from the pad, joined to it by a short track"
+      "says": "move via 52 0.01 mm further from the pad, joined to it by a short track"
      },
      {
       "command": "ecad.board.via.edit",
       "params": {
        "protection": "tented",
        "vias": [
-        81
+        52
        ]
       },
       "says": "or tent or plug it, if your fab does: then solder can't reach the hole"
@@ -432,9 +154,9 @@
     ],
     "items": [
      {
-      "id": 81,
+      "id": 52,
       "kind": "via",
-      "ref": "via 81"
+      "ref": "via 52"
      },
      {
       "id": 30,
@@ -443,7 +165,7 @@
       "ref": "U2.20"
      }
     ],
-    "key": "via_near_pad|p30.20|v81",
+    "key": "via_near_pad|p30.20|v52",
     "layer": "top",
     "limit": {
      "bound": "min",
@@ -456,7 +178,7 @@
      "units": "mm",
      "value": 0.2492
     },
-    "message": "via 81 (open) is 0.2492 mm from pad U2.20; keep 0.25 mm, so a solder mask web stays between them and the solder doesn't wick into the via",
+    "message": "via 52 (open) is 0.2492 mm from pad U2.20; keep 0.25 mm, so a solder mask web stays between them and the solder doesn't wick into the via",
     "message_key": "electronics.drc_msg_via_near_pad",
     "section": "routing-dfm#vias",
     "severity": "warning",
@@ -465,71 +187,7 @@
    {
     "approved": false,
     "args": {
-     "a": "via 107",
-     "b": "R1.2",
-     "layer": "top",
-     "protection": "open",
-     "required": "0.25",
-     "value": "0.222"
-    },
-    "at": [
-     -17.55,
-     8.45
-    ],
-    "class": "practical",
-    "code": "via_near_pad",
-    "fix": [
-     {
-      "command": "ecad.board.move",
-      "says": "move via 107 0.03 mm further from the pad, joined to it by a short track"
-     },
-     {
-      "command": "ecad.board.via.edit",
-      "params": {
-       "protection": "tented",
-       "vias": [
-        107
-       ]
-      },
-      "says": "or tent or plug it, if your fab does: then solder can't reach the hole"
-     }
-    ],
-    "items": [
-     {
-      "id": 107,
-      "kind": "via",
-      "ref": "via 107"
-     },
-     {
-      "id": 18,
-      "kind": "pad",
-      "pad": "2",
-      "ref": "R1.2"
-     }
-    ],
-    "key": "via_near_pad|p18.2|v107",
-    "layer": "top",
-    "limit": {
-     "bound": "min",
-     "param": "profile.via_to_pad",
-     "units": "mm",
-     "value": 0.25
-    },
-    "margin": -0.028,
-    "measured": {
-     "units": "mm",
-     "value": 0.222
-    },
-    "message": "via 107 (open) is 0.222 mm from pad R1.2; keep 0.25 mm, so a solder mask web stays between them and the solder doesn't wick into the via",
-    "message_key": "electronics.drc_msg_via_near_pad",
-    "section": "routing-dfm#vias",
-    "severity": "warning",
-    "verify": "the limit comes from public summaries of fab DFM guides, not from a standard: verify it with your fab"
-   },
-   {
-    "approved": false,
-    "args": {
-     "a": "via 117",
+     "a": "via 92",
      "b": "C1.2",
      "layer": "top",
      "protection": "open",
@@ -545,14 +203,14 @@
     "fix": [
      {
       "command": "ecad.board.move",
-      "says": "move via 117 0.02 mm further from the pad, joined to it by a short track"
+      "says": "move via 92 0.02 mm further from the pad, joined to it by a short track"
      },
      {
       "command": "ecad.board.via.edit",
       "params": {
        "protection": "tented",
        "vias": [
-        117
+        92
        ]
       },
       "says": "or tent or plug it, if your fab does: then solder can't reach the hole"
@@ -560,9 +218,9 @@
     ],
     "items": [
      {
-      "id": 117,
+      "id": 92,
       "kind": "via",
-      "ref": "via 117"
+      "ref": "via 92"
      },
      {
       "id": 1,
@@ -571,7 +229,7 @@
       "ref": "C1.2"
      }
     ],
-    "key": "via_near_pad|p1.2|v117",
+    "key": "via_near_pad|p1.2|v92",
     "layer": "top",
     "limit": {
      "bound": "min",
@@ -584,7 +242,7 @@
      "units": "mm",
      "value": 0.2385
     },
-    "message": "via 117 (open) is 0.2385 mm from pad C1.2; keep 0.25 mm, so a solder mask web stays between them and the solder doesn't wick into the via",
+    "message": "via 92 (open) is 0.2385 mm from pad C1.2; keep 0.25 mm, so a solder mask web stays between them and the solder doesn't wick into the via",
     "message_key": "electronics.drc_msg_via_near_pad",
     "section": "routing-dfm#vias",
     "severity": "warning",
@@ -593,7 +251,263 @@
    {
     "approved": false,
     "args": {
-     "a": "via 139",
+     "a": "via 104",
+     "b": "C6.1",
+     "layer": "top",
+     "protection": "open",
+     "required": "0.25",
+     "value": "0.2"
+    },
+    "at": [
+     -3.45,
+     3.4
+    ],
+    "class": "practical",
+    "code": "via_near_pad",
+    "fix": [
+     {
+      "command": "ecad.board.move",
+      "says": "move via 104 0.05 mm further from the pad, joined to it by a short track"
+     },
+     {
+      "command": "ecad.board.via.edit",
+      "params": {
+       "protection": "tented",
+       "vias": [
+        104
+       ]
+      },
+      "says": "or tent or plug it, if your fab does: then solder can't reach the hole"
+     }
+    ],
+    "items": [
+     {
+      "id": 104,
+      "kind": "via",
+      "ref": "via 104"
+     },
+     {
+      "id": 7,
+      "kind": "pad",
+      "pad": "1",
+      "ref": "C6.1"
+     }
+    ],
+    "key": "via_near_pad|p7.1|v104",
+    "layer": "top",
+    "limit": {
+     "bound": "min",
+     "param": "profile.via_to_pad",
+     "units": "mm",
+     "value": 0.25
+    },
+    "margin": -0.05,
+    "measured": {
+     "units": "mm",
+     "value": 0.2
+    },
+    "message": "via 104 (open) is 0.2 mm from pad C6.1; keep 0.25 mm, so a solder mask web stays between them and the solder doesn't wick into the via",
+    "message_key": "electronics.drc_msg_via_near_pad",
+    "section": "routing-dfm#vias",
+    "severity": "warning",
+    "verify": "the limit comes from public summaries of fab DFM guides, not from a standard: verify it with your fab"
+   },
+   {
+    "approved": false,
+    "args": {
+     "a": "via 106",
+     "b": "C8.1",
+     "layer": "top",
+     "protection": "open",
+     "required": "0.25",
+     "value": "0.2"
+    },
+    "at": [
+     13.65,
+     1.9
+    ],
+    "class": "practical",
+    "code": "via_near_pad",
+    "fix": [
+     {
+      "command": "ecad.board.move",
+      "says": "move via 106 0.05 mm further from the pad, joined to it by a short track"
+     },
+     {
+      "command": "ecad.board.via.edit",
+      "params": {
+       "protection": "tented",
+       "vias": [
+        106
+       ]
+      },
+      "says": "or tent or plug it, if your fab does: then solder can't reach the hole"
+     }
+    ],
+    "items": [
+     {
+      "id": 106,
+      "kind": "via",
+      "ref": "via 106"
+     },
+     {
+      "id": 9,
+      "kind": "pad",
+      "pad": "1",
+      "ref": "C8.1"
+     }
+    ],
+    "key": "via_near_pad|p9.1|v106",
+    "layer": "top",
+    "limit": {
+     "bound": "min",
+     "param": "profile.via_to_pad",
+     "units": "mm",
+     "value": 0.25
+    },
+    "margin": -0.05,
+    "measured": {
+     "units": "mm",
+     "value": 0.2
+    },
+    "message": "via 106 (open) is 0.2 mm from pad C8.1; keep 0.25 mm, so a solder mask web stays between them and the solder doesn't wick into the via",
+    "message_key": "electronics.drc_msg_via_near_pad",
+    "section": "routing-dfm#vias",
+    "severity": "warning",
+    "verify": "the limit comes from public summaries of fab DFM guides, not from a standard: verify it with your fab"
+   },
+   {
+    "approved": false,
+    "args": {
+     "a": "via 114",
+     "b": "C5.1",
+     "layer": "top",
+     "protection": "open",
+     "required": "0.25",
+     "value": "0.2"
+    },
+    "at": [
+     -5.1,
+     0.9
+    ],
+    "class": "practical",
+    "code": "via_near_pad",
+    "fix": [
+     {
+      "command": "ecad.board.move",
+      "says": "move via 114 0.05 mm further from the pad, joined to it by a short track"
+     },
+     {
+      "command": "ecad.board.via.edit",
+      "params": {
+       "protection": "tented",
+       "vias": [
+        114
+       ]
+      },
+      "says": "or tent or plug it, if your fab does: then solder can't reach the hole"
+     }
+    ],
+    "items": [
+     {
+      "id": 114,
+      "kind": "via",
+      "ref": "via 114"
+     },
+     {
+      "id": 6,
+      "kind": "pad",
+      "pad": "1",
+      "ref": "C5.1"
+     }
+    ],
+    "key": "via_near_pad|p6.1|v114",
+    "layer": "top",
+    "limit": {
+     "bound": "min",
+     "param": "profile.via_to_pad",
+     "units": "mm",
+     "value": 0.25
+    },
+    "margin": -0.05,
+    "measured": {
+     "units": "mm",
+     "value": 0.2
+    },
+    "message": "via 114 (open) is 0.2 mm from pad C5.1; keep 0.25 mm, so a solder mask web stays between them and the solder doesn't wick into the via",
+    "message_key": "electronics.drc_msg_via_near_pad",
+    "section": "routing-dfm#vias",
+    "severity": "warning",
+    "verify": "the limit comes from public summaries of fab DFM guides, not from a standard: verify it with your fab"
+   },
+   {
+    "approved": false,
+    "args": {
+     "a": "via 118",
+     "b": "J5.1",
+     "layer": "top",
+     "protection": "open",
+     "required": "0.25",
+     "value": "0.1738"
+    },
+    "at": [
+     -21.0,
+     7.25
+    ],
+    "class": "practical",
+    "code": "via_near_pad",
+    "fix": [
+     {
+      "command": "ecad.board.move",
+      "says": "move via 118 0.08 mm further from the pad, joined to it by a short track"
+     },
+     {
+      "command": "ecad.board.via.edit",
+      "params": {
+       "protection": "tented",
+       "vias": [
+        118
+       ]
+      },
+      "says": "or tent or plug it, if your fab does: then solder can't reach the hole"
+     }
+    ],
+    "items": [
+     {
+      "id": 118,
+      "kind": "via",
+      "ref": "via 118"
+     },
+     {
+      "id": 16,
+      "kind": "pad",
+      "pad": "1",
+      "ref": "J5.1"
+     }
+    ],
+    "key": "via_near_pad|p16.1|v118",
+    "layer": "top",
+    "limit": {
+     "bound": "min",
+     "param": "profile.via_to_pad",
+     "units": "mm",
+     "value": 0.25
+    },
+    "margin": -0.0762,
+    "measured": {
+     "units": "mm",
+     "value": 0.1738
+    },
+    "message": "via 118 (open) is 0.1738 mm from pad J5.1; keep 0.25 mm, so a solder mask web stays between them and the solder doesn't wick into the via",
+    "message_key": "electronics.drc_msg_via_near_pad",
+    "section": "routing-dfm#vias",
+    "severity": "warning",
+    "verify": "the limit comes from public summaries of fab DFM guides, not from a standard: verify it with your fab"
+   },
+   {
+    "approved": false,
+    "args": {
+     "a": "via 128",
      "b": "C3.1",
      "layer": "top",
      "protection": "open",
@@ -609,14 +523,14 @@
     "fix": [
      {
       "command": "ecad.board.move",
-      "says": "move via 139 0.05 mm further from the pad, joined to it by a short track"
+      "says": "move via 128 0.05 mm further from the pad, joined to it by a short track"
      },
      {
       "command": "ecad.board.via.edit",
       "params": {
        "protection": "tented",
        "vias": [
-        139
+        128
        ]
       },
       "says": "or tent or plug it, if your fab does: then solder can't reach the hole"
@@ -624,9 +538,9 @@
     ],
     "items": [
      {
-      "id": 139,
+      "id": 128,
       "kind": "via",
-      "ref": "via 139"
+      "ref": "via 128"
      },
      {
       "id": 4,
@@ -635,7 +549,7 @@
       "ref": "C3.1"
      }
     ],
-    "key": "via_near_pad|p4.1|v139",
+    "key": "via_near_pad|p4.1|v128",
     "layer": "top",
     "limit": {
      "bound": "min",
@@ -648,7 +562,7 @@
      "units": "mm",
      "value": 0.2
     },
-    "message": "via 139 (open) is 0.2 mm from pad C3.1; keep 0.25 mm, so a solder mask web stays between them and the solder doesn't wick into the via",
+    "message": "via 128 (open) is 0.2 mm from pad C3.1; keep 0.25 mm, so a solder mask web stays between them and the solder doesn't wick into the via",
     "message_key": "electronics.drc_msg_via_near_pad",
     "section": "routing-dfm#vias",
     "severity": "warning",
@@ -657,7 +571,7 @@
    {
     "approved": false,
     "args": {
-     "a": "via 141",
+     "a": "via 130",
      "b": "SW1.2",
      "layer": "top",
      "protection": "open",
@@ -673,14 +587,14 @@
     "fix": [
      {
       "command": "ecad.board.move",
-      "says": "move via 141 0.05 mm further from the pad, joined to it by a short track"
+      "says": "move via 130 0.05 mm further from the pad, joined to it by a short track"
      },
      {
       "command": "ecad.board.via.edit",
       "params": {
        "protection": "tented",
        "vias": [
-        141
+        130
        ]
       },
       "says": "or tent or plug it, if your fab does: then solder can't reach the hole"
@@ -688,9 +602,9 @@
     ],
     "items": [
      {
-      "id": 141,
+      "id": 130,
       "kind": "via",
-      "ref": "via 141"
+      "ref": "via 130"
      },
      {
       "id": 26,
@@ -699,7 +613,7 @@
       "ref": "SW1.2"
      }
     ],
-    "key": "via_near_pad|p26.2|v141",
+    "key": "via_near_pad|p26.2|v130",
     "layer": "top",
     "limit": {
      "bound": "min",
@@ -712,7 +626,7 @@
      "units": "mm",
      "value": 0.2
     },
-    "message": "via 141 (open) is 0.2 mm from pad SW1.2; keep 0.25 mm, so a solder mask web stays between them and the solder doesn't wick into the via",
+    "message": "via 130 (open) is 0.2 mm from pad SW1.2; keep 0.25 mm, so a solder mask web stays between them and the solder doesn't wick into the via",
     "message_key": "electronics.drc_msg_via_near_pad",
     "section": "routing-dfm#vias",
     "severity": "warning",
@@ -721,7 +635,7 @@
    {
     "approved": false,
     "args": {
-     "a": "via 160",
+     "a": "via 146",
      "b": "R8.2",
      "layer": "top",
      "protection": "open",
@@ -737,14 +651,14 @@
     "fix": [
      {
       "command": "ecad.board.move",
-      "says": "move via 160 0.05 mm further from the pad, joined to it by a short track"
+      "says": "move via 146 0.05 mm further from the pad, joined to it by a short track"
      },
      {
       "command": "ecad.board.via.edit",
       "params": {
        "protection": "tented",
        "vias": [
-        160
+        146
        ]
       },
       "says": "or tent or plug it, if your fab does: then solder can't reach the hole"
@@ -752,9 +666,9 @@
     ],
     "items": [
      {
-      "id": 160,
+      "id": 146,
       "kind": "via",
-      "ref": "via 160"
+      "ref": "via 146"
      },
      {
       "id": 25,
@@ -763,7 +677,7 @@
       "ref": "R8.2"
      }
     ],
-    "key": "via_near_pad|p25.2|v160",
+    "key": "via_near_pad|p25.2|v146",
     "layer": "top",
     "limit": {
      "bound": "min",
@@ -776,7 +690,7 @@
      "units": "mm",
      "value": 0.2099
     },
-    "message": "via 160 (open) is 0.2099 mm from pad R8.2; keep 0.25 mm, so a solder mask web stays between them and the solder doesn't wick into the via",
+    "message": "via 146 (open) is 0.2099 mm from pad R8.2; keep 0.25 mm, so a solder mask web stays between them and the solder doesn't wick into the via",
     "message_key": "electronics.drc_msg_via_near_pad",
     "section": "routing-dfm#vias",
     "severity": "warning",
@@ -785,60 +699,135 @@
    {
     "approved": false,
     "args": {
-     "a": "the start of track 46",
-     "b": "C1.1",
+     "a": "via 153",
+     "b": "R7.1",
      "layer": "top",
-     "share": "100"
+     "protection": "open",
+     "required": "0.25",
+     "value": "0.2"
     },
     "at": [
-     14.5,
-     11.85
+     14.55,
+     -6.1
     ],
     "class": "practical",
-    "code": "pad_entry",
+    "code": "via_near_pad",
     "fix": [
      {
-      "command": "ecad.board.track.reshape",
-      "says": "reshape track 46 so it leaves the pad from the middle of its edge"
+      "command": "ecad.board.move",
+      "says": "move via 153 0.05 mm further from the pad, joined to it by a short track"
+     },
+     {
+      "command": "ecad.board.via.edit",
+      "params": {
+       "protection": "tented",
+       "vias": [
+        153
+       ]
+      },
+      "says": "or tent or plug it, if your fab does: then solder can't reach the hole"
      }
     ],
     "items": [
      {
-      "end": 0,
-      "id": 46,
-      "kind": "track_end",
-      "ref": "the start of track 46"
+      "id": 153,
+      "kind": "via",
+      "ref": "via 153"
      },
      {
-      "id": 1,
+      "id": 24,
       "kind": "pad",
       "pad": "1",
-      "ref": "C1.1"
+      "ref": "R7.1"
      }
     ],
-    "key": "pad_entry|p1.1|t46.0",
+    "key": "via_near_pad|p24.1|v153",
     "layer": "top",
     "limit": {
-     "bound": "max",
-     "param": "pad_entry.corner",
-     "units": "ratio",
-     "value": 1.0
+     "bound": "min",
+     "param": "profile.via_to_pad",
+     "units": "mm",
+     "value": 0.25
     },
-    "margin": 0.0,
+    "margin": -0.05,
     "measured": {
-     "units": "ratio",
-     "value": 1.0
+     "units": "mm",
+     "value": 0.2
     },
-    "message": "track 46 (0.4 mm) leaves pad C1.1 at its corner, 100 % of the way from the edge's middle: enter a pad near the middle of its edge",
-    "message_key": "electronics.drc_msg_pad_entry",
-    "section": "routing-dfm#pad-entry",
+    "message": "via 153 (open) is 0.2 mm from pad R7.1; keep 0.25 mm, so a solder mask web stays between them and the solder doesn't wick into the via",
+    "message_key": "electronics.drc_msg_via_near_pad",
+    "section": "routing-dfm#vias",
     "severity": "warning",
     "verify": "the limit comes from public summaries of fab DFM guides, not from a standard: verify it with your fab"
    },
    {
     "approved": false,
     "args": {
-     "a": "the start of track 74",
+     "a": "via 189",
+     "b": "R2.1",
+     "layer": "top",
+     "protection": "open",
+     "required": "0.25",
+     "value": "0.2"
+    },
+    "at": [
+     -12.65,
+     7.55
+    ],
+    "class": "practical",
+    "code": "via_near_pad",
+    "fix": [
+     {
+      "command": "ecad.board.move",
+      "says": "move via 189 0.05 mm further from the pad, joined to it by a short track"
+     },
+     {
+      "command": "ecad.board.via.edit",
+      "params": {
+       "protection": "tented",
+       "vias": [
+        189
+       ]
+      },
+      "says": "or tent or plug it, if your fab does: then solder can't reach the hole"
+     }
+    ],
+    "items": [
+     {
+      "id": 189,
+      "kind": "via",
+      "ref": "via 189"
+     },
+     {
+      "id": 19,
+      "kind": "pad",
+      "pad": "1",
+      "ref": "R2.1"
+     }
+    ],
+    "key": "via_near_pad|p19.1|v189",
+    "layer": "top",
+    "limit": {
+     "bound": "min",
+     "param": "profile.via_to_pad",
+     "units": "mm",
+     "value": 0.25
+    },
+    "margin": -0.05,
+    "measured": {
+     "units": "mm",
+     "value": 0.2
+    },
+    "message": "via 189 (open) is 0.2 mm from pad R2.1; keep 0.25 mm, so a solder mask web stays between them and the solder doesn't wick into the via",
+    "message_key": "electronics.drc_msg_via_near_pad",
+    "section": "routing-dfm#vias",
+    "severity": "warning",
+    "verify": "the limit comes from public summaries of fab DFM guides, not from a standard: verify it with your fab"
+   },
+   {
+    "approved": false,
+    "args": {
+     "a": "the start of track 45",
      "b": "U2.1",
      "layer": "top",
      "share": "100"
@@ -852,15 +841,15 @@
     "fix": [
      {
       "command": "ecad.board.track.reshape",
-      "says": "reshape track 74 so it leaves the pad from the middle of its edge"
+      "says": "reshape track 45 so it leaves the pad from the middle of its edge"
      }
     ],
     "items": [
      {
       "end": 0,
-      "id": 74,
+      "id": 45,
       "kind": "track_end",
-      "ref": "the start of track 74"
+      "ref": "the start of track 45"
      },
      {
       "id": 30,
@@ -869,7 +858,7 @@
       "ref": "U2.1"
      }
     ],
-    "key": "pad_entry|p30.1|t74.0",
+    "key": "pad_entry|p30.1|t45.0",
     "layer": "top",
     "limit": {
      "bound": "max",
@@ -882,7 +871,7 @@
      "units": "ratio",
      "value": 1.0
     },
-    "message": "track 74 (0.3 mm) leaves pad U2.1 at its corner, 100 % of the way from the edge's middle: enter a pad near the middle of its edge",
+    "message": "track 45 (0.3 mm) leaves pad U2.1 at its corner, 100 % of the way from the edge's middle: enter a pad near the middle of its edge",
     "message_key": "electronics.drc_msg_pad_entry",
     "section": "routing-dfm#pad-entry",
     "severity": "warning",
@@ -891,7 +880,7 @@
    {
     "approved": false,
     "args": {
-     "a": "the start of track 76",
+     "a": "the start of track 47",
      "b": "U2.11",
      "layer": "top",
      "share": "100"
@@ -905,15 +894,15 @@
     "fix": [
      {
       "command": "ecad.board.track.reshape",
-      "says": "reshape track 76 so it leaves the pad from the middle of its edge"
+      "says": "reshape track 47 so it leaves the pad from the middle of its edge"
      }
     ],
     "items": [
      {
       "end": 0,
-      "id": 76,
+      "id": 47,
       "kind": "track_end",
-      "ref": "the start of track 76"
+      "ref": "the start of track 47"
      },
      {
       "id": 30,
@@ -922,7 +911,7 @@
       "ref": "U2.11"
      }
     ],
-    "key": "pad_entry|p30.11|t76.0",
+    "key": "pad_entry|p30.11|t47.0",
     "layer": "top",
     "limit": {
      "bound": "max",
@@ -935,7 +924,7 @@
      "units": "ratio",
      "value": 1.0
     },
-    "message": "track 76 (0.3 mm) leaves pad U2.11 at its corner, 100 % of the way from the edge's middle: enter a pad near the middle of its edge",
+    "message": "track 47 (0.3 mm) leaves pad U2.11 at its corner, 100 % of the way from the edge's middle: enter a pad near the middle of its edge",
     "message_key": "electronics.drc_msg_pad_entry",
     "section": "routing-dfm#pad-entry",
     "severity": "warning",
@@ -944,7 +933,7 @@
    {
     "approved": false,
     "args": {
-     "a": "the start of track 110",
+     "a": "the start of track 85",
      "b": "SW2.3",
      "layer": "top",
      "share": "87"
@@ -958,15 +947,15 @@
     "fix": [
      {
       "command": "ecad.board.track.reshape",
-      "says": "reshape track 110 so it leaves the pad from the middle of its edge"
+      "says": "reshape track 85 so it leaves the pad from the middle of its edge"
      }
     ],
     "items": [
      {
       "end": 0,
-      "id": 110,
+      "id": 85,
       "kind": "track_end",
-      "ref": "the start of track 110"
+      "ref": "the start of track 85"
      },
      {
       "id": 27,
@@ -975,7 +964,7 @@
       "ref": "SW2.3"
      }
     ],
-    "key": "pad_entry|p27.3|t110.0",
+    "key": "pad_entry|p27.3|t85.0",
     "layer": "top",
     "limit": {
      "bound": "max",
@@ -988,7 +977,7 @@
      "units": "ratio",
      "value": 0.8667
     },
-    "message": "track 110 (0.3 mm) leaves pad SW2.3 at its corner, 87 % of the way from the edge's middle: enter a pad near the middle of its edge",
+    "message": "track 85 (0.3 mm) leaves pad SW2.3 at its corner, 87 % of the way from the edge's middle: enter a pad near the middle of its edge",
     "message_key": "electronics.drc_msg_pad_entry",
     "section": "routing-dfm#pad-entry",
     "severity": "warning",
@@ -997,7 +986,7 @@
    {
     "approved": false,
     "args": {
-     "a": "the start of track 112",
+     "a": "the start of track 87",
      "b": "SW3.3",
      "layer": "top",
      "share": "87"
@@ -1011,15 +1000,15 @@
     "fix": [
      {
       "command": "ecad.board.track.reshape",
-      "says": "reshape track 112 so it leaves the pad from the middle of its edge"
+      "says": "reshape track 87 so it leaves the pad from the middle of its edge"
      }
     ],
     "items": [
      {
       "end": 0,
-      "id": 112,
+      "id": 87,
       "kind": "track_end",
-      "ref": "the start of track 112"
+      "ref": "the start of track 87"
      },
      {
       "id": 28,
@@ -1028,7 +1017,7 @@
       "ref": "SW3.3"
      }
     ],
-    "key": "pad_entry|p28.3|t112.0",
+    "key": "pad_entry|p28.3|t87.0",
     "layer": "top",
     "limit": {
      "bound": "max",
@@ -1041,7 +1030,7 @@
      "units": "ratio",
      "value": 0.8667
     },
-    "message": "track 112 (0.3 mm) leaves pad SW3.3 at its corner, 87 % of the way from the edge's middle: enter a pad near the middle of its edge",
+    "message": "track 87 (0.3 mm) leaves pad SW3.3 at its corner, 87 % of the way from the edge's middle: enter a pad near the middle of its edge",
     "message_key": "electronics.drc_msg_pad_entry",
     "section": "routing-dfm#pad-entry",
     "severity": "warning",
@@ -1050,7 +1039,7 @@
    {
     "approved": false,
     "args": {
-     "a": "the start of track 118",
+     "a": "the start of track 93",
      "b": "J2.2",
      "layer": "top",
      "share": "90"
@@ -1064,15 +1053,15 @@
     "fix": [
      {
       "command": "ecad.board.track.reshape",
-      "says": "reshape track 118 so it leaves the pad from the middle of its edge"
+      "says": "reshape track 93 so it leaves the pad from the middle of its edge"
      }
     ],
     "items": [
      {
       "end": 0,
-      "id": 118,
+      "id": 93,
       "kind": "track_end",
-      "ref": "the start of track 118"
+      "ref": "the start of track 93"
      },
      {
       "id": 14,
@@ -1081,7 +1070,7 @@
       "ref": "J2.2"
      }
     ],
-    "key": "pad_entry|p14.2|t118.0",
+    "key": "pad_entry|p14.2|t93.0",
     "layer": "top",
     "limit": {
      "bound": "max",
@@ -1094,7 +1083,7 @@
      "units": "ratio",
      "value": 0.9
     },
-    "message": "track 118 (0.3 mm) leaves pad J2.2 at its corner, 90 % of the way from the edge's middle: enter a pad near the middle of its edge",
+    "message": "track 93 (0.3 mm) leaves pad J2.2 at its corner, 90 % of the way from the edge's middle: enter a pad near the middle of its edge",
     "message_key": "electronics.drc_msg_pad_entry",
     "section": "routing-dfm#pad-entry",
     "severity": "warning",
@@ -1103,60 +1092,7 @@
    {
     "approved": false,
     "args": {
-     "a": "the end of track 125",
-     "b": "C6.1",
-     "layer": "top",
-     "share": "56"
-    },
-    "at": [
-     -3.85,
-     3.9
-    ],
-    "class": "practical",
-    "code": "pad_entry",
-    "fix": [
-     {
-      "command": "ecad.board.track.reshape",
-      "says": "reshape track 125 so it leaves the pad from the middle of its edge"
-     }
-    ],
-    "items": [
-     {
-      "end": 1,
-      "id": 125,
-      "kind": "track_end",
-      "ref": "the end of track 125"
-     },
-     {
-      "id": 7,
-      "kind": "pad",
-      "pad": "1",
-      "ref": "C6.1"
-     }
-    ],
-    "key": "pad_entry|p7.1|t125.1",
-    "layer": "top",
-    "limit": {
-     "bound": "max",
-     "param": "pad_entry.corner",
-     "units": "ratio",
-     "value": 1.0
-    },
-    "margin": 0.4444,
-    "measured": {
-     "units": "ratio",
-     "value": 0.5556
-    },
-    "message": "track 125 (0.4 mm) leaves pad C6.1 at its corner, 56 % of the way from the edge's middle: enter a pad near the middle of its edge",
-    "message_key": "electronics.drc_msg_pad_entry",
-    "section": "routing-dfm#pad-entry",
-    "severity": "warning",
-    "verify": "the limit comes from public summaries of fab DFM guides, not from a standard: verify it with your fab"
-   },
-   {
-    "approved": false,
-    "args": {
-     "a": "the start of track 134",
+     "a": "the start of track 123",
      "b": "J2.1",
      "layer": "top",
      "share": "90"
@@ -1170,15 +1106,15 @@
     "fix": [
      {
       "command": "ecad.board.track.reshape",
-      "says": "reshape track 134 so it leaves the pad from the middle of its edge"
+      "says": "reshape track 123 so it leaves the pad from the middle of its edge"
      }
     ],
     "items": [
      {
       "end": 0,
-      "id": 134,
+      "id": 123,
       "kind": "track_end",
-      "ref": "the start of track 134"
+      "ref": "the start of track 123"
      },
      {
       "id": 14,
@@ -1187,7 +1123,7 @@
       "ref": "J2.1"
      }
     ],
-    "key": "pad_entry|p14.1|t134.0",
+    "key": "pad_entry|p14.1|t123.0",
     "layer": "top",
     "limit": {
      "bound": "max",
@@ -1200,7 +1136,7 @@
      "units": "ratio",
      "value": 0.9
     },
-    "message": "track 134 (0.4 mm) leaves pad J2.1 at its corner, 90 % of the way from the edge's middle: enter a pad near the middle of its edge",
+    "message": "track 123 (0.4 mm) leaves pad J2.1 at its corner, 90 % of the way from the edge's middle: enter a pad near the middle of its edge",
     "message_key": "electronics.drc_msg_pad_entry",
     "section": "routing-dfm#pad-entry",
     "severity": "warning",
@@ -1209,29 +1145,135 @@
    {
     "approved": false,
     "args": {
-     "a": "the start of track 162",
-     "b": "SW2.1",
+     "a": "the start of track 161",
+     "b": "C1.1",
      "layer": "top",
-     "share": "87"
+     "share": "100"
     },
     "at": [
-     5.8,
-     -11.2
+     14.5,
+     11.85
     ],
     "class": "practical",
     "code": "pad_entry",
     "fix": [
      {
       "command": "ecad.board.track.reshape",
-      "says": "reshape track 162 so it leaves the pad from the middle of its edge"
+      "says": "reshape track 161 so it leaves the pad from the middle of its edge"
      }
     ],
     "items": [
      {
       "end": 0,
-      "id": 162,
+      "id": 161,
       "kind": "track_end",
-      "ref": "the start of track 162"
+      "ref": "the start of track 161"
+     },
+     {
+      "id": 1,
+      "kind": "pad",
+      "pad": "1",
+      "ref": "C1.1"
+     }
+    ],
+    "key": "pad_entry|p1.1|t161.0",
+    "layer": "top",
+    "limit": {
+     "bound": "max",
+     "param": "pad_entry.corner",
+     "units": "ratio",
+     "value": 1.0
+    },
+    "margin": 0.0,
+    "measured": {
+     "units": "ratio",
+     "value": 1.0
+    },
+    "message": "track 161 (0.4 mm) leaves pad C1.1 at its corner, 100 % of the way from the edge's middle: enter a pad near the middle of its edge",
+    "message_key": "electronics.drc_msg_pad_entry",
+    "section": "routing-dfm#pad-entry",
+    "severity": "warning",
+    "verify": "the limit comes from public summaries of fab DFM guides, not from a standard: verify it with your fab"
+   },
+   {
+    "approved": false,
+    "args": {
+     "a": "the start of track 169",
+     "b": "C10.1",
+     "layer": "top",
+     "share": "89"
+    },
+    "at": [
+     -6.5,
+     -15.0
+    ],
+    "class": "practical",
+    "code": "pad_entry",
+    "fix": [
+     {
+      "command": "ecad.board.track.reshape",
+      "says": "reshape track 169 so it leaves the pad from the middle of its edge"
+     }
+    ],
+    "items": [
+     {
+      "end": 0,
+      "id": 169,
+      "kind": "track_end",
+      "ref": "the start of track 169"
+     },
+     {
+      "id": 2,
+      "kind": "pad",
+      "pad": "1",
+      "ref": "C10.1"
+     }
+    ],
+    "key": "pad_entry|p2.1|t169.0",
+    "layer": "top",
+    "limit": {
+     "bound": "max",
+     "param": "pad_entry.corner",
+     "units": "ratio",
+     "value": 1.0
+    },
+    "margin": 0.1111,
+    "measured": {
+     "units": "ratio",
+     "value": 0.8889
+    },
+    "message": "track 169 (0.4 mm) leaves pad C10.1 at its corner, 89 % of the way from the edge's middle: enter a pad near the middle of its edge",
+    "message_key": "electronics.drc_msg_pad_entry",
+    "section": "routing-dfm#pad-entry",
+    "severity": "warning",
+    "verify": "the limit comes from public summaries of fab DFM guides, not from a standard: verify it with your fab"
+   },
+   {
+    "approved": false,
+    "args": {
+     "a": "the start of track 171",
+     "b": "SW2.1",
+     "layer": "top",
+     "share": "87"
+    },
+    "at": [
+     5.8,
+     -11.85
+    ],
+    "class": "practical",
+    "code": "pad_entry",
+    "fix": [
+     {
+      "command": "ecad.board.track.reshape",
+      "says": "reshape track 171 so it leaves the pad from the middle of its edge"
+     }
+    ],
+    "items": [
+     {
+      "end": 0,
+      "id": 171,
+      "kind": "track_end",
+      "ref": "the start of track 171"
      },
      {
       "id": 27,
@@ -1240,7 +1282,7 @@
       "ref": "SW2.1"
      }
     ],
-    "key": "pad_entry|p27.1|t162.0",
+    "key": "pad_entry|p27.1|t171.0",
     "layer": "top",
     "limit": {
      "bound": "max",
@@ -1253,7 +1295,7 @@
      "units": "ratio",
      "value": 0.8667
     },
-    "message": "track 162 (0.15 mm) leaves pad SW2.1 at its corner, 87 % of the way from the edge's middle: enter a pad near the middle of its edge",
+    "message": "track 171 (0.15 mm) leaves pad SW2.1 at its corner, 87 % of the way from the edge's middle: enter a pad near the middle of its edge",
     "message_key": "electronics.drc_msg_pad_entry",
     "section": "routing-dfm#pad-entry",
     "severity": "warning",
@@ -1262,441 +1304,7 @@
    {
     "approved": false,
     "args": {
-     "a": "the start of track 183",
-     "b": "U1.29",
-     "layer": "top",
-     "share": "85"
-    },
-    "at": [
-     -12.4,
-     6.1
-    ],
-    "class": "practical",
-    "code": "pad_entry",
-    "fix": [
-     {
-      "command": "ecad.board.track.reshape",
-      "says": "reshape track 183 so it leaves the pad from the middle of its edge"
-     }
-    ],
-    "items": [
-     {
-      "end": 0,
-      "id": 183,
-      "kind": "track_end",
-      "ref": "the start of track 183"
-     },
-     {
-      "id": 29,
-      "kind": "pad",
-      "pad": "29",
-      "ref": "U1.29"
-     }
-    ],
-    "key": "pad_entry|p29.29|t183.0",
-    "layer": "top",
-    "limit": {
-     "bound": "max",
-     "param": "pad_entry.corner",
-     "units": "ratio",
-     "value": 1.0
-    },
-    "margin": 0.15,
-    "measured": {
-     "units": "ratio",
-     "value": 0.85
-    },
-    "message": "track 183 (0.15 mm) leaves pad U1.29 at its corner, 85 % of the way from the edge's middle: enter a pad near the middle of its edge",
-    "message_key": "electronics.drc_msg_pad_entry",
-    "section": "routing-dfm#pad-entry",
-    "severity": "warning",
-    "verify": "the limit comes from public summaries of fab DFM guides, not from a standard: verify it with your fab"
-   },
-   {
-    "approved": false,
-    "args": {
-     "a": "the end of track 38",
-     "angle": "45",
-     "b": "track 106",
-     "layer": "top",
-     "limit": "70",
-     "meets": "track"
-    },
-    "at": [
-     -17.9,
-     7.8852
-    ],
-    "class": "practical",
-    "code": "acute_angle",
-    "fix": [
-     {
-      "command": "ecad.board.track.reshape",
-      "says": "reshape track 38 so it meets track 106 at 90\u00b0 or more"
-     }
-    ],
-    "items": [
-     {
-      "end": 1,
-      "id": 38,
-      "kind": "track_end",
-      "ref": "the end of track 38"
-     },
-     {
-      "id": 106,
-      "kind": "track",
-      "ref": "track 106"
-     }
-    ],
-    "key": "acute_angle|t106|t38.1",
-    "layer": "top",
-    "limit": {
-     "bound": "min",
-     "param": "profile.acute_angle",
-     "units": "degrees",
-     "value": 70.0
-    },
-    "margin": -25.0,
-    "measured": {
-     "units": "degrees",
-     "value": 45.0
-    },
-    "message": "the gap between track 38 and track 106 opens at 45\u00b0: a pocket under 70\u00b0 can trap etchant; join them at 90\u00b0 or more",
-    "message_key": "electronics.drc_msg_acute_angle",
-    "section": "routing-dfm#corners",
-    "severity": "warning",
-    "verify": "the limit comes from public summaries of fab DFM guides, not from a standard: verify it with your fab"
-   },
-   {
-    "approved": false,
-    "args": {
-     "a": "the end of track 40",
-     "angle": "45",
-     "b": "track 39",
-     "layer": "top",
-     "limit": "70",
-     "meets": "track"
-    },
-    "at": [
-     -13.1231,
-     8.9643
-    ],
-    "class": "practical",
-    "code": "acute_angle",
-    "fix": [
-     {
-      "command": "ecad.board.track.reshape",
-      "says": "reshape track 40 so it meets track 39 at 90\u00b0 or more"
-     }
-    ],
-    "items": [
-     {
-      "end": 1,
-      "id": 40,
-      "kind": "track_end",
-      "ref": "the end of track 40"
-     },
-     {
-      "id": 39,
-      "kind": "track",
-      "ref": "track 39"
-     }
-    ],
-    "key": "acute_angle|t39|t40.1",
-    "layer": "top",
-    "limit": {
-     "bound": "min",
-     "param": "profile.acute_angle",
-     "units": "degrees",
-     "value": 70.0
-    },
-    "margin": -25.0,
-    "measured": {
-     "units": "degrees",
-     "value": 45.0
-    },
-    "message": "the gap between track 40 and track 39 opens at 45\u00b0: a pocket under 70\u00b0 can trap etchant; join them at 90\u00b0 or more",
-    "message_key": "electronics.drc_msg_acute_angle",
-    "section": "routing-dfm#corners",
-    "severity": "warning",
-    "verify": "the limit comes from public summaries of fab DFM guides, not from a standard: verify it with your fab"
-   },
-   {
-    "approved": false,
-    "args": {
-     "a": "the end of track 43",
-     "angle": "45",
-     "b": "track 181",
-     "layer": "bottom",
-     "limit": "70",
-     "meets": "track"
-    },
-    "at": [
-     -14.163,
-     8.2483
-    ],
-    "class": "practical",
-    "code": "acute_angle",
-    "fix": [
-     {
-      "command": "ecad.board.track.reshape",
-      "says": "reshape track 43 so it meets track 181 at 90\u00b0 or more"
-     }
-    ],
-    "items": [
-     {
-      "end": 1,
-      "id": 43,
-      "kind": "track_end",
-      "ref": "the end of track 43"
-     },
-     {
-      "id": 181,
-      "kind": "track",
-      "ref": "track 181"
-     }
-    ],
-    "key": "acute_angle|t181|t43.1",
-    "layer": "bottom",
-    "limit": {
-     "bound": "min",
-     "param": "profile.acute_angle",
-     "units": "degrees",
-     "value": 70.0
-    },
-    "margin": -25.0,
-    "measured": {
-     "units": "degrees",
-     "value": 45.0
-    },
-    "message": "the gap between track 43 and track 181 opens at 45\u00b0: a pocket under 70\u00b0 can trap etchant; join them at 90\u00b0 or more",
-    "message_key": "electronics.drc_msg_acute_angle",
-    "section": "routing-dfm#corners",
-    "severity": "warning",
-    "verify": "the limit comes from public summaries of fab DFM guides, not from a standard: verify it with your fab"
-   },
-   {
-    "approved": false,
-    "args": {
-     "a": "the end of track 45",
-     "angle": "45",
-     "b": "J1.A4",
-     "layer": "top",
-     "limit": "70",
-     "meets": "pad"
-    },
-    "at": [
-     -15.1947,
-     9.28
-    ],
-    "class": "practical",
-    "code": "acute_angle",
-    "fix": [
-     {
-      "command": "ecad.board.track.reshape",
-      "says": "reshape track 45 so it leaves the pad square to its edge"
-     }
-    ],
-    "items": [
-     {
-      "end": 1,
-      "id": 45,
-      "kind": "track_end",
-      "ref": "the end of track 45"
-     },
-     {
-      "id": 13,
-      "kind": "pad",
-      "pad": "A4",
-      "ref": "J1.A4"
-     }
-    ],
-    "key": "acute_angle|p13.A4|t45.1",
-    "layer": "top",
-    "limit": {
-     "bound": "min",
-     "param": "profile.acute_angle",
-     "units": "degrees",
-     "value": 70.0
-    },
-    "margin": -25.0,
-    "measured": {
-     "units": "degrees",
-     "value": 45.0
-    },
-    "message": "the gap between track 45 and pad J1.A4 opens at 45\u00b0: a pocket under 70\u00b0 can trap etchant; turn the track so both sides open wider",
-    "message_key": "electronics.drc_msg_acute_angle",
-    "section": "routing-dfm#corners",
-    "severity": "warning",
-    "verify": "the limit comes from public summaries of fab DFM guides, not from a standard: verify it with your fab"
-   },
-   {
-    "approved": false,
-    "args": {
-     "a": "the end of track 47",
-     "angle": "45",
-     "b": "track 46",
-     "layer": "top",
-     "limit": "70",
-     "meets": "track"
-    },
-    "at": [
-     11.887,
-     12.0517
-    ],
-    "class": "practical",
-    "code": "acute_angle",
-    "fix": [
-     {
-      "command": "ecad.board.track.reshape",
-      "says": "reshape track 47 so it meets track 46 at 90\u00b0 or more"
-     }
-    ],
-    "items": [
-     {
-      "end": 1,
-      "id": 47,
-      "kind": "track_end",
-      "ref": "the end of track 47"
-     },
-     {
-      "id": 46,
-      "kind": "track",
-      "ref": "track 46"
-     }
-    ],
-    "key": "acute_angle|t46|t47.1",
-    "layer": "top",
-    "limit": {
-     "bound": "min",
-     "param": "profile.acute_angle",
-     "units": "degrees",
-     "value": 70.0
-    },
-    "margin": -25.0,
-    "measured": {
-     "units": "degrees",
-     "value": 45.0
-    },
-    "message": "the gap between track 47 and track 46 opens at 45\u00b0: a pocket under 70\u00b0 can trap etchant; join them at 90\u00b0 or more",
-    "message_key": "electronics.drc_msg_acute_angle",
-    "section": "routing-dfm#corners",
-    "severity": "warning",
-    "verify": "the limit comes from public summaries of fab DFM guides, not from a standard: verify it with your fab"
-   },
-   {
-    "approved": false,
-    "args": {
-     "a": "the end of track 50",
-     "angle": "45",
-     "b": "U2.19",
-     "layer": "top",
-     "limit": "70",
-     "meets": "pad"
-    },
-    "at": [
-     -2.3488,
-     -0.29
-    ],
-    "class": "practical",
-    "code": "acute_angle",
-    "fix": [
-     {
-      "command": "ecad.board.track.reshape",
-      "says": "reshape track 50 so it leaves the pad square to its edge"
-     }
-    ],
-    "items": [
-     {
-      "end": 1,
-      "id": 50,
-      "kind": "track_end",
-      "ref": "the end of track 50"
-     },
-     {
-      "id": 30,
-      "kind": "pad",
-      "pad": "19",
-      "ref": "U2.19"
-     }
-    ],
-    "key": "acute_angle|p30.19|t50.1",
-    "layer": "top",
-    "limit": {
-     "bound": "min",
-     "param": "profile.acute_angle",
-     "units": "degrees",
-     "value": 70.0
-    },
-    "margin": -25.0,
-    "measured": {
-     "units": "degrees",
-     "value": 45.0
-    },
-    "message": "the gap between track 50 and pad U2.19 opens at 45\u00b0: a pocket under 70\u00b0 can trap etchant; turn the track so both sides open wider",
-    "message_key": "electronics.drc_msg_acute_angle",
-    "section": "routing-dfm#corners",
-    "severity": "warning",
-    "verify": "the limit comes from public summaries of fab DFM guides, not from a standard: verify it with your fab"
-   },
-   {
-    "approved": false,
-    "args": {
-     "a": "the end of track 69",
-     "angle": "45",
-     "b": "U1.37",
-     "layer": "top",
-     "limit": "70",
-     "meets": "pad"
-    },
-    "at": [
-     -18.2088,
-     6.1
-    ],
-    "class": "practical",
-    "code": "acute_angle",
-    "fix": [
-     {
-      "command": "ecad.board.track.reshape",
-      "says": "reshape track 69 so it leaves the pad square to its edge"
-     }
-    ],
-    "items": [
-     {
-      "end": 1,
-      "id": 69,
-      "kind": "track_end",
-      "ref": "the end of track 69"
-     },
-     {
-      "id": 29,
-      "kind": "pad",
-      "pad": "37",
-      "ref": "U1.37"
-     }
-    ],
-    "key": "acute_angle|p29.37|t69.1",
-    "layer": "top",
-    "limit": {
-     "bound": "min",
-     "param": "profile.acute_angle",
-     "units": "degrees",
-     "value": 70.0
-    },
-    "margin": -25.0,
-    "measured": {
-     "units": "degrees",
-     "value": 45.0
-    },
-    "message": "the gap between track 69 and pad U1.37 opens at 45\u00b0: a pocket under 70\u00b0 can trap etchant; turn the track so both sides open wider",
-    "message_key": "electronics.drc_msg_acute_angle",
-    "section": "routing-dfm#corners",
-    "severity": "warning",
-    "verify": "the limit comes from public summaries of fab DFM guides, not from a standard: verify it with your fab"
-   },
-   {
-    "approved": false,
-    "args": {
-     "a": "the start of track 70",
+     "a": "the start of track 39",
      "angle": "45",
      "b": "U1.5",
      "layer": "top",
@@ -1712,15 +1320,15 @@
     "fix": [
      {
       "command": "ecad.board.track.reshape",
-      "says": "reshape track 70 so it leaves the pad square to its edge"
+      "says": "reshape track 39 so it leaves the pad square to its edge"
      }
     ],
     "items": [
      {
       "end": 0,
-      "id": 70,
+      "id": 39,
       "kind": "track_end",
-      "ref": "the start of track 70"
+      "ref": "the start of track 39"
      },
      {
       "id": 29,
@@ -1729,7 +1337,7 @@
       "ref": "U1.5"
      }
     ],
-    "key": "acute_angle|p29.5|t70.0",
+    "key": "acute_angle|p29.5|t39.0",
     "layer": "top",
     "limit": {
      "bound": "min",
@@ -1742,7 +1350,7 @@
      "units": "degrees",
      "value": 45.0
     },
-    "message": "the gap between track 70 and pad U1.5 opens at 45\u00b0: a pocket under 70\u00b0 can trap etchant; turn the track so both sides open wider",
+    "message": "the gap between track 39 and pad U1.5 opens at 45\u00b0: a pocket under 70\u00b0 can trap etchant; turn the track so both sides open wider",
     "message_key": "electronics.drc_msg_acute_angle",
     "section": "routing-dfm#corners",
     "severity": "warning",
@@ -1751,7 +1359,7 @@
    {
     "approved": false,
     "args": {
-     "a": "the start of track 88",
+     "a": "the start of track 59",
      "angle": "45",
      "b": "C2.2",
      "layer": "top",
@@ -1767,15 +1375,15 @@
     "fix": [
      {
       "command": "ecad.board.track.reshape",
-      "says": "reshape track 88 so it leaves the pad square to its edge"
+      "says": "reshape track 59 so it leaves the pad square to its edge"
      }
     ],
     "items": [
      {
       "end": 0,
-      "id": 88,
+      "id": 59,
       "kind": "track_end",
-      "ref": "the start of track 88"
+      "ref": "the start of track 59"
      },
      {
       "id": 3,
@@ -1784,7 +1392,7 @@
       "ref": "C2.2"
      }
     ],
-    "key": "acute_angle|p3.2|t88.0",
+    "key": "acute_angle|p3.2|t59.0",
     "layer": "top",
     "limit": {
      "bound": "min",
@@ -1797,7 +1405,7 @@
      "units": "degrees",
      "value": 45.0
     },
-    "message": "the gap between track 88 and pad C2.2 opens at 45\u00b0: a pocket under 70\u00b0 can trap etchant; turn the track so both sides open wider",
+    "message": "the gap between track 59 and pad C2.2 opens at 45\u00b0: a pocket under 70\u00b0 can trap etchant; turn the track so both sides open wider",
     "message_key": "electronics.drc_msg_acute_angle",
     "section": "routing-dfm#corners",
     "severity": "warning",
@@ -1806,94 +1414,39 @@
    {
     "approved": false,
     "args": {
-     "a": "the start of track 106",
+     "a": "the end of track 110",
      "angle": "45",
-     "b": "R1.2",
-     "layer": "top",
-     "limit": "70",
-     "meets": "pad"
-    },
-    "at": [
-     -17.8352,
-     7.95
-    ],
-    "class": "practical",
-    "code": "acute_angle",
-    "fix": [
-     {
-      "command": "ecad.board.track.reshape",
-      "says": "reshape track 106 so it leaves the pad square to its edge"
-     }
-    ],
-    "items": [
-     {
-      "end": 0,
-      "id": 106,
-      "kind": "track_end",
-      "ref": "the start of track 106"
-     },
-     {
-      "id": 18,
-      "kind": "pad",
-      "pad": "2",
-      "ref": "R1.2"
-     }
-    ],
-    "key": "acute_angle|p18.2|t106.0",
-    "layer": "top",
-    "limit": {
-     "bound": "min",
-     "param": "profile.acute_angle",
-     "units": "degrees",
-     "value": 70.0
-    },
-    "margin": -25.0,
-    "measured": {
-     "units": "degrees",
-     "value": 45.0
-    },
-    "message": "the gap between track 106 and pad R1.2 opens at 45\u00b0: a pocket under 70\u00b0 can trap etchant; turn the track so both sides open wider",
-    "message_key": "electronics.drc_msg_acute_angle",
-    "section": "routing-dfm#corners",
-    "severity": "warning",
-    "verify": "the limit comes from public summaries of fab DFM guides, not from a standard: verify it with your fab"
-   },
-   {
-    "approved": false,
-    "args": {
-     "a": "the end of track 106",
-     "angle": "45",
-     "b": "track 38",
+     "b": "track 115",
      "layer": "top",
      "limit": "70",
      "meets": "track"
     },
     "at": [
-     -17.4,
-     8.4648
+     -5.363,
+     0.6983
     ],
     "class": "practical",
     "code": "acute_angle",
     "fix": [
      {
       "command": "ecad.board.track.reshape",
-      "says": "reshape track 106 so it meets track 38 at 90\u00b0 or more"
+      "says": "reshape track 110 so it meets track 115 at 90\u00b0 or more"
      }
     ],
     "items": [
      {
       "end": 1,
-      "id": 106,
+      "id": 110,
       "kind": "track_end",
-      "ref": "the end of track 106"
+      "ref": "the end of track 110"
      },
      {
-      "id": 38,
+      "id": 115,
       "kind": "track",
-      "ref": "track 38"
+      "ref": "track 115"
      }
     ],
-    "key": "acute_angle|t106.1|t38",
+    "key": "acute_angle|t110.1|t115",
     "layer": "top",
     "limit": {
      "bound": "min",
@@ -1906,7 +1459,7 @@
      "units": "degrees",
      "value": 45.0
     },
-    "message": "the gap between track 106 and track 38 opens at 45\u00b0: a pocket under 70\u00b0 can trap etchant; join them at 90\u00b0 or more",
+    "message": "the gap between track 110 and track 115 opens at 45\u00b0: a pocket under 70\u00b0 can trap etchant; join them at 90\u00b0 or more",
     "message_key": "electronics.drc_msg_acute_angle",
     "section": "routing-dfm#corners",
     "severity": "warning",
@@ -1915,62 +1468,7 @@
    {
     "approved": false,
     "args": {
-     "a": "the end of track 127",
-     "angle": "45",
-     "b": "C5.1",
-     "layer": "top",
-     "limit": "70",
-     "meets": "pad"
-    },
-    "at": [
-     -6.3853,
-     0.8
-    ],
-    "class": "practical",
-    "code": "acute_angle",
-    "fix": [
-     {
-      "command": "ecad.board.track.reshape",
-      "says": "reshape track 127 so it leaves the pad square to its edge"
-     }
-    ],
-    "items": [
-     {
-      "end": 1,
-      "id": 127,
-      "kind": "track_end",
-      "ref": "the end of track 127"
-     },
-     {
-      "id": 6,
-      "kind": "pad",
-      "pad": "1",
-      "ref": "C5.1"
-     }
-    ],
-    "key": "acute_angle|p6.1|t127.1",
-    "layer": "top",
-    "limit": {
-     "bound": "min",
-     "param": "profile.acute_angle",
-     "units": "degrees",
-     "value": 70.0
-    },
-    "margin": -25.0,
-    "measured": {
-     "units": "degrees",
-     "value": 45.0
-    },
-    "message": "the gap between track 127 and pad C5.1 opens at 45\u00b0: a pocket under 70\u00b0 can trap etchant; turn the track so both sides open wider",
-    "message_key": "electronics.drc_msg_acute_angle",
-    "section": "routing-dfm#corners",
-    "severity": "warning",
-    "verify": "the limit comes from public summaries of fab DFM guides, not from a standard: verify it with your fab"
-   },
-   {
-    "approved": false,
-    "args": {
-     "a": "the end of track 133",
+     "a": "the end of track 116",
      "angle": "45",
      "b": "Q1.2",
      "layer": "top",
@@ -1986,15 +1484,15 @@
     "fix": [
      {
       "command": "ecad.board.track.reshape",
-      "says": "reshape track 133 so it leaves the pad square to its edge"
+      "says": "reshape track 116 so it leaves the pad square to its edge"
      }
     ],
     "items": [
      {
       "end": 1,
-      "id": 133,
+      "id": 116,
       "kind": "track_end",
-      "ref": "the end of track 133"
+      "ref": "the end of track 116"
      },
      {
       "id": 17,
@@ -2003,7 +1501,7 @@
       "ref": "Q1.2"
      }
     ],
-    "key": "acute_angle|p17.2|t133.1",
+    "key": "acute_angle|p17.2|t116.1",
     "layer": "top",
     "limit": {
      "bound": "min",
@@ -2016,7 +1514,7 @@
      "units": "degrees",
      "value": 45.0
     },
-    "message": "the gap between track 133 and pad Q1.2 opens at 45\u00b0: a pocket under 70\u00b0 can trap etchant; turn the track so both sides open wider",
+    "message": "the gap between track 116 and pad Q1.2 opens at 45\u00b0: a pocket under 70\u00b0 can trap etchant; turn the track so both sides open wider",
     "message_key": "electronics.drc_msg_acute_angle",
     "section": "routing-dfm#corners",
     "severity": "warning",
@@ -2025,7 +1523,117 @@
    {
     "approved": false,
     "args": {
-     "a": "the end of track 137",
+     "a": "the end of track 120",
+     "angle": "45",
+     "b": "U2.19",
+     "layer": "top",
+     "limit": "70",
+     "meets": "pad"
+    },
+    "at": [
+     -2.3488,
+     -0.29
+    ],
+    "class": "practical",
+    "code": "acute_angle",
+    "fix": [
+     {
+      "command": "ecad.board.track.reshape",
+      "says": "reshape track 120 so it leaves the pad square to its edge"
+     }
+    ],
+    "items": [
+     {
+      "end": 1,
+      "id": 120,
+      "kind": "track_end",
+      "ref": "the end of track 120"
+     },
+     {
+      "id": 30,
+      "kind": "pad",
+      "pad": "19",
+      "ref": "U2.19"
+     }
+    ],
+    "key": "acute_angle|p30.19|t120.1",
+    "layer": "top",
+    "limit": {
+     "bound": "min",
+     "param": "profile.acute_angle",
+     "units": "degrees",
+     "value": 70.0
+    },
+    "margin": -25.0,
+    "measured": {
+     "units": "degrees",
+     "value": 45.0
+    },
+    "message": "the gap between track 120 and pad U2.19 opens at 45\u00b0: a pocket under 70\u00b0 can trap etchant; turn the track so both sides open wider",
+    "message_key": "electronics.drc_msg_acute_angle",
+    "section": "routing-dfm#corners",
+    "severity": "warning",
+    "verify": "the limit comes from public summaries of fab DFM guides, not from a standard: verify it with your fab"
+   },
+   {
+    "approved": false,
+    "args": {
+     "a": "the end of track 122",
+     "angle": "45",
+     "b": "U1.37",
+     "layer": "top",
+     "limit": "70",
+     "meets": "pad"
+    },
+    "at": [
+     -17.9588,
+     6.1
+    ],
+    "class": "practical",
+    "code": "acute_angle",
+    "fix": [
+     {
+      "command": "ecad.board.track.reshape",
+      "says": "reshape track 122 so it leaves the pad square to its edge"
+     }
+    ],
+    "items": [
+     {
+      "end": 1,
+      "id": 122,
+      "kind": "track_end",
+      "ref": "the end of track 122"
+     },
+     {
+      "id": 29,
+      "kind": "pad",
+      "pad": "37",
+      "ref": "U1.37"
+     }
+    ],
+    "key": "acute_angle|p29.37|t122.1",
+    "layer": "top",
+    "limit": {
+     "bound": "min",
+     "param": "profile.acute_angle",
+     "units": "degrees",
+     "value": 70.0
+    },
+    "margin": -25.0,
+    "measured": {
+     "units": "degrees",
+     "value": 45.0
+    },
+    "message": "the gap between track 122 and pad U1.37 opens at 45\u00b0: a pocket under 70\u00b0 can trap etchant; turn the track so both sides open wider",
+    "message_key": "electronics.drc_msg_acute_angle",
+    "section": "routing-dfm#corners",
+    "severity": "warning",
+    "verify": "the limit comes from public summaries of fab DFM guides, not from a standard: verify it with your fab"
+   },
+   {
+    "approved": false,
+    "args": {
+     "a": "the end of track 126",
      "angle": "45",
      "b": "SW1.1",
      "layer": "top",
@@ -2041,15 +1649,15 @@
     "fix": [
      {
       "command": "ecad.board.track.reshape",
-      "says": "reshape track 137 so it leaves the pad square to its edge"
+      "says": "reshape track 126 so it leaves the pad square to its edge"
      }
     ],
     "items": [
      {
       "end": 1,
-      "id": 137,
+      "id": 126,
       "kind": "track_end",
-      "ref": "the end of track 137"
+      "ref": "the end of track 126"
      },
      {
       "id": 26,
@@ -2058,7 +1666,7 @@
       "ref": "SW1.1"
      }
     ],
-    "key": "acute_angle|p26.1|t137.1",
+    "key": "acute_angle|p26.1|t126.1",
     "layer": "top",
     "limit": {
      "bound": "min",
@@ -2071,7 +1679,7 @@
      "units": "degrees",
      "value": 45.0
     },
-    "message": "the gap between track 137 and pad SW1.1 opens at 45\u00b0: a pocket under 70\u00b0 can trap etchant; turn the track so both sides open wider",
+    "message": "the gap between track 126 and pad SW1.1 opens at 45\u00b0: a pocket under 70\u00b0 can trap etchant; turn the track so both sides open wider",
     "message_key": "electronics.drc_msg_acute_angle",
     "section": "routing-dfm#corners",
     "severity": "warning",
@@ -2080,9 +1688,9 @@
    {
     "approved": false,
     "args": {
-     "a": "the end of track 143",
+     "a": "the end of track 132",
      "angle": "45",
-     "b": "track 138",
+     "b": "track 127",
      "layer": "top",
      "limit": "70",
      "meets": "track"
@@ -2096,23 +1704,23 @@
     "fix": [
      {
       "command": "ecad.board.track.reshape",
-      "says": "reshape track 143 so it meets track 138 at 90\u00b0 or more"
+      "says": "reshape track 132 so it meets track 127 at 90\u00b0 or more"
      }
     ],
     "items": [
      {
       "end": 1,
-      "id": 143,
+      "id": 132,
       "kind": "track_end",
-      "ref": "the end of track 143"
+      "ref": "the end of track 132"
      },
      {
-      "id": 138,
+      "id": 127,
       "kind": "track",
-      "ref": "track 138"
+      "ref": "track 127"
      }
     ],
-    "key": "acute_angle|t138|t143.1",
+    "key": "acute_angle|t127|t132.1",
     "layer": "top",
     "limit": {
      "bound": "min",
@@ -2125,7 +1733,62 @@
      "units": "degrees",
      "value": 45.0
     },
-    "message": "the gap between track 143 and track 138 opens at 45\u00b0: a pocket under 70\u00b0 can trap etchant; join them at 90\u00b0 or more",
+    "message": "the gap between track 132 and track 127 opens at 45\u00b0: a pocket under 70\u00b0 can trap etchant; join them at 90\u00b0 or more",
+    "message_key": "electronics.drc_msg_acute_angle",
+    "section": "routing-dfm#corners",
+    "severity": "warning",
+    "verify": "the limit comes from public summaries of fab DFM guides, not from a standard: verify it with your fab"
+   },
+   {
+    "approved": false,
+    "args": {
+     "a": "the end of track 142",
+     "angle": "45",
+     "b": "Q1.1",
+     "layer": "top",
+     "limit": "70",
+     "meets": "pad"
+    },
+    "at": [
+     -10.2,
+     -11.6588
+    ],
+    "class": "practical",
+    "code": "acute_angle",
+    "fix": [
+     {
+      "command": "ecad.board.track.reshape",
+      "says": "reshape track 142 so it leaves the pad square to its edge"
+     }
+    ],
+    "items": [
+     {
+      "end": 1,
+      "id": 142,
+      "kind": "track_end",
+      "ref": "the end of track 142"
+     },
+     {
+      "id": 17,
+      "kind": "pad",
+      "pad": "1",
+      "ref": "Q1.1"
+     }
+    ],
+    "key": "acute_angle|p17.1|t142.1",
+    "layer": "top",
+    "limit": {
+     "bound": "min",
+     "param": "profile.acute_angle",
+     "units": "degrees",
+     "value": 70.0
+    },
+    "margin": -25.0,
+    "measured": {
+     "units": "degrees",
+     "value": 45.0
+    },
+    "message": "the gap between track 142 and pad Q1.1 opens at 45\u00b0: a pocket under 70\u00b0 can trap etchant; turn the track so both sides open wider",
     "message_key": "electronics.drc_msg_acute_angle",
     "section": "routing-dfm#corners",
     "severity": "warning",
@@ -2136,14 +1799,14 @@
     "args": {
      "a": "the end of track 147",
      "angle": "45",
-     "b": "R4.2",
+     "b": "R8.2",
      "layer": "top",
      "limit": "70",
      "meets": "pad"
     },
     "at": [
-     10.75,
-     13.4912
+     -12.05,
+     -9.5912
     ],
     "class": "practical",
     "code": "acute_angle",
@@ -2161,178 +1824,13 @@
       "ref": "the end of track 147"
      },
      {
-      "id": 21,
-      "kind": "pad",
-      "pad": "2",
-      "ref": "R4.2"
-     }
-    ],
-    "key": "acute_angle|p21.2|t147.1",
-    "layer": "top",
-    "limit": {
-     "bound": "min",
-     "param": "profile.acute_angle",
-     "units": "degrees",
-     "value": 70.0
-    },
-    "margin": -25.0,
-    "measured": {
-     "units": "degrees",
-     "value": 45.0
-    },
-    "message": "the gap between track 147 and pad R4.2 opens at 45\u00b0: a pocket under 70\u00b0 can trap etchant; turn the track so both sides open wider",
-    "message_key": "electronics.drc_msg_acute_angle",
-    "section": "routing-dfm#corners",
-    "severity": "warning",
-    "verify": "the limit comes from public summaries of fab DFM guides, not from a standard: verify it with your fab"
-   },
-   {
-    "approved": false,
-    "args": {
-     "a": "the end of track 152",
-     "angle": "67",
-     "b": "J4.4",
-     "layer": "top",
-     "limit": "70",
-     "meets": "pad"
-    },
-    "at": [
-     -15.6769,
-     -13.7223
-    ],
-    "class": "practical",
-    "code": "acute_angle",
-    "fix": [
-     {
-      "command": "ecad.board.track.reshape",
-      "says": "reshape track 152 so it leaves the pad square to its edge"
-     }
-    ],
-    "items": [
-     {
-      "end": 1,
-      "id": 152,
-      "kind": "track_end",
-      "ref": "the end of track 152"
-     },
-     {
-      "id": 15,
-      "kind": "pad",
-      "pad": "4",
-      "ref": "J4.4"
-     }
-    ],
-    "key": "acute_angle|p15.4|t152.1",
-    "layer": "top",
-    "limit": {
-     "bound": "min",
-     "param": "profile.acute_angle",
-     "units": "degrees",
-     "value": 70.0
-    },
-    "margin": -3.471,
-    "measured": {
-     "units": "degrees",
-     "value": 66.529
-    },
-    "message": "the gap between track 152 and pad J4.4 opens at 67\u00b0: a pocket under 70\u00b0 can trap etchant; turn the track so both sides open wider",
-    "message_key": "electronics.drc_msg_acute_angle",
-    "section": "routing-dfm#corners",
-    "severity": "warning",
-    "verify": "the limit comes from public summaries of fab DFM guides, not from a standard: verify it with your fab"
-   },
-   {
-    "approved": false,
-    "args": {
-     "a": "the end of track 156",
-     "angle": "45",
-     "b": "Q1.1",
-     "layer": "top",
-     "limit": "70",
-     "meets": "pad"
-    },
-    "at": [
-     -10.2,
-     -11.6588
-    ],
-    "class": "practical",
-    "code": "acute_angle",
-    "fix": [
-     {
-      "command": "ecad.board.track.reshape",
-      "says": "reshape track 156 so it leaves the pad square to its edge"
-     }
-    ],
-    "items": [
-     {
-      "end": 1,
-      "id": 156,
-      "kind": "track_end",
-      "ref": "the end of track 156"
-     },
-     {
-      "id": 17,
-      "kind": "pad",
-      "pad": "1",
-      "ref": "Q1.1"
-     }
-    ],
-    "key": "acute_angle|p17.1|t156.1",
-    "layer": "top",
-    "limit": {
-     "bound": "min",
-     "param": "profile.acute_angle",
-     "units": "degrees",
-     "value": 70.0
-    },
-    "margin": -25.0,
-    "measured": {
-     "units": "degrees",
-     "value": 45.0
-    },
-    "message": "the gap between track 156 and pad Q1.1 opens at 45\u00b0: a pocket under 70\u00b0 can trap etchant; turn the track so both sides open wider",
-    "message_key": "electronics.drc_msg_acute_angle",
-    "section": "routing-dfm#corners",
-    "severity": "warning",
-    "verify": "the limit comes from public summaries of fab DFM guides, not from a standard: verify it with your fab"
-   },
-   {
-    "approved": false,
-    "args": {
-     "a": "the end of track 161",
-     "angle": "45",
-     "b": "R8.2",
-     "layer": "top",
-     "limit": "70",
-     "meets": "pad"
-    },
-    "at": [
-     -12.05,
-     -9.5912
-    ],
-    "class": "practical",
-    "code": "acute_angle",
-    "fix": [
-     {
-      "command": "ecad.board.track.reshape",
-      "says": "reshape track 161 so it leaves the pad square to its edge"
-     }
-    ],
-    "items": [
-     {
-      "end": 1,
-      "id": 161,
-      "kind": "track_end",
-      "ref": "the end of track 161"
-     },
-     {
       "id": 25,
       "kind": "pad",
       "pad": "2",
       "ref": "R8.2"
      }
     ],
-    "key": "acute_angle|p25.2|t161.1",
+    "key": "acute_angle|p25.2|t147.1",
     "layer": "top",
     "limit": {
      "bound": "min",
@@ -2345,7 +1843,7 @@
      "units": "degrees",
      "value": 45.0
     },
-    "message": "the gap between track 161 and pad R8.2 opens at 45\u00b0: a pocket under 70\u00b0 can trap etchant; turn the track so both sides open wider",
+    "message": "the gap between track 147 and pad R8.2 opens at 45\u00b0: a pocket under 70\u00b0 can trap etchant; turn the track so both sides open wider",
     "message_key": "electronics.drc_msg_acute_angle",
     "section": "routing-dfm#corners",
     "severity": "warning",
@@ -2354,7 +1852,7 @@
    {
     "approved": false,
     "args": {
-     "a": "the end of track 172",
+     "a": "the end of track 148",
      "angle": "45",
      "b": "R6.2",
      "layer": "top",
@@ -2370,15 +1868,15 @@
     "fix": [
      {
       "command": "ecad.board.track.reshape",
-      "says": "reshape track 172 so it leaves the pad square to its edge"
+      "says": "reshape track 148 so it leaves the pad square to its edge"
      }
     ],
     "items": [
      {
       "end": 1,
-      "id": 172,
+      "id": 148,
       "kind": "track_end",
-      "ref": "the end of track 172"
+      "ref": "the end of track 148"
      },
      {
       "id": 23,
@@ -2387,7 +1885,7 @@
       "ref": "R6.2"
      }
     ],
-    "key": "acute_angle|p23.2|t172.1",
+    "key": "acute_angle|p23.2|t148.1",
     "layer": "top",
     "limit": {
      "bound": "min",
@@ -2400,7 +1898,7 @@
      "units": "degrees",
      "value": 45.0
     },
-    "message": "the gap between track 172 and pad R6.2 opens at 45\u00b0: a pocket under 70\u00b0 can trap etchant; turn the track so both sides open wider",
+    "message": "the gap between track 148 and pad R6.2 opens at 45\u00b0: a pocket under 70\u00b0 can trap etchant; turn the track so both sides open wider",
     "message_key": "electronics.drc_msg_acute_angle",
     "section": "routing-dfm#corners",
     "severity": "warning",
@@ -2409,7 +1907,7 @@
    {
     "approved": false,
     "args": {
-     "a": "the end of track 173",
+     "a": "the end of track 149",
      "angle": "45",
      "b": "C9.1",
      "layer": "top",
@@ -2425,15 +1923,15 @@
     "fix": [
      {
       "command": "ecad.board.track.reshape",
-      "says": "reshape track 173 so it leaves the pad square to its edge"
+      "says": "reshape track 149 so it leaves the pad square to its edge"
      }
     ],
     "items": [
      {
       "end": 1,
-      "id": 173,
+      "id": 149,
       "kind": "track_end",
-      "ref": "the end of track 173"
+      "ref": "the end of track 149"
      },
      {
       "id": 10,
@@ -2442,7 +1940,7 @@
       "ref": "C9.1"
      }
     ],
-    "key": "acute_angle|p10.1|t173.1",
+    "key": "acute_angle|p10.1|t149.1",
     "layer": "top",
     "limit": {
      "bound": "min",
@@ -2455,7 +1953,7 @@
      "units": "degrees",
      "value": 45.0
     },
-    "message": "the gap between track 173 and pad C9.1 opens at 45\u00b0: a pocket under 70\u00b0 can trap etchant; turn the track so both sides open wider",
+    "message": "the gap between track 149 and pad C9.1 opens at 45\u00b0: a pocket under 70\u00b0 can trap etchant; turn the track so both sides open wider",
     "message_key": "electronics.drc_msg_acute_angle",
     "section": "routing-dfm#corners",
     "severity": "warning",
@@ -2464,94 +1962,39 @@
    {
     "approved": false,
     "args": {
-     "a": "the end of track 183",
+     "a": "the end of track 162",
      "angle": "45",
-     "b": "J1.A7",
-     "layer": "top",
-     "limit": "70",
-     "meets": "pad"
-    },
-    "at": [
-     -12.7212,
-     10.42
-    ],
-    "class": "practical",
-    "code": "acute_angle",
-    "fix": [
-     {
-      "command": "ecad.board.track.reshape",
-      "says": "reshape track 183 so it leaves the pad square to its edge"
-     }
-    ],
-    "items": [
-     {
-      "end": 1,
-      "id": 183,
-      "kind": "track_end",
-      "ref": "the end of track 183"
-     },
-     {
-      "id": 13,
-      "kind": "pad",
-      "pad": "A7",
-      "ref": "J1.A7"
-     }
-    ],
-    "key": "acute_angle|p13.A7|t183.1",
-    "layer": "top",
-    "limit": {
-     "bound": "min",
-     "param": "profile.acute_angle",
-     "units": "degrees",
-     "value": 70.0
-    },
-    "margin": -25.0,
-    "measured": {
-     "units": "degrees",
-     "value": 45.0
-    },
-    "message": "the gap between track 183 and pad J1.A7 opens at 45\u00b0: a pocket under 70\u00b0 can trap etchant; turn the track so both sides open wider",
-    "message_key": "electronics.drc_msg_acute_angle",
-    "section": "routing-dfm#corners",
-    "severity": "warning",
-    "verify": "the limit comes from public summaries of fab DFM guides, not from a standard: verify it with your fab"
-   },
-   {
-    "approved": false,
-    "args": {
-     "a": "the end of track 183",
-     "angle": "45",
-     "b": "track 182",
+     "b": "track 161",
      "layer": "top",
      "limit": "70",
      "meets": "track"
     },
     "at": [
-     -12.7731,
-     10.5857
+     12.013,
+     12.0517
     ],
     "class": "practical",
     "code": "acute_angle",
     "fix": [
      {
       "command": "ecad.board.track.reshape",
-      "says": "reshape track 183 so it meets track 182 at 90\u00b0 or more"
+      "says": "reshape track 162 so it meets track 161 at 90\u00b0 or more"
      }
     ],
     "items": [
      {
       "end": 1,
-      "id": 183,
+      "id": 162,
       "kind": "track_end",
-      "ref": "the end of track 183"
+      "ref": "the end of track 162"
      },
      {
-      "id": 182,
+      "id": 161,
       "kind": "track",
-      "ref": "track 182"
+      "ref": "track 161"
      }
     ],
-    "key": "acute_angle|t182|t183.1",
+    "key": "acute_angle|t161|t162.1",
     "layer": "top",
     "limit": {
      "bound": "min",
@@ -2564,7 +2007,7 @@
      "units": "degrees",
      "value": 45.0
     },
-    "message": "the gap between track 183 and track 182 opens at 45\u00b0: a pocket under 70\u00b0 can trap etchant; join them at 90\u00b0 or more",
+    "message": "the gap between track 162 and track 161 opens at 45\u00b0: a pocket under 70\u00b0 can trap etchant; join them at 90\u00b0 or more",
     "message_key": "electronics.drc_msg_acute_angle",
     "section": "routing-dfm#corners",
     "severity": "warning",
@@ -2573,31 +2016,301 @@
    {
     "approved": false,
     "args": {
-     "a": "the end of track 196",
+     "a": "the end of track 169",
      "angle": "45",
-     "b": "U2.6",
+     "b": "J4.1",
      "layer": "top",
      "limit": "70",
      "meets": "pad"
     },
     "at": [
-     12.6,
-     2.6412
+     -7.55,
+     -14.0353
     ],
     "class": "practical",
     "code": "acute_angle",
     "fix": [
      {
       "command": "ecad.board.track.reshape",
-      "says": "reshape track 196 so it leaves the pad square to its edge"
+      "says": "reshape track 169 so it leaves the pad square to its edge"
      }
     ],
     "items": [
      {
       "end": 1,
-      "id": 196,
+      "id": 169,
       "kind": "track_end",
-      "ref": "the end of track 196"
+      "ref": "the end of track 169"
+     },
+     {
+      "id": 15,
+      "kind": "pad",
+      "pad": "1",
+      "ref": "J4.1"
+     }
+    ],
+    "key": "acute_angle|p15.1|t169.1",
+    "layer": "top",
+    "limit": {
+     "bound": "min",
+     "param": "profile.acute_angle",
+     "units": "degrees",
+     "value": 70.0
+    },
+    "margin": -25.0,
+    "measured": {
+     "units": "degrees",
+     "value": 45.0
+    },
+    "message": "the gap between track 169 and pad J4.1 opens at 45\u00b0: a pocket under 70\u00b0 can trap etchant; turn the track so both sides open wider",
+    "message_key": "electronics.drc_msg_acute_angle",
+    "section": "routing-dfm#corners",
+    "severity": "warning",
+    "verify": "the limit comes from public summaries of fab DFM guides, not from a standard: verify it with your fab"
+   },
+   {
+    "approved": false,
+    "args": {
+     "a": "the end of track 170",
+     "angle": "66",
+     "b": "J4.4",
+     "layer": "top",
+     "limit": "70",
+     "meets": "pad"
+    },
+    "at": [
+     -15.6269,
+     -13.7442
+    ],
+    "class": "practical",
+    "code": "acute_angle",
+    "fix": [
+     {
+      "command": "ecad.board.track.reshape",
+      "says": "reshape track 170 so it leaves the pad square to its edge"
+     }
+    ],
+    "items": [
+     {
+      "end": 1,
+      "id": 170,
+      "kind": "track_end",
+      "ref": "the end of track 170"
+     },
+     {
+      "id": 15,
+      "kind": "pad",
+      "pad": "4",
+      "ref": "J4.4"
+     }
+    ],
+    "key": "acute_angle|p15.4|t170.1",
+    "layer": "top",
+    "limit": {
+     "bound": "min",
+     "param": "profile.acute_angle",
+     "units": "degrees",
+     "value": 70.0
+    },
+    "margin": -3.5602,
+    "measured": {
+     "units": "degrees",
+     "value": 66.4398
+    },
+    "message": "the gap between track 170 and pad J4.4 opens at 66\u00b0: a pocket under 70\u00b0 can trap etchant; turn the track so both sides open wider",
+    "message_key": "electronics.drc_msg_acute_angle",
+    "section": "routing-dfm#corners",
+    "severity": "warning",
+    "verify": "the limit comes from public summaries of fab DFM guides, not from a standard: verify it with your fab"
+   },
+   {
+    "approved": false,
+    "args": {
+     "a": "the end of track 182",
+     "angle": "45",
+     "b": "J1.A4",
+     "layer": "top",
+     "limit": "70",
+     "meets": "pad"
+    },
+    "at": [
+     -15.1947,
+     9.28
+    ],
+    "class": "practical",
+    "code": "acute_angle",
+    "fix": [
+     {
+      "command": "ecad.board.track.reshape",
+      "says": "reshape track 182 so it leaves the pad square to its edge"
+     }
+    ],
+    "items": [
+     {
+      "end": 1,
+      "id": 182,
+      "kind": "track_end",
+      "ref": "the end of track 182"
+     },
+     {
+      "id": 13,
+      "kind": "pad",
+      "pad": "A4",
+      "ref": "J1.A4"
+     }
+    ],
+    "key": "acute_angle|p13.A4|t182.1",
+    "layer": "top",
+    "limit": {
+     "bound": "min",
+     "param": "profile.acute_angle",
+     "units": "degrees",
+     "value": 70.0
+    },
+    "margin": -25.0,
+    "measured": {
+     "units": "degrees",
+     "value": 45.0
+    },
+    "message": "the gap between track 182 and pad J1.A4 opens at 45\u00b0: a pocket under 70\u00b0 can trap etchant; turn the track so both sides open wider",
+    "message_key": "electronics.drc_msg_acute_angle",
+    "section": "routing-dfm#corners",
+    "severity": "warning",
+    "verify": "the limit comes from public summaries of fab DFM guides, not from a standard: verify it with your fab"
+   },
+   {
+    "approved": false,
+    "args": {
+     "a": "track 194",
+     "b": "Q1.3",
+     "length": "4.5162",
+     "nets": "3V3_GPS"
+    },
+    "at": [
+     -8.35,
+     -11.4875
+    ],
+    "class": "critical",
+    "code": "unrouted",
+    "fix": [
+     {
+      "command": "ecad.board.track",
+      "says": "route 4.5162 mm from [\"-7.7\", \"-13.65\"] to [\"-9\", \"-9.325\"]"
+     }
+    ],
+    "items": [
+     {
+      "id": 194,
+      "kind": "track",
+      "ref": "track 194"
+     },
+     {
+      "id": 17,
+      "kind": "pad",
+      "pad": "3",
+      "ref": "Q1.3"
+     }
+    ],
+    "key": "unrouted|p17.3|t194",
+    "limit": {
+     "bound": "max",
+     "param": "connections.open",
+     "units": "connections",
+     "value": 0.0
+    },
+    "margin": -1.0,
+    "measured": {
+     "units": "connections",
+     "value": 1.0
+    },
+    "message": "net 3V3_GPS: track 194 to Q1.3 still to route",
+    "message_key": "electronics.drc_msg_unrouted",
+    "nets": [
+     "3V3_GPS"
+    ],
+    "section": "workflow#done",
+    "severity": "warning"
+   },
+   {
+    "approved": false,
+    "args": {
+     "a": "U1.17",
+     "b": "U2.16",
+     "length": "8.1401",
+     "nets": "LORA_MISO"
+    },
+    "at": [
+     -4.825,
+     1.1425
+    ],
+    "class": "critical",
+    "code": "unrouted",
+    "fix": [
+     {
+      "command": "ecad.board.track",
+      "says": "route 8.1401 mm from [\"-7.8\", \"-1.635\"] to [\"-1.85\", \"3.92\"]"
+     }
+    ],
+    "items": [
+     {
+      "id": 29,
+      "kind": "pad",
+      "pad": "17",
+      "ref": "U1.17"
+     },
+     {
+      "id": 30,
+      "kind": "pad",
+      "pad": "16",
+      "ref": "U2.16"
+     }
+    ],
+    "key": "unrouted|p29.17|p30.16",
+    "limit": {
+     "bound": "max",
+     "param": "connections.open",
+     "units": "connections",
+     "value": 0.0
+    },
+    "margin": -1.0,
+    "measured": {
+     "units": "connections",
+     "value": 1.0
+    },
+    "message": "net LORA_MISO: U1.17 to U2.16 still to route",
+    "message_key": "electronics.drc_msg_unrouted",
+    "nets": [
+     "LORA_MISO"
+    ],
+    "section": "workflow#done",
+    "severity": "warning"
+   },
+   {
+    "approved": false,
+    "args": {
+     "a": "U1.9",
+     "b": "U2.6",
+     "length": "25.354",
+     "nets": "LORA_RXEN"
+    },
+    "at": [
+     0.19,
+     -2.325
+    ],
+    "class": "critical",
+    "code": "unrouted",
+    "fix": [
+     {
+      "command": "ecad.board.track",
+      "says": "route 25.354 mm from [\"-11.47\", \"-7.3\"] to [\"11.85\", \"2.65\"]"
+     }
+    ],
+    "items": [
+     {
+      "id": 29,
+      "kind": "pad",
+      "pad": "9",
+      "ref": "U1.9"
      },
      {
       "id": 30,
@@ -2606,115 +2319,7 @@
       "ref": "U2.6"
      }
     ],
-    "key": "acute_angle|p30.6|t196.1",
-    "layer": "top",
-    "limit": {
-     "bound": "min",
-     "param": "profile.acute_angle",
-     "units": "degrees",
-     "value": 70.0
-    },
-    "margin": -25.0,
-    "measured": {
-     "units": "degrees",
-     "value": 45.0
-    },
-    "message": "the gap between track 196 and pad U2.6 opens at 45\u00b0: a pocket under 70\u00b0 can trap etchant; turn the track so both sides open wider",
-    "message_key": "electronics.drc_msg_acute_angle",
-    "section": "routing-dfm#corners",
-    "severity": "warning",
-    "verify": "the limit comes from public summaries of fab DFM guides, not from a standard: verify it with your fab"
-   },
-   {
-    "approved": false,
-    "args": {
-     "a": "the end of track 197",
-     "angle": "45",
-     "b": "U1.8",
-     "layer": "top",
-     "limit": "70",
-     "meets": "pad"
-    },
-    "at": [
-     -12.9088,
-     -8.1
-    ],
-    "class": "practical",
-    "code": "acute_angle",
-    "fix": [
-     {
-      "command": "ecad.board.track.reshape",
-      "says": "reshape track 197 so it leaves the pad square to its edge"
-     }
-    ],
-    "items": [
-     {
-      "end": 1,
-      "id": 197,
-      "kind": "track_end",
-      "ref": "the end of track 197"
-     },
-     {
-      "id": 29,
-      "kind": "pad",
-      "pad": "8",
-      "ref": "U1.8"
-     }
-    ],
-    "key": "acute_angle|p29.8|t197.1",
-    "layer": "top",
-    "limit": {
-     "bound": "min",
-     "param": "profile.acute_angle",
-     "units": "degrees",
-     "value": 70.0
-    },
-    "margin": -25.0,
-    "measured": {
-     "units": "degrees",
-     "value": 45.0
-    },
-    "message": "the gap between track 197 and pad U1.8 opens at 45\u00b0: a pocket under 70\u00b0 can trap etchant; turn the track so both sides open wider",
-    "message_key": "electronics.drc_msg_acute_angle",
-    "section": "routing-dfm#corners",
-    "severity": "warning",
-    "verify": "the limit comes from public summaries of fab DFM guides, not from a standard: verify it with your fab"
-   },
-   {
-    "approved": false,
-    "args": {
-     "a": "R2.2",
-     "b": "J1.B1",
-     "length": "3.265",
-     "nets": "GND"
-    },
-    "at": [
-     -10.55,
-     8.4
-    ],
-    "class": "critical",
-    "code": "unrouted",
-    "fix": [
-     {
-      "command": "ecad.board.track",
-      "says": "route 3.265 mm from [\"-11.3\", \"6.95\"] to [\"-9.8\", \"9.85\"]"
-     }
-    ],
-    "items": [
-     {
-      "id": 19,
-      "kind": "pad",
-      "pad": "2",
-      "ref": "R2.2"
-     },
-     {
-      "id": 13,
-      "kind": "pad",
-      "pad": "B1",
-      "ref": "J1.B1"
-     }
-    ],
-    "key": "unrouted|p13.B1|p19.2",
+    "key": "unrouted|p29.9|p30.6",
     "limit": {
      "bound": "max",
      "param": "connections.open",
@@ -2726,10 +2331,10 @@
      "units": "connections",
      "value": 1.0
     },
-    "message": "net GND: R2.2 to J1.B1 still to route",
+    "message": "net LORA_RXEN: U1.9 to U2.6 still to route",
     "message_key": "electronics.drc_msg_unrouted",
     "nets": [
-     "GND"
+     "LORA_RXEN"
     ],
     "section": "workflow#done",
     "severity": "warning"
@@ -2737,28 +2342,243 @@
    {
     "approved": false,
     "args": {
-     "a": "track 43",
-     "b": "U1.27",
-     "length": "3.4813",
-     "nets": "VBUS"
+     "a": "J5.2",
+     "b": "U1.39",
+     "length": "4.783",
+     "nets": "SWCLK"
     },
     "at": [
-     -10.285,
-     6.575
+     -19.445,
+     7.665
     ],
     "class": "critical",
     "code": "unrouted",
     "fix": [
      {
       "command": "ecad.board.track",
-      "says": "route 3.4813 mm from [\"-9.1\", \"7.85\"] to [\"-11.47\", \"5.3\"]"
+      "says": "route 4.783 mm from [\"-19.8\", \"10.03\"] to [\"-19.09\", \"5.3\"]"
      }
     ],
     "items": [
      {
-      "id": 43,
+      "id": 16,
+      "kind": "pad",
+      "pad": "2",
+      "ref": "J5.2"
+     },
+     {
+      "id": 29,
+      "kind": "pad",
+      "pad": "39",
+      "ref": "U1.39"
+     }
+    ],
+    "key": "unrouted|p16.2|p29.39",
+    "limit": {
+     "bound": "max",
+     "param": "connections.open",
+     "units": "connections",
+     "value": 0.0
+    },
+    "margin": -1.0,
+    "measured": {
+     "units": "connections",
+     "value": 1.0
+    },
+    "message": "net SWCLK: J5.2 to U1.39 still to route",
+    "message_key": "electronics.drc_msg_unrouted",
+    "nets": [
+     "SWCLK"
+    ],
+    "section": "workflow#done",
+    "severity": "warning"
+   },
+   {
+    "approved": false,
+    "args": {
+     "a": "J1.A7",
+     "b": "U1.29",
+     "length": "4.55",
+     "nets": "USB_DN"
+    },
+    "at": [
+     -12.745,
+     7.575
+    ],
+    "class": "critical",
+    "code": "unrouted",
+    "fix": [
+     {
+      "command": "ecad.board.track",
+      "says": "route 4.55 mm from [\"-12.75\", \"9.85\"] to [\"-12.74\", \"5.3\"]"
+     }
+    ],
+    "items": [
+     {
+      "id": 13,
+      "kind": "pad",
+      "pad": "A7",
+      "ref": "J1.A7"
+     },
+     {
+      "id": 29,
+      "kind": "pad",
+      "pad": "29",
+      "ref": "U1.29"
+     }
+    ],
+    "key": "unrouted|p13.A7|p29.29",
+    "limit": {
+     "bound": "max",
+     "param": "connections.open",
+     "units": "connections",
+     "value": 0.0
+    },
+    "margin": -1.0,
+    "measured": {
+     "units": "connections",
+     "value": 1.0
+    },
+    "message": "net USB_DN: J1.A7 to U1.29 still to route",
+    "message_key": "electronics.drc_msg_unrouted",
+    "nets": [
+     "USB_DN"
+    ],
+    "section": "workflow#done",
+    "severity": "warning"
+   },
+   {
+    "approved": false,
+    "args": {
+     "a": "track 121",
+     "b": "U1.31",
+     "length": "3.8225",
+     "nets": "USB_DP"
+    },
+    "at": [
+     -13.53,
+     7.15
+    ],
+    "class": "critical",
+    "code": "unrouted",
+    "fix": [
+     {
+      "command": "ecad.board.track",
+      "says": "route 3.8225 mm from [\"-13.05\", \"9\"] to [\"-14.01\", \"5.3\"]"
+     }
+    ],
+    "items": [
+     {
+      "id": 121,
       "kind": "track",
-      "ref": "track 43"
+      "ref": "track 121"
+     },
+     {
+      "id": 29,
+      "kind": "pad",
+      "pad": "31",
+      "ref": "U1.31"
+     }
+    ],
+    "key": "unrouted|p29.31|t121",
+    "limit": {
+     "bound": "max",
+     "param": "connections.open",
+     "units": "connections",
+     "value": 0.0
+    },
+    "margin": -1.0,
+    "measured": {
+     "units": "connections",
+     "value": 1.0
+    },
+    "message": "net USB_DP: track 121 to U1.31 still to route",
+    "message_key": "electronics.drc_msg_unrouted",
+    "nets": [
+     "USB_DP"
+    ],
+    "section": "workflow#done",
+    "severity": "warning"
+   },
+   {
+    "approved": false,
+    "args": {
+     "a": "R4.1",
+     "b": "J1.B4",
+     "length": "20.2255",
+     "nets": "VBUS"
+    },
+    "at": [
+     -0.55,
+     10.975
+    ],
+    "class": "critical",
+    "code": "unrouted",
+    "fix": [
+     {
+      "command": "ecad.board.track",
+      "says": "route 20.2255 mm from [\"9.5\", \"12.1\"] to [\"-10.6\", \"9.85\"]"
+     }
+    ],
+    "items": [
+     {
+      "id": 21,
+      "kind": "pad",
+      "pad": "1",
+      "ref": "R4.1"
+     },
+     {
+      "id": 13,
+      "kind": "pad",
+      "pad": "B4",
+      "ref": "J1.B4"
+     }
+    ],
+    "key": "unrouted|p13.B4|p21.1",
+    "limit": {
+     "bound": "max",
+     "param": "connections.open",
+     "units": "connections",
+     "value": 0.0
+    },
+    "margin": -1.0,
+    "measured": {
+     "units": "connections",
+     "value": 1.0
+    },
+    "message": "net VBUS: R4.1 to J1.B4 still to route",
+    "message_key": "electronics.drc_msg_unrouted",
+    "nets": [
+     "VBUS"
+    ],
+    "section": "workflow#done",
+    "severity": "warning"
+   },
+   {
+    "approved": false,
+    "args": {
+     "a": "track 182",
+     "b": "U1.27",
+     "length": "3.2045",
+     "nets": "VBUS"
+    },
+    "at": [
+     -11.385,
+     6.9
+    ],
+    "class": "critical",
+    "code": "unrouted",
+    "fix": [
+     {
+      "command": "ecad.board.track",
+      "says": "route 3.2045 mm from [\"-11.3\", \"8.5\"] to [\"-11.47\", \"5.3\"]"
+     }
+    ],
+    "items": [
+     {
+      "id": 182,
+      "kind": "track",
+      "ref": "track 182"
      },
      {
       "id": 29,
@@ -2767,7 +2587,7 @@
       "ref": "U1.27"
      }
     ],
-    "key": "unrouted|p29.27|t43",
+    "key": "unrouted|p29.27|t182",
     "limit": {
      "bound": "max",
      "param": "connections.open",
@@ -2779,16 +2599,89 @@
      "units": "connections",
      "value": 1.0
     },
-    "message": "net VBUS: track 43 to U1.27 still to route",
+    "message": "net VBUS: track 182 to U1.27 still to route",
     "message_key": "electronics.drc_msg_unrouted",
     "nets": [
      "VBUS"
     ],
     "section": "workflow#done",
     "severity": "warning"
+   },
+   {
+    "approved": false,
+    "args": {
+     "count": "59",
+     "required": "0.15",
+     "value": "0.15"
+    },
+    "at": [
+     -26.0,
+     -17.0
+    ],
+    "class": "practical",
+    "code": "fab_class",
+    "fix": [
+     {
+      "command": "ecad.board.via.edit",
+      "says": "make the vias (or the footprints' pads) larger where there is room (ecad.board.rules raises what new vias get)"
+     }
+    ],
+    "items": [],
+    "key": "fab_class|at_minimum.ring",
+    "limit": {
+     "bound": "min",
+     "param": "profile.ring",
+     "units": "mm",
+     "value": 0.15
+    },
+    "margin": 0.0,
+    "measured": {
+     "units": "mm",
+     "value": 0.15
+    },
+    "message": "59 features are at the JLCPCB 2-layer standard profile's least ring (0.15 mm): a design one step looser leaves room for the process",
+    "message_key": "electronics.drc_msg_fab_class",
+    "section": "manufacturing#profiles",
+    "severity": "warning"
+   },
+   {
+    "approved": false,
+    "args": {
+     "count": "55",
+     "required": "0.3",
+     "value": "0.3"
+    },
+    "at": [
+     -26.0,
+     -17.0
+    ],
+    "class": "practical",
+    "code": "fab_class",
+    "fix": [
+     {
+      "command": "ecad.board.via.edit",
+      "says": "make the vias (or the footprints' pads) larger where there is room (ecad.board.rules raises what new vias get)"
+     }
+    ],
+    "items": [],
+    "key": "fab_class|at_minimum.drill",
+    "limit": {
+     "bound": "min",
+     "param": "profile.drill",
+     "units": "mm",
+     "value": 0.3
+    },
+    "margin": 0.0,
+    "measured": {
+     "units": "mm",
+     "value": 0.3
+    },
+    "message": "55 features are at the JLCPCB 2-layer standard profile's least drill (0.3 mm): a design one step looser leaves room for the process",
+    "message_key": "electronics.drc_msg_fab_class",
+    "section": "manufacturing#profiles",
+    "severity": "warning"
    }
   ],
-  "more": 2,
   "profile": {
    "hash": "f2fdcad0",
    "id": "jlcpcb_2layer",
@@ -2800,8 +2693,8 @@
  "quality": {
   "counts": {
    "approved": 0,
-   "errors": 0,
-   "infos": 19,
+   "errors": 1,
+   "infos": 15,
    "pending_user": 0,
    "stale": 0,
    "warnings": 24
@@ -2811,15 +2704,101 @@
    {
     "approved": false,
     "args": {
-     "layer": "bottom",
+     "a": "track 163",
+     "b": "track 113",
+     "layer": "top",
+     "net": "LORA_SCK",
+     "nets": "LORA_SCK, 3V3",
+     "others": "a slot that track 113 (3V3) cuts at (-2.7, 0.85)",
+     "reference": "bottom",
+     "required": "0",
+     "value": "2",
+     "what": "a slot that track 113 (3V3) cuts"
+    },
+    "at": [
+     -4.6936,
+     -1.4936
+    ],
+    "class": "critical",
+    "code": "pi.return_path",
+    "family": "pi",
+    "fix": [
+     {
+      "command": "ecad.board.net.inspect",
+      "params": {
+       "metrics": [
+        "reference"
+       ],
+       "nets": [
+        "LORA_SCK"
+       ]
+      },
+      "says": "see where LORA_SCK's reference breaks; route it over solid plane, or move what cuts the plane"
+     },
+     {
+      "command": "ecad.board.net.inspect",
+      "params": {
+       "metrics": [
+        "layers"
+       ],
+       "nets": [
+        "3V3"
+       ]
+      },
+      "says": "track 113 of 3V3 on bottom cuts the plane there: move it to a signal layer"
+     }
+    ],
+    "key": "pi.return_path|t163|z196",
+    "layer": "top",
+    "limit": {
+     "bound": "max",
+     "param": "",
+     "units": "crossings",
+     "value": 0.0
+    },
+    "margin": -2.0,
+    "measured": {
+     "units": "crossings",
+     "value": 2.0
+    },
+    "message": "track 163 (LORA_SCK, top) crosses 2 gaps in its reference plane on bottom (GND): a slot that track 113 (3V3) cuts at (-4.6936, -1.4936); then a slot that track 113 (3V3) cuts at (-2.7, 0.85)",
+    "message_key": "electronics.quality_msg_pi_return_path_more",
+    "nets": [
+     "LORA_SCK",
+     "3V3"
+    ],
+    "objects": [
+     {
+      "id": 163,
+      "key": "t163",
+      "kind": "track",
+      "ref": "track 163"
+     },
+     {
+      "id": 113,
+      "key": "t113",
+      "kind": "track",
+      "ref": "track 113"
+     }
+    ],
+    "principle": "A fast edge's return current flows in the plane right under its track; a gap makes it detour, which adds inductance and crosstalk and makes the gap radiate.",
+    "regime": "T1 (clock role); reference bottom (GND), h 1.53 mm",
+    "section": "power-ground#return-paths",
+    "severity": "error",
+    "status": "fail"
+   },
+   {
+    "approved": false,
+    "args": {
+     "layer": "top",
      "layers": "top, bottom",
      "nets": "GND",
      "required": "0.5",
-     "value": "65.9029"
+     "value": "25.9759"
     },
     "at": [
-     -0.579,
-     -11.2022
+     -21.9862,
+     4.2585
     ],
     "class": "practical",
     "code": "pi.stitching",
@@ -2834,19 +2813,19 @@
       "says": "add stitching vias where the planes are weakest, solving again after each"
      }
     ],
-    "key": "pi.stitching|tie|z198|z199",
+    "key": "pi.stitching|tie|z195|z196",
     "limit": {
      "bound": "max",
      "param": "pi.stitching.tie_mv",
      "units": "mV",
      "value": 0.5
     },
-    "margin": -65.4029,
+    "margin": -25.4759,
     "measured": {
      "units": "mV",
-     "value": 65.9029
+     "value": 25.9759
     },
-    "message": "GND's planes (top, bottom) are tied to the power entry J1 weakly: at (-0.6, -11.2) on bottom they rise 65.9 mV when every mm\u00b2 of its copper draws 10 mA, past 0.5 mV",
+    "message": "GND's planes (top, bottom) are tied to the power entry J1 weakly: at (-22, 4.3) on top they rise 25.98 mV when every mm\u00b2 of its copper draws 10 mA, past 0.5 mV",
     "message_key": "electronics.quality_msg_pi_stitching",
     "nets": [
      "GND"
@@ -2863,11 +2842,11 @@
      "layers": "top, bottom",
      "nets": "GND",
      "required": "5.8213",
-     "value": "20.5973"
+     "value": "20.9476"
     },
     "at": [
-     6.2,
-     16.2
+     25.2,
+     -10.8
     ],
     "class": "practical",
     "code": "pi.stitching",
@@ -2882,19 +2861,19 @@
       "says": "add a grid of stitching vias: by default its pitch keeps every via-free circle within \u03bbg/10"
      }
     ],
-    "key": "pi.stitching|z198|z199",
+    "key": "pi.stitching|z195|z196",
     "limit": {
      "bound": "max",
      "param": "pi.stitching.fraction",
      "units": "mm",
      "value": 5.8213
     },
-    "margin": -14.776,
+    "margin": -15.1262,
     "measured": {
      "units": "mm",
-     "value": 20.5973
+     "value": 20.9476
     },
-    "message": "where GND's planes overlap (top, bottom), the largest circle with no via joining them is 21 mm across at (6.2, 16.2); \u03bbg/10 at 2483.5 MHz is 5.8 mm",
+    "message": "where GND's planes overlap (top, bottom), the largest circle with no via joining them is 21 mm across at (25.2, -10.8); \u03bbg/10 at 2483.5 MHz is 5.8 mm",
     "message_key": "electronics.quality_msg_pi_stitching",
     "nets": [
      "GND"
@@ -2908,12 +2887,12 @@
    {
     "approved": false,
     "args": {
-     "a": "drawing 221",
-     "b": "via 91",
-     "on": "open via 91",
+     "a": "drawing 201",
+     "b": "via 62",
+     "on": "open via 62",
      "percent": "3",
      "required": "0",
-     "text": "drawing 221 (\"LoRa Mesh Node Mini\")",
+     "text": "drawing 201 (\"LoRa Mesh Node Mini\")",
      "value": "0.0269"
     },
     "at": [
@@ -2926,10 +2905,10 @@
     "fix": [
      {
       "command": "ecad.board.draw.edit",
-      "says": "move drawing 221 off exposed copper, holes and the edge"
+      "says": "move drawing 201 off exposed copper, holes and the edge"
      }
     ],
-    "key": "silk.clip|drawing|g221|v91",
+    "key": "silk.clip|drawing|g201|v62",
     "limit": {
      "bound": "max",
      "param": "",
@@ -2941,20 +2920,20 @@
      "units": "ratio",
      "value": 0.0269
     },
-    "message": "drawing 221 (\"LoRa Mesh Node Mini\") loses 3 % of its box to open via 91: the fab clips the legend there",
+    "message": "drawing 201 (\"LoRa Mesh Node Mini\") loses 3 % of its box to open via 62: the fab clips the legend there",
     "message_key": "electronics.quality_msg_silk_clip",
     "objects": [
      {
-      "id": 221,
-      "key": "g221",
+      "id": 201,
+      "key": "g201",
       "kind": "graphic",
-      "ref": "drawing 221"
+      "ref": "drawing 201"
      },
      {
-      "id": 91,
-      "key": "v91",
+      "id": 62,
+      "key": "v62",
       "kind": "via",
-      "ref": "via 91"
+      "ref": "via 62"
      }
     ],
     "principle": "Fabs remove legend that lands on exposed copper, holes and the board edge, so a designator printed there arrives with strokes missing.",
@@ -2965,12 +2944,12 @@
    {
     "approved": false,
     "args": {
-     "a": "drawing 222",
-     "b": "via 99",
-     "on": "open via 99",
+     "a": "drawing 202",
+     "b": "via 70",
+     "on": "open via 70",
      "percent": "3",
      "required": "0",
-     "text": "drawing 222 (\"REV A  2026-11-02\")",
+     "text": "drawing 202 (\"REV A  2026-11-02\")",
      "value": "0.0292"
     },
     "at": [
@@ -2983,10 +2962,10 @@
     "fix": [
      {
       "command": "ecad.board.draw.edit",
-      "says": "move drawing 222 off exposed copper, holes and the edge"
+      "says": "move drawing 202 off exposed copper, holes and the edge"
      }
     ],
-    "key": "silk.clip|drawing|g222|v99",
+    "key": "silk.clip|drawing|g202|v70",
     "limit": {
      "bound": "max",
      "param": "",
@@ -2998,20 +2977,20 @@
      "units": "ratio",
      "value": 0.0292
     },
-    "message": "drawing 222 (\"REV A  2026-11-02\") loses 3 % of its box to open via 99: the fab clips the legend there",
+    "message": "drawing 202 (\"REV A  2026-11-02\") loses 3 % of its box to open via 70: the fab clips the legend there",
     "message_key": "electronics.quality_msg_silk_clip",
     "objects": [
      {
-      "id": 222,
-      "key": "g222",
+      "id": 202,
+      "key": "g202",
       "kind": "graphic",
-      "ref": "drawing 222"
+      "ref": "drawing 202"
      },
      {
-      "id": 99,
-      "key": "v99",
+      "id": 70,
+      "key": "v70",
       "kind": "via",
-      "ref": "via 99"
+      "ref": "via 70"
      }
     ],
     "principle": "Fabs remove legend that lands on exposed copper, holes and the board edge, so a designator printed there arrives with strokes missing.",
@@ -3022,12 +3001,12 @@
    {
     "approved": false,
     "args": {
-     "a": "drawing 223",
-     "b": "via 195",
-     "on": "open via 195",
+     "a": "drawing 203",
+     "b": "via 106",
+     "on": "open via 106",
      "percent": "4",
      "required": "0",
-     "text": "drawing 223 (\"LMN-MINI-01-A\")",
+     "text": "drawing 203 (\"LMN-MINI-01-A\")",
      "value": "0.0408"
     },
     "at": [
@@ -3040,10 +3019,10 @@
     "fix": [
      {
       "command": "ecad.board.draw.edit",
-      "says": "move drawing 223 off exposed copper, holes and the edge"
+      "says": "move drawing 203 off exposed copper, holes and the edge"
      }
     ],
-    "key": "silk.clip|drawing|g223|v195",
+    "key": "silk.clip|drawing|g203|v106",
     "limit": {
      "bound": "max",
      "param": "",
@@ -3055,20 +3034,20 @@
      "units": "ratio",
      "value": 0.0408
     },
-    "message": "drawing 223 (\"LMN-MINI-01-A\") loses 4 % of its box to open via 195: the fab clips the legend there",
+    "message": "drawing 203 (\"LMN-MINI-01-A\") loses 4 % of its box to open via 106: the fab clips the legend there",
     "message_key": "electronics.quality_msg_silk_clip",
     "objects": [
      {
-      "id": 223,
-      "key": "g223",
+      "id": 203,
+      "key": "g203",
       "kind": "graphic",
-      "ref": "drawing 223"
+      "ref": "drawing 203"
      },
      {
-      "id": 195,
-      "key": "v195",
+      "id": 106,
+      "key": "v106",
       "kind": "via",
-      "ref": "via 195"
+      "ref": "via 106"
      }
     ],
     "principle": "Fabs remove legend that lands on exposed copper, holes and the board edge, so a designator printed there arrives with strokes missing.",
@@ -3933,8 +3912,8 @@
      "size": "0603"
     },
     "at": [
-     -11.3,
-     6.95
+     -10.25,
+     7.6
     ],
     "class": "practical",
     "code": "dfm.pad_to_pour",
@@ -3988,7 +3967,7 @@
      "size": "0603"
     },
     "at": [
-     11.2,
+     11.1,
      15.4
     ],
     "class": "practical",
@@ -4087,74 +4066,9 @@
     "section": "routing-dfm#pad-to-pour",
     "severity": "warning",
     "status": "fail"
-   },
-   {
-    "approved": false,
-    "args": {
-     "a": "track 51",
-     "layer": "top",
-     "net": "LORA_SCK",
-     "nets": "LORA_SCK",
-     "percent": "75",
-     "reference": "bottom",
-     "required": "0.8",
-     "value": "0.75"
-    },
-    "at": [
-     -4.6233,
-     -1.4233
-    ],
-    "class": "critical",
-    "code": "pi.return_path",
-    "family": "pi",
-    "fix": [
-     {
-      "command": "ecad.board.net.inspect",
-      "params": {
-       "metrics": [
-        "reference"
-       ],
-       "nets": [
-        "LORA_SCK"
-       ]
-      },
-      "says": "see which segments run over voids; keep fast tracks away from via fields and plane edges"
-     }
-    ],
-    "key": "pi.return_path|coverage|t51|z199",
-    "layer": "top",
-    "limit": {
-     "bound": "min",
-     "param": "pi.return_path.coverage_min",
-     "units": "ratio",
-     "value": 0.8
-    },
-    "margin": -0.05,
-    "measured": {
-     "units": "ratio",
-     "value": 0.75
-    },
-    "message": "75 % of the \u00b13h corridor under track 51 (LORA_SCK, top) is on its reference plane on bottom (GND): the return spreads round voids",
-    "message_key": "electronics.quality_msg_pi_return_path_coverage",
-    "nets": [
-     "LORA_SCK"
-    ],
-    "objects": [
-     {
-      "id": 51,
-      "key": "t51",
-      "kind": "track",
-      "ref": "track 51"
-     }
-    ],
-    "principle": "A fast edge's return current flows in the plane right under its track; a gap makes it detour, which adds inductance and crosstalk and makes the gap radiate.",
-    "regime": "T1 (clock role); reference bottom (GND), h 1.53 mm",
-    "section": "power-ground#return-paths",
-    "severity": "info",
-    "status": "fail"
    }
   ],
-  "more": 18,
+  "more": 15,
   "not_applicable": [
    {
     "code": "esd.ground",
@@ -4171,14 +4085,26 @@
     ]
    },
    {
-    "code": "pi.return_path",
-    "count": 5,
+    "code": "pi.bottleneck",
+    "count": 1,
     "needs": [
-     "intent: driver or edge_ns of LORA_NSS",
+     "geometry: copper joining two of 3V3_GPS's power pins"
+    ]
+   },
+   {
+    "code": "pi.current",
+    "count": 1,
+    "needs": [
+     "geometry: copper joining two of 3V3_GPS's power pins"
+    ]
+   },
+   {
+    "code": "pi.return_path",
+    "count": 3,
+    "needs": [
      "intent: driver or edge_ns of LORA_MOSI",
-     "intent: driver or edge_ns of LORA_MISO",
-     "intent: driver or edge_ns of SWDIO",
-     "intent: driver or edge_ns of SWCLK"
+     "intent: driver or edge_ns of LORA_NSS",
+     "intent: driver or edge_ns of SWDIO"
     ]
    },
    {
@@ -4242,45 +4168,50 @@
      "warnings": 0
     },
     "critical": {
-     "errors": 0,
+     "errors": 1,
      "fail": 1,
-     "infos": 1,
-     "not_applicable": 7,
+     "infos": 0,
+     "not_applicable": 8,
      "review": 0,
      "warnings": 0
     },
     "practical": {
      "errors": 0,
-     "fail": 42,
-     "infos": 18,
-     "not_applicable": 2,
+     "fail": 39,
+     "infos": 15,
+     "not_applicable": 3,
      "review": 0,
      "warnings": 24
     }
    },
    "by_code": {
     "dfm.pad_to_pour": 16,
-    "dfm.tombstone": 16,
+    "dfm.tombstone": 15,
     "pi.return_path": 1,
     "pi.stitching": 2,
-    "si.pair": 1,
-    "si.skew": 1,
     "silk.clip": 3,
     "silk.polarity": 3
    },
    "worst": [
     {
+     "code": "pi.return_path",
+     "key": "pi.return_path|t163|z196",
+     "margin": -2.0,
+     "message": "track 163 (LORA_SCK, top) crosses 2 gaps in its reference plane on bottom (GND): a slot that track 113 (3V3) cuts at (-4.6936, -1.4936); then a slot that track 113 (3V3) cuts at (-2.7, 0.85)",
+     "units": "crossings"
+    },
+    {
      "code": "pi.stitching",
-     "key": "pi.stitching|tie|z198|z199",
-     "margin": -65.4029,
-     "message": "GND's planes (top, bottom) are tied to the power entry J1 weakly: at (-0.6, -11.2) on bottom they rise 65.9 mV when every mm\u00b2 of its copper draws 10 mA, past 0.5 mV",
+     "key": "pi.stitching|tie|z195|z196",
+     "margin": -25.4759,
+     "message": "GND's planes (top, bottom) are tied to the power entry J1 weakly: at (-22, 4.3) on top they rise 25.98 mV when every mm\u00b2 of its copper draws 10 mA, past 0.5 mV",
      "units": "mV"
     },
     {
      "code": "pi.stitching",
-     "key": "pi.stitching|z198|z199",
-     "margin": -14.776,
-     "message": "where GND's planes overlap (top, bottom), the largest circle with no via joining them is 21 mm across at (6.2, 16.2); \u03bbg/10 at 2483.5 MHz is 5.8 mm",
+     "key": "pi.stitching|z195|z196",
+     "margin": -15.1262,
+     "message": "where GND's planes overlap (top, bottom), the largest circle with no via joining them is 21 mm across at (25.2, -10.8); \u03bbg/10 at 2483.5 MHz is 5.8 mm",
      "units": "mm"
     },
     {
@@ -4296,13 +4227,6 @@
      "margin": -0.2,
      "message": "Q1's polarity mark at its pin 1 (Q1.1) is weak: 0.3 mm across, below 0.5 mm",
      "units": "mm"
-    },
-    {
-     "code": "silk.clip",
-     "key": "silk.clip|drawing|g223|v195",
-     "margin": -0.0408,
-     "message": "drawing 223 (\"LMN-MINI-01-A\") loses 4 % of its box to open via 195: the fab clips the legend there",
-     "units": "ratio"
     }
    ]
   }
@@ -5907,42 +5831,138 @@
     "blocking": [
      {
       "at": [
-       -10.55,
-       8.4
+       -8.35,
+       -11.49
       ],
       "code": "unrouted",
       "fix": {
        "command": "ecad.board.track",
-       "says": "route 3.265 mm from [\"-11.3\", \"6.95\"] to [\"-9.8\", \"9.85\"]"
+       "says": "route 4.5162 mm from [\"-7.7\", \"-13.65\"] to [\"-9\", \"-9.325\"]"
       },
-      "key": "unrouted|p13.B1|p19.2",
+      "key": "unrouted|p17.3|t194",
       "margin": -1.0,
-      "message": "net GND: R2.2 to J1.B1 still to route",
+      "message": "net 3V3_GPS: track 194 to Q1.3 still to route",
       "section": "workflow#done",
       "units": "connections"
      },
      {
       "at": [
-       -10.29,
-       6.57
+       -4.83,
+       1.14
       ],
       "code": "unrouted",
       "fix": {
        "command": "ecad.board.track",
-       "says": "route 3.4813 mm from [\"-9.1\", \"7.85\"] to [\"-11.47\", \"5.3\"]"
+       "says": "route 8.1401 mm from [\"-7.8\", \"-1.635\"] to [\"-1.85\", \"3.92\"]"
       },
-      "key": "unrouted|p29.27|t43",
+      "key": "unrouted|p29.17|p30.16",
       "margin": -1.0,
-      "message": "net VBUS: track 43 to U1.27 still to route",
+      "message": "net LORA_MISO: U1.17 to U2.16 still to route",
+      "section": "workflow#done",
+      "units": "connections"
+     },
+     {
+      "at": [
+       0.19,
+       -2.33
+      ],
+      "code": "unrouted",
+      "fix": {
+       "command": "ecad.board.track",
+       "says": "route 25.354 mm from [\"-11.47\", \"-7.3\"] to [\"11.85\", \"2.65\"]"
+      },
+      "key": "unrouted|p29.9|p30.6",
+      "margin": -1.0,
+      "message": "net LORA_RXEN: U1.9 to U2.6 still to route",
+      "section": "workflow#done",
+      "units": "connections"
+     },
+     {
+      "at": [
+       -19.45,
+       7.67
+      ],
+      "code": "unrouted",
+      "fix": {
+       "command": "ecad.board.track",
+       "says": "route 4.783 mm from [\"-19.8\", \"10.03\"] to [\"-19.09\", \"5.3\"]"
+      },
+      "key": "unrouted|p16.2|p29.39",
+      "margin": -1.0,
+      "message": "net SWCLK: J5.2 to U1.39 still to route",
+      "section": "workflow#done",
+      "units": "connections"
+     },
+     {
+      "at": [
+       -12.75,
+       7.57
+      ],
+      "code": "unrouted",
+      "fix": {
+       "command": "ecad.board.track",
+       "says": "route 4.55 mm from [\"-12.75\", \"9.85\"] to [\"-12.74\", \"5.3\"]"
+      },
+      "key": "unrouted|p13.A7|p29.29",
+      "margin": -1.0,
+      "message": "net USB_DN: J1.A7 to U1.29 still to route",
+      "section": "workflow#done",
+      "units": "connections"
+     },
+     {
+      "at": [
+       -13.53,
+       7.15
+      ],
+      "code": "unrouted",
+      "fix": {
+       "command": "ecad.board.track",
+       "says": "route 3.8225 mm from [\"-13.05\", \"9\"] to [\"-14.01\", \"5.3\"]"
+      },
+      "key": "unrouted|p29.31|t121",
+      "margin": -1.0,
+      "message": "net USB_DP: track 121 to U1.31 still to route",
+      "section": "workflow#done",
+      "units": "connections"
+     },
+     {
+      "at": [
+       -0.55,
+       10.98
+      ],
+      "code": "unrouted",
+      "fix": {
+       "command": "ecad.board.track",
+       "says": "route 20.2255 mm from [\"9.5\", \"12.1\"] to [\"-10.6\", \"9.85\"]"
+      },
+      "key": "unrouted|p13.B4|p21.1",
+      "margin": -1.0,
+      "message": "net VBUS: R4.1 to J1.B4 still to route",
+      "section": "workflow#done",
+      "units": "connections"
+     },
+     {
+      "at": [
+       -11.39,
+       6.9
+      ],
+      "code": "unrouted",
+      "fix": {
+       "command": "ecad.board.track",
+       "says": "route 3.2045 mm from [\"-11.3\", \"8.5\"] to [\"-11.47\", \"5.3\"]"
+      },
+      "key": "unrouted|p29.27|t182",
+      "margin": -1.0,
+      "message": "net VBUS: track 182 to U1.27 still to route",
       "section": "workflow#done",
       "units": "connections"
      }
     ],
     "by_code": {
-     "unrouted": 2
+     "unrouted": 8
     },
     "counts": {
-     "open": 2
+     "open": 8
     },
     "gate": "completeness",
     "status": "fail"
@@ -5955,53 +5975,65 @@
     "status": "pass"
    },
    {
+    "blocking": [
+     {
+      "at": [
+       9.15,
+       13.89
+      ],
+      "code": "copper_to_edge",
+      "fix": {
+       "command": "ecad.board.move",
+       "says": "move it 0.2 mm further in"
+      },
+      "key": "copper_to_edge|p21.2",
+      "margin": -0.486,
+      "message": "R4.2 is 0 mm from the board's edge or an unplated hole; the least is 0.2 mm",
+      "section": "routing-dfm#copper",
+      "units": "mm"
+     }
+    ],
+    "by_code": {
+     "copper_to_edge": 1
+    },
     "counts": {
-     "open": 0
+     "open": 1
     },
     "gate": "fab",
-    "status": "pass"
+    "status": "fail"
    },
    {
     "blocking": [
      {
       "at": [
-       11.0,
-       13.7
+       -4.69,
+       -1.49
       ],
-      "code": "courtyard_overlap",
+      "code": "pi.return_path",
       "fix": {
-       "command": "ecad.board.move",
-       "says": "move D1 or R4 0.35 mm apart"
+       "command": "ecad.board.net.inspect",
+       "params": {
+        "metrics": [
+         "reference"
+        ],
+        "nets": [
+         "LORA_SCK"
+        ]
+       },
+       "says": "see where LORA_SCK's reference breaks; route it over solid plane, or move what cuts the plane"
       },
-      "key": "courtyard_overlap|f11|f21",
-      "margin": -0.35,
-      "message": "the courtyards of D1 and R4 overlap",
-      "section": "placement#spacing",
-      "units": "mm"
-     },
-     {
-      "at": [
-       13.3,
-       13.7
-      ],
-      "code": "courtyard_overlap",
-      "fix": {
-       "command": "ecad.board.move",
-       "says": "move D1 or U4 0.05 mm apart"
-      },
-      "key": "courtyard_overlap|f11|f32",
-      "margin": -0.05,
-      "message": "the courtyards of D1 and U4 overlap",
-      "section": "placement#spacing",
-      "units": "mm"
+      "key": "pi.return_path|t163|z196",
+      "margin": -2.0,
+      "message": "track 163 (LORA_SCK, top) crosses 2 gaps in its reference plane on bottom (GND): a slot that track 113 (3V3) cuts at (-4.6936, -1.4936); then a slot t\u2026",
+      "section": "power-ground#return-paths",
+      "units": "crossings"
      }
     ],
     "by_code": {
-     "courtyard_overlap": 4,
      "pi.return_path": 1
     },
     "counts": {
-     "open": 5
+     "open": 1
     },
     "gate": "critical",
     "status": "fail"
@@ -6047,49 +6079,49 @@
      },
      {
       "at": [
-       -9.3,
-       -7.55
+       -2.9,
+       -4.6
       ],
       "code": "via_near_pad",
       "fix": {
        "command": "ecad.board.move",
-       "says": "move via 65 0.05 mm further from the pad, joined to it by a short track"
+       "says": "move via 52 0.01 mm further from the pad, joined to it by a short track"
       },
-      "key": "via_near_pad|p29.10|v65",
-      "margin": -0.05,
-      "message": "via 65 (open) is 0.2 mm from pad U1.10; keep 0.25 mm, so a solder mask web stays between them and the solder doesn't wick into the via",
+      "key": "via_near_pad|p30.20|v52",
+      "margin": -0.001,
+      "message": "via 52 (open) is 0.2492 mm from pad U2.20; keep 0.25 mm, so a solder mask web stays between them and the solder doesn't wick into the via",
       "section": "routing-dfm#vias",
       "units": "mm"
      },
      {
       "at": [
-       14.5,
-       11.85
+       12.6,
+       -8.4
       ],
       "code": "pad_entry",
       "fix": {
        "command": "ecad.board.track.reshape",
-       "says": "reshape track 46 so it leaves the pad from the middle of its edge"
+       "says": "reshape track 45 so it leaves the pad from the middle of its edge"
       },
-      "key": "pad_entry|p1.1|t46.0",
+      "key": "pad_entry|p30.1|t45.0",
       "margin": 0.0,
-      "message": "track 46 (0.4 mm) leaves pad C1.1 at its corner, 100 % of the way from the edge's middle: enter a pad near the middle of its edge",
+      "message": "track 45 (0.3 mm) leaves pad U2.1 at its corner, 100 % of the way from the edge's middle: enter a pad near the middle of its edge",
       "section": "routing-dfm#pad-entry",
       "units": "ratio"
      },
      {
       "at": [
-       -17.9,
-       7.89
+       -16.64,
+       -8.1
       ],
       "code": "acute_angle",
       "fix": {
        "command": "ecad.board.track.reshape",
-       "says": "reshape track 38 so it meets track 106 at 90\u00b0 or more"
+       "says": "reshape track 39 so it leaves the pad square to its edge"
       },
-      "key": "acute_angle|t106|t38.1",
+      "key": "acute_angle|p29.5|t39.0",
       "margin": -25.0,
-      "message": "the gap between track 38 and track 106 opens at 45\u00b0: a pocket under 70\u00b0 can trap etchant; join them at 90\u00b0 or more",
+      "message": "the gap between track 39 and pad U1.5 opens at 45\u00b0: a pocket under 70\u00b0 can trap etchant; turn the track so both sides open wider",
       "section": "routing-dfm#corners",
       "units": "degrees"
      },
@@ -6105,14 +6137,14 @@
       },
       "key": "fab_class|at_minimum.ring",
       "margin": 0.0,
-      "message": "75 features are at the JLCPCB 2-layer standard profile's least ring (0.15 mm): a design one step looser leaves room for the process",
+      "message": "59 features are at the JLCPCB 2-layer standard profile's least ring (0.15 mm): a design one step looser leaves room for the process",
       "section": "manufacturing#profiles",
       "units": "mm"
      },
      {
       "at": [
-       -0.58,
-       -11.2
+       -21.99,
+       4.26
       ],
       "code": "pi.stitching",
       "fix": {
@@ -6123,9 +6155,9 @@
        },
        "says": "add stitching vias where the planes are weakest, solving again after each"
       },
-      "key": "pi.stitching|tie|z198|z199",
-      "margin": -65.403,
-      "message": "GND's planes (top, bottom) are tied to the power entry J1 weakly: at (-0.6, -11.2) on bottom they rise 65.9 mV when every mm\u00b2 of its copper draws 10 m\u2026",
+      "key": "pi.stitching|tie|z195|z196",
+      "margin": -25.476,
+      "message": "GND's planes (top, bottom) are tied to the power entry J1 weakly: at (-22, 4.3) on top they rise 25.98 mV when every mm\u00b2 of its copper draws 10 mA, pa\u2026",
       "section": "power-ground#stitching",
       "units": "mV"
      },
@@ -6137,11 +6169,11 @@
       "code": "silk.clip",
       "fix": {
        "command": "ecad.board.draw.edit",
-       "says": "move drawing 221 off exposed copper, holes and the edge"
+       "says": "move drawing 201 off exposed copper, holes and the edge"
       },
-      "key": "silk.clip|drawing|g221|v91",
+      "key": "silk.clip|drawing|g201|v62",
       "margin": -0.027,
-      "message": "drawing 221 (\"LoRa Mesh Node Mini\") loses 3 % of its box to open via 91: the fab clips the legend there",
+      "message": "drawing 201 (\"LoRa Mesh Node Mini\") loses 3 % of its box to open via 62: the fab clips the legend there",
       "section": "silkscreen-assembly#clipping",
       "units": "ratio"
      },
@@ -6186,49 +6218,49 @@
      },
      {
       "at": [
-       -3.1,
-       7.9
+       17.2,
+       12.05
       ],
       "code": "via_near_pad",
       "fix": {
        "command": "ecad.board.move",
-       "says": "move via 67 0.05 mm further from the pad, joined to it by a short track"
+       "says": "move via 92 0.02 mm further from the pad, joined to it by a short track"
       },
-      "key": "via_near_pad|p30.13|v67",
-      "margin": -0.05,
-      "message": "via 67 (open) is 0.2 mm from pad U2.13; keep 0.25 mm, so a solder mask web stays between them and the solder doesn't wick into the via",
+      "key": "via_near_pad|p1.2|v92",
+      "margin": -0.011,
+      "message": "via 92 (open) is 0.2385 mm from pad C1.2; keep 0.25 mm, so a solder mask web stays between them and the solder doesn't wick into the via",
       "section": "routing-dfm#vias",
       "units": "mm"
      },
      {
       "at": [
        12.6,
-       -8.4
+       8.6
       ],
       "code": "pad_entry",
       "fix": {
        "command": "ecad.board.track.reshape",
-       "says": "reshape track 74 so it leaves the pad from the middle of its edge"
+       "says": "reshape track 47 so it leaves the pad from the middle of its edge"
       },
-      "key": "pad_entry|p30.1|t74.0",
+      "key": "pad_entry|p30.11|t47.0",
       "margin": 0.0,
-      "message": "track 74 (0.3 mm) leaves pad U2.1 at its corner, 100 % of the way from the edge's middle: enter a pad near the middle of its edge",
+      "message": "track 47 (0.3 mm) leaves pad U2.11 at its corner, 100 % of the way from the edge's middle: enter a pad near the middle of its edge",
       "section": "routing-dfm#pad-entry",
       "units": "ratio"
      },
      {
       "at": [
-       -13.12,
-       8.96
+       22.9,
+       8.31
       ],
       "code": "acute_angle",
       "fix": {
        "command": "ecad.board.track.reshape",
-       "says": "reshape track 40 so it meets track 39 at 90\u00b0 or more"
+       "says": "reshape track 59 so it leaves the pad square to its edge"
       },
-      "key": "acute_angle|t39|t40.1",
+      "key": "acute_angle|p3.2|t59.0",
       "margin": -25.0,
-      "message": "the gap between track 40 and track 39 opens at 45\u00b0: a pocket under 70\u00b0 can trap etchant; join them at 90\u00b0 or more",
+      "message": "the gap between track 59 and pad C2.2 opens at 45\u00b0: a pocket under 70\u00b0 can trap etchant; turn the track so both sides open wider",
       "section": "routing-dfm#corners",
       "units": "degrees"
      },
@@ -6244,14 +6276,14 @@
       },
       "key": "fab_class|at_minimum.drill",
       "margin": 0.0,
-      "message": "71 features are at the JLCPCB 2-layer standard profile's least drill (0.3 mm): a design one step looser leaves room for the process",
+      "message": "55 features are at the JLCPCB 2-layer standard profile's least drill (0.3 mm): a design one step looser leaves room for the process",
       "section": "manufacturing#profiles",
       "units": "mm"
      },
      {
       "at": [
-       6.2,
-       16.2
+       25.2,
+       -10.8
       ],
       "code": "pi.stitching",
       "fix": {
@@ -6262,29 +6294,27 @@
        },
        "says": "add a grid of stitching vias: by default its pitch keeps every via-free circle within \u03bbg/10"
       },
-      "key": "pi.stitching|z198|z199",
-      "margin": -14.776,
-      "message": "where GND's planes overlap (top, bottom), the largest circle with no via joining them is 21 mm across at (6.2, 16.2); \u03bbg/10 at 2483.5 MHz is 5.8 mm",
+      "key": "pi.stitching|z195|z196",
+      "margin": -15.126,
+      "message": "where GND's planes overlap (top, bottom), the largest circle with no via joining them is 21 mm across at (25.2, -10.8); \u03bbg/10 at 2483.5 MHz is 5.8 mm",
       "section": "power-ground#stitching",
       "units": "mm"
      }
     ],
     "by_code": {
-     "acute_angle": 25,
+     "acute_angle": 16,
      "dfm.pad_to_pour": 16,
-     "dfm.tombstone": 16,
+     "dfm.tombstone": 15,
      "fab_class": 2,
-     "pad_entry": 10,
+     "pad_entry": 9,
      "pi.stitching": 2,
-     "si.pair": 1,
-     "si.skew": 1,
      "silk.clip": 3,
      "silk.polarity": 3,
      "silk_over_pad": 1,
-     "via_near_pad": 8
+     "via_near_pad": 11
     },
     "counts": {
-     "open": 88
+     "open": 78
     },
     "gate": "practical",
     "status": "warn"
@@ -6301,7 +6331,7 @@
   "next": [
    {
     "command": "ecad.drc.inspect",
-    "do": "route the 2 open connections",
+    "do": "route the 8 open connections",
     "gate": "completeness",
     "params": {
      "codes": [
@@ -6313,15 +6343,27 @@
    },
    {
     "command": "ecad.drc.inspect",
-    "do": "fix the 5 critical findings (the codes in params): ecad.drc.inspect gives each one's fix",
-    "gate": "critical",
+    "do": "fix the 1 fab findings (the codes in params): ecad.drc.inspect gives each one's fix",
+    "gate": "fab",
     "params": {
      "codes": [
-      "courtyard_overlap"
+      "copper_to_edge"
      ],
      "limit": 10
     },
-    "read": "placement#spacing"
+    "read": "routing-dfm#copper"
+   },
+   {
+    "command": "ecad.quality.inspect",
+    "do": "fix the 1 critical findings (the codes in params): ecad.quality.inspect gives each one's fix",
+    "gate": "critical",
+    "params": {
+     "codes": [
+      "pi.return_path"
+     ],
+     "limit": 10
+    },
+    "read": "power-ground#return-paths"
    },
    {
     "command": "ecad.intent.inspect",
@@ -6331,28 +6373,14 @@
      "blocking": true
     },
     "read": "workflow#intent"
-   },
-   {
-    "command": "ecad.drc.inspect",
-    "do": "fix the 88 practical findings (the codes in params): ecad.drc.inspect gives each one's fix",
-    "gate": "practical",
-    "params": {
-     "codes": [
-      "acute_angle",
-      "fab_class",
-      "pad_entry",
-      "silk_over_pad",
-      "via_near_pad"
-     ],
-     "limit": 10
-    },
-    "read": "silkscreen-assembly#clipping"
    }
   ],
   "not_verified": [
    "esd.ground (1 place not checked): needs intent: tvs or esd_array parts with the connector pins they\u2026",
    "esd.path (1 place not checked): needs intent: tvs or esd_array parts with the connector pins they\u2026",
-   "pi.return_path (5 places not checked): needs intent: driver or edge_ns of LORA_NSS; \u2026",
+   "pi.bottleneck (1 place not checked): needs geometry: copper joining two of 3V3_GPS's power pins",
+   "pi.current (1 place not checked): needs geometry: copper joining two of 3V3_GPS's power pins",
+   "pi.return_path (3 places not checked): needs intent: driver or edge_ns of LORA_MOSI; \u2026",
    "rf.antenna_keepout (1 place not checked): needs intent: the antenna part (role antenna)",
    "rf.coplanar_gap (1 place not checked): needs intent: the RF nets (role rf)",
    "rf.fence (1 place not checked): needs intent: the RF nets (role rf)",
@@ -6369,21 +6397,21 @@
    "version": 1
   },
   "scorecard": {
-   "at_limit": 1,
+   "at_limit": 3,
    "by_class": {
     "cosmetic": 0,
-    "critical": 7,
-    "practical": 88
+    "critical": 10,
+    "practical": 78
    },
-   "drc_errors": 4,
-   "drc_warnings": 48,
+   "drc_errors": 1,
+   "drc_warnings": 47,
    "intent_coverage": "21/22",
-   "length_mm": 525.5602,
+   "length_mm": 419.7543,
    "on_board": "32/32",
-   "quality_critical": 0,
-   "quality_not_checked": 9,
-   "routed": "91/93",
-   "vias": 71
+   "quality_critical": 1,
+   "quality_not_checked": 11,
+   "routed": "85/93",
+   "vias": 55
   },
   "stage": "release"
  },
@@ -6392,7 +6420,7 @@
   "cpl_rows": 30,
   "files": [
    {
-    "bytes": 211424,
+    "bytes": 210532,
     "function": "zip",
     "path": "/home/user/solidcraft/examples/lora-mini/out/lora-mini-jlcpcb.zip"
    },
@@ -6402,7 +6430,7 @@
     "path": "/home/user/solidcraft/examples/lora-mini/out/lora-mini-jlcpcb-bom.csv"
    },
    {
-    "bytes": 741,
+    "bytes": 742,
     "function": "cpl",
     "path": "/home/user/solidcraft/examples/lora-mini/out/lora-mini-jlcpcb-cpl.csv"
    }
@@ -6415,8 +6443,8 @@
    "opens": [],
    "pads": 163,
    "plated": [
-    81,
-    81
+    65,
+    65
    ],
    "problems": [],
    "shorts": [],
@@ -6433,8 +6461,8 @@
   "opens": [],
   "pads": 163,
   "plated": [
-   81,
-   81
+   65,
+   65
   ],
   "problems": [],
   "shorts": [],
@@ -6446,7 +6474,7 @@
  "pdf": {
   "files": [
    {
-    "bytes": 370259,
+    "bytes": 367831,
     "pages": [
      1,
      2,
