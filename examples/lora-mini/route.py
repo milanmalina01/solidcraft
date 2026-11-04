@@ -257,6 +257,12 @@ def route_board(board, footprints, circuit, passes=10):
         records, fails = [], []
         failed, order = route_nets(b, nets, pad_at, circuit, commands, order, records, fails, fixed=base[0])
         print(f"pass {attempt + 1}: {len(failed)} connections unrouted")
+        # A pass near the best gets the rip-up rescue before it is weighed.
+        if fails and (best is None or len(failed) <= len(best[0]) + 4):
+            b, records, fails = rescue(base[0], b, records, fails, pad_at)
+            commands = list(base[1]) + [r["cmd"] for r in records]
+            failed = [f"{f['name']}: {f['src']}" for f in fails] + [f for f in failed if f.startswith("GND")]
+            print(f"  after the rescue: {len(failed)}")
         if best is None or len(failed) < len(best[0]):
             best = (failed, commands, b, records, fails)
         if not failed:
@@ -273,12 +279,6 @@ def route_board(board, footprints, circuit, passes=10):
             rest = rest[::-1]
         order = bad + rest
     failed, commands, b, records, fails = best
-    if fails:
-        # What the passes left: rip up what blocks each, route it, route the ripped ones again,
-        # kept only when fewer connections are left unrouted.
-        b, records, fails = rescue(base[0], b, records, fails, pad_at)
-        commands = list(base[1]) + [r["cmd"] for r in records]
-        failed = [f"{f['name']}: {f['src']}" for f in fails] + [f for f in failed if f.startswith("GND")]
     if failed:
         print("unrouted:", ", ".join(failed))
     return commands
