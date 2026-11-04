@@ -237,3 +237,30 @@ fn a_route_ends_on_a_via_of_no_net_and_undo_takes_back_its_clicks_before_any_edi
     FileAction::Undo.run(&mut h.app);
     assert_eq!(h.app.session.undo.len(), undo - 1, "now the last edit is undone");
 }
+
+#[test]
+fn board_marking_stamps_a_qr_code_on_its_own_with_the_contents_typed() {
+    let mut h = board_with_a_resistor();
+    run(&mut h, "ecad.board.outline", json!({"rect": [30, 20]}));
+    h.app.start("ecad.board.marking");
+    h.frames(2);
+    click(&mut h, "dialog:Only the QR code");
+    click(&mut h, "dialog:Contents");
+    h.step(&json!({"key": "A", "cmd": true})).unwrap();
+    h.step(&json!({"text": "https://example.org/b/1"})).unwrap();
+    h.step(&json!({"key": "Enter"})).unwrap();
+    h.frames(2);
+    assert_eq!(h.app.preferences.board_marking.qr_text, "https://example.org/b/1", "the contents typed are kept");
+    let rect = crate::scenario::rect_of("electronics:board").unwrap();
+    let map = crate::electronics_workspace::PageMap::new(&h.app.electronics.page.cam, rect).unwrap();
+    let p = map.to_screen(-8.0, 6.0);
+    h.step(&json!({"click": [p.x, p.y]})).unwrap();
+    h.frames(2);
+    let m = h.app.session.doc.ecad.board.markings.last().expect("a marking is stamped");
+    let t = &m.template;
+    assert!(t.qr && !t.title && !t.revision && !t.date && t.part_number.is_empty(), "{t:?}");
+    assert_eq!(t.qr_text, "https://example.org/b/1");
+    let id = m.id;
+    let g = &h.app.session.doc.ecad.board.graphics;
+    assert!(g.iter().any(|g| g.marking == Some(id)) && g.iter().filter(|g| g.marking == Some(id)).all(|g| g.graphic.fill), "only the code's squares");
+}
