@@ -220,11 +220,11 @@ NOT_ASSEMBLED = ["J4", "J5"]
 # Ground pads of small parts get a short track to a via of their own, so each reaches the bottom
 # pour whatever the top pour does between the tracks.
 GND_ESCAPES = ["U1.5", "U1.21", "J5.4", "U2.1", "U2.11", "U2.12", "U2.20", "U2.22", "D2.1", "C1.2", "C2.2", "C3.2", "C4.2", "C5.2", "C6.2", "C7.2", "C8.2", "C9.2", "C10.2",
-               "R1.2", "R2.2", "R3.2", "R7.2", "SW2.3", "SW3.3", "U3.2", "U4.2", "J2.2"]
+               "R1.2", "R2.2", "R3.2", "R7.2", "SW2.3", "SW3.3", "U3.2", "U4.2", "J2.2", "J1.B1"]
 
-# The USB-C's ground pads have no room for a via between its shell's slots and pegs: each is tied by
-# a short track to the ground pad of the CC resistor beside it, which has one.
-GND_LINKS = [("J1.A1", "R1.2"), ("J1.B1", "R2.2")]
+# The USB-C's A1 ground pad has no room for a via between its shell's slot and peg: it is tied by a
+# short track to the ground pad of the CC resistor beside it, which has one (B1 has room for its own).
+GND_LINKS = [("J1.A1", "R1.2")]
 
 POWER_WIDTH = 0.4
 SIGNAL_WIDTH = 0.15
