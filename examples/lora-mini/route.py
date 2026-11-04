@@ -259,7 +259,7 @@ def route_board(board, footprints, circuit, passes=10):
         print(f"pass {attempt + 1}: {len(failed)} connections unrouted")
         # A pass near the best gets the rip-up rescue before it is weighed.
         if fails and (best is None or len(failed) <= len(best[0]) + 4):
-            b, records, fails = rescue(base[0], b, records, fails, pad_at)
+            b, records, fails = rescue(base[0], b, records, fails, pad_at, nets)
             commands = list(base[1]) + [r["cmd"] for r in records]
             failed = [f"{f['name']}: {f['src']}" for f in fails] + [f for f in failed if f.startswith("GND")]
             print(f"  after the rescue: {len(failed)}")
@@ -769,10 +769,38 @@ def hits(b, path, net, records):
     return out
 
 
-def rescue(fixed, b, records, fails, pad_at, rounds=4):
+def route_net(b, name, pins, width, pad_at, fixed):
+    """A whole net on `b`, each pin joined to the copper it already has, nearest first: its
+    records and the connections that failed."""
+    n = b.net(name)
+    recs, failed = [], []
+    done = [pins[0]]
+    rest = list(pins[1:])
+    while rest:
+        src = min(rest, key=lambda p: min(math.dist(pad_at[p][1], pad_at[d][1]) for d in done))
+        rest.remove(src)
+        f = {"name": name, "src": src, "goals": list(done), "width": width}
+        path = route_valid(b, pad_at, f, fixed)
+        if path is None:
+            failed.append(f)
+        else:
+            legs = tidy(b, n, path)
+            commit(b, legs, width, n)
+            recs.append({"kind": "conn", **f, "legs": legs, "cmd": track_command(b, legs, width)})
+        done.append(src)
+    return recs, failed
+
+
+def rescue(fixed, b, records, fails, pad_at, nets, rounds=4):
+    """What a pass left: for each failed connection, the routes in the way of a search that may
+    cross them at a cost are ripped up with the rest of their nets (so nothing is left hanging
+    off copper that moved), the connection is routed, those nets are routed again whole, and the
+    result is kept when they end with fewer connections unrouted than before."""
     for _ in range(rounds):
         better = False
         for f in list(fails):
+            if f not in fails:
+                continue
             n = b.net(f["name"])
             path = route_one(b, pad_at, f, fixed=fixed)
             if path is None:
@@ -790,48 +818,45 @@ def rescue(fixed, b, records, fails, pad_at, rounds=4):
                 better = True
                 print(f"routed {f['name']}: {f['src']} on a second search")
                 continue
-            kept = [r for k, r in enumerate(records) if k not in victims]
-            ripped = [r for k, r in enumerate(records) if k in victims]
+            whole = {records[k]["name"] for k in victims if records[k]["kind"] == "conn"} - {f["name"]}
+            escapes = [records[k] for k in victims if records[k]["kind"] == "escape"]
+            kept = [r for k, r in enumerate(records) if not ((r["kind"] == "conn" and r["name"] in whole) or (k in victims and r["kind"] == "escape"))]
             b2 = rebuild(fixed, kept)
             new_records = list(kept)
             path2 = route_valid(b2, pad_at, f, fixed)
             if path2 is None:
                 continue
             legs = tidy(b2, n, path2)
+            commit(b2, legs, f["width"], n)
             new_records.append({"kind": "conn", "name": f["name"], "src": f["src"], "goals": f["goals"], "width": f["width"],
                                 "legs": legs, "cmd": track_command(b2, legs, f["width"])})
-            commit(b2, legs, f["width"], n)
-            lost = []
-            for r in ripped:
-                if r["kind"] == "escape":
-                    g = b2.net("GND")
-                    b2.signal = False
-                    p = escape(b2, g, pad_at[r["src"]], 0.3)
-                    if p is None:
-                        lost.append(r)
-                        continue
-                    lg = tidy(b2, g, p)
-                    cmd = track_command(b2, lg, 0.3)
-                    cmd[1]["via"] = {}
-                    commit(b2, lg, 0.3, g)
-                    end_via(b2, (p[-1][1], p[-1][2]), g)
-                    new_records.append({**r, "legs": lg, "cmd": cmd})
-                    continue
-                p = route_valid(b2, pad_at, r, fixed)
+            new_fails = []
+            for name in sorted(whole):
+                width = next((r["width"] for r in records if r["name"] == name), 0.15)
+                pins = [p for p in nets[name] if p in pad_at]
+                recs, failed = route_net(b2, name, pins, width, pad_at, fixed)
+                new_records += recs
+                new_fails += failed
+            lost_escapes = 0
+            for r in escapes:
+                g = b2.net("GND")
+                b2.signal = False
+                p = escape(b2, g, pad_at[r["src"]], 0.3)
                 if p is None:
-                    lost.append(r)
+                    lost_escapes += 1
                     continue
-                rn = b2.net(r["name"])
-                lg = tidy(b2, rn, p)
-                commit(b2, lg, r["width"], rn)
-                new_records.append({**r, "legs": lg, "cmd": track_command(b2, lg, r["width"])})
-            # Escapes lost count less than connections: a pad still has the pour.
-            lost_conns = [r for r in lost if r["kind"] != "escape"]
-            if not lost_conns and len(lost) <= 1:
-                fails = [x for x in fails if x is not f] + [{k: r[k] for k in ("name", "src", "goals", "width")} for r in lost_conns]
+                lg = tidy(b2, g, p)
+                cmd = track_command(b2, lg, 0.3)
+                cmd[1]["via"] = {}
+                commit(b2, lg, 0.3, g)
+                end_via(b2, (p[-1][1], p[-1][2]), g)
+                new_records.append({**r, "legs": lg, "cmd": cmd})
+            before = sum(1 for x in fails if x["name"] in whole) + 1
+            if len(new_fails) < before and lost_escapes <= 1:
+                fails = [x for x in fails if x is not f and x["name"] not in whole] + new_fails
                 b, records = b2, new_records
                 better = True
-                print(f"rescued {f['name']}: {f['src']} (ripped {len(ripped)} routes)")
+                print(f"rescued {f['name']}: {f['src']} (nets routed again: {', '.join(sorted(whole)) or 'none'}; {len(new_fails)} left among them)")
         if not better or not fails:
             break
     return b, records, fails
