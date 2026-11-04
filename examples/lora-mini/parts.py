@@ -149,6 +149,8 @@ def _line(a, b):
 # Silkscreen polarity and pin-1 marks: a short line beside pin 1 (or the cathode), outside the
 # pads by the silk-to-pad gap.
 SILK = {
+    # The E73's pin 1: a bar just outside the module's edge beside it (the body hides the rest).
+    "E73-2G4M08S1C": [_line([7.4, -5.4], [7.4, -4.6])],
     "SWD-PADS-4": [_line([-4.4, -1.2], [-3.2, -1.2])],
     "TACT-5.1": [_line([-3.9, 1.5], [-3.9, 2.4]), _line([-2.0, 2.7], [2.0, 2.7]), _line([-2.0, -2.7], [2.0, -2.7])],
     "SLIDE-SPDT": [_line([1.95, -2.9], [2.55, -2.9])],
@@ -182,6 +184,8 @@ def footprint_commands():
         ("ecad.footprint.generate", {"footprint": "LED0603", "package": "chip", "size": "0603"}),
         ("ecad.footprint.set_graphics", {"footprint": "LED0603", "layer": "silkscreen", "graphics": [_line([-1.35, -0.5], [-1.35, 0.5])]}),
         ("ecad.footprint.generate", {"footprint": "SOT-23", "package": "sot23", "pins": 3}),
+        # A pin-1 bar of 0.6 mm below pin 1, outside the pad.
+        ("ecad.footprint.set_graphics", {"footprint": "SOT-23", "layer": "silkscreen", "graphics": [_line([-1.25, -1.85], [-0.65, -1.85])]}),
         ("ecad.footprint.generate", {"footprint": "HDR-1x6", "package": "header", "pins": 6}),
         ("ecad.footprint.set_graphics", {"footprint": "HDR-1x6", "layer": "silkscreen", "graphics": [
             {"type": "rect", "from": [-1.32, -7.62], "to": [1.32, 7.62], "width": 0.15}, _line([-1.65, 5.6], [-1.65, 7.1])]}),

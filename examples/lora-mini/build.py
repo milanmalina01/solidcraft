@@ -48,7 +48,7 @@ PLACE = {
     "R4": ([9.8, 12.7], 90),  # clear of the M2 hole at (8.5, 14.6)
     "D1": ([11.9, 13.0], 180),  # its cathode beside U4.1 (CHRG)
     "J2": ([21.5, 13.0], 0),  # the battery plug from the top edge
-    "C2": ([21.8, 8.05], 0),
+    "C2": ([22.3, 8.15], 0),
     "SW1": ([24.0, 3.0], 270),  # the lever out of the right edge
     "U3": ([19.0, 3.0], 0),
     "C3": ([19.0, 6.0], 0),
@@ -262,8 +262,9 @@ def main():
     script += list(tracks)
     hw, hh = BOARD_W / 2, BOARD_H / 2
     for layer in ("top", "bottom"):
-        script.append(("ecad.board.pour", {"layer": layer, "net": "GND", "rect": [BOARD_W - 0.2, BOARD_H - 0.2], "connect": "solid"}))
+        script.append(("ecad.board.pour", {"layer": layer, "net": "GND", "rect": [BOARD_W - 0.2, BOARD_H - 0.2], "connect": "thermal"}))
     script += [
+        ("ecad.board.stitch", {"net": "GND", "pattern": "grid"}),
         ("ecad.board.stitch", {"net": "GND", "pattern": "needed"}),
         ("ecad.board.labels", {"mode": "fit"}),
         ("ecad.board.marking", {"side": "bottom", "at": [-12.0, 8.0], "number": "01",
@@ -272,7 +273,7 @@ def main():
     # A first rule check; the clearance errors it can fix by narrowing a track (the router's
     # corners inside a pad) are fixed with the check's own suggestion, then everything is checked.
     mid = os.path.join(OUT, "phase2.sc")
-    first = results_of(run(script + [("ecad.drc.inspect", {})], "phase2a", start=phase1_sc, save=mid))[-1]
+    first = results_of(run(script + [("ecad.drc.inspect", {"limit": 2000})], "phase2a", start=phase1_sc, save=mid))[-1]
     first = first.get("result", first) if isinstance(first, dict) else first
     fixes = []
     for f in first.get("findings", []):
