@@ -310,7 +310,10 @@ def route_nets(b, nets, pad_at, circuit, commands, order, records=None, fails=No
     # The 3V3 trunk first (it reaches both modules), then the other rails, then the signals,
     # shortest first; on a later pass, what failed before goes first.
     if order is None:
-        first = ["USB_DP", "USB_DN", "VBUS", "CC1", "CC2", "3V3", "VBAT", "VSYS", "3V3_GPS"]
+        # The USB lines, then the module-to-module lines that need the channel between the
+        # modules on the top layer (a rail run through it first walls it off), then the rails.
+        first = ["USB_DP", "USB_DN", "VBUS", "CC1", "CC2", "LORA_NSS", "LORA_SCK", "LORA_MOSI", "LORA_MISO", "LORA_RST",
+                 "LORA_BUSY", "LORA_DIO1", "SWDIO", "SWCLK", "3V3", "VBAT", "VSYS", "3V3_GPS"]
         order = [n for n in first if n in nets] + sorted((n for n in nets if n not in first), key=lambda n: span(nets[n]))
     # The ground links (see circuit.GND_LINKS) before anything else.
     g = b.net("GND")
@@ -327,7 +330,7 @@ def route_nets(b, nets, pad_at, circuit, commands, order, records=None, fails=No
     escaped = False
     for name in order:
         # The ground escapes once the USB-C's own lines are in, before the rest crowd them.
-        if not escaped and name not in ("USB_DP", "USB_DN", "CC1", "CC2"):
+        if not escaped and name not in ("USB_DP", "USB_DN", "VBUS", "CC1", "CC2") and not name.startswith("LORA_") and name not in ("SWDIO", "SWCLK"):
             escaped = True
             ground_escapes(b, pad_at, circuit, commands, failed, records)
         pins = [p for p in nets[name] if p in pad_at]
