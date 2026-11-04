@@ -40,13 +40,13 @@ PLACE = {
     "C8": ([14.6, 2.6], 90),
     "J1": ([-13.0, 9.85], 0),  # the USB-C opening at the top edge
     "R1": ([-17.2, 7.5], 180),
-    "R2": ([-11.3, 7.75], 270),  # under J1.B5, so CC2 needs no crossing of VBUS
+    "R2": ([-11.05, 7.6], 0),  # under J1.B5 (R2.1 toward B5), so CC2 needs no crossing of VBUS
     "J5": ([-19.8, 11.3], 90),
     "U4": ([15.0, 14.2], 0),
     "C1": ([15.6, 11.4], 0),
-    "R3": ([12.0, 15.4], 180),  # beside U4.5 (PROG)
-    "R4": ([10.3, 12.9], 90),
-    "D1": ([12.0, 13.0], 180),  # its cathode beside U4.1 (CHRG)
+    "R3": ([11.9, 15.4], 180),  # beside U4.5 (PROG)
+    "R4": ([9.5, 12.9], 90),
+    "D1": ([11.9, 13.0], 180),  # its cathode beside U4.1 (CHRG)
     "J2": ([21.5, 13.0], 0),  # the battery plug from the top edge
     "C2": ([21.8, 8.15], 0),
     "SW1": ([24.0, 3.0], 270),  # the lever out of the right edge
