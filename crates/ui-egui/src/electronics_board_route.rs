@@ -24,7 +24,7 @@ use egui::{Color32, Pos2, Rect, Sense, Stroke, Ui, pos2, vec2};
 use serde_json::{Value, json};
 use solidcraft_engine::doc::ecad::board::{MAX_LEGS, check_track_width, check_via};
 use solidcraft_engine::doc::ecad::copper;
-use solidcraft_engine::doc::ecad::drc::{self, Clash};
+use solidcraft_engine::doc::ecad::drc::{self, Clash, DrcItem};
 use solidcraft_engine::doc::ecad::fill::PourFill;
 use solidcraft_engine::doc::ecad::footprint::Core;
 use solidcraft_engine::doc::ecad::path::{self, is_arc, sweep, tessellate};
@@ -972,7 +972,9 @@ pub(crate) fn click(app: &mut SolveApp, map: PageMap, p: Pos2, free: bool, doubl
         let width = width_of(app, route.net.or(to.net));
         let (points, curves) = drawn(app, &route, to.at, layer, width);
         let (clashes, truncated, _) = track_clashes(app, route.net.or(to.net), layer, width, &points, &curves);
-        let text = match clashes.first() {
+        // Copper of no net that the route ends on joins it and takes its net: not a clash.
+        let joined = joins(&to);
+        let text = match clashes.iter().find(|c| joined.as_ref() != Some(&c.item)) {
             Some(c) => Some(clash_text(app, c, "electronics.board_clash")),
             None => truncated.then(|| tr("electronics.board_clash_unchecked")),
         };
@@ -987,6 +989,19 @@ pub(crate) fn click(app: &mut SolveApp, map: PageMap, p: Pos2, free: bool, doubl
     app.electronics.board.tool = Some(Tool::Track(route));
     if reached || double {
         finish(app);
+    }
+}
+
+/// The copper of no net a route ends on, which the track joins (and so gives its net): a via or a
+/// track with nothing connected to it yet. `None` for anything else.
+fn joins(to: &Target) -> Option<DrcItem> {
+    if to.net.is_some() {
+        return None;
+    }
+    match to.on {
+        On::Via(id) => Some(DrcItem::Via(id)),
+        On::Track(id) => Some(DrcItem::Track(id)),
+        _ => None,
     }
 }
 
@@ -1204,8 +1219,13 @@ pub(crate) fn step_back(app: &mut SolveApp) -> bool {
 /// Undo takes back its last click, as Backspace does, rather than the route made before it.
 /// `false` when no route is started there.
 pub(crate) fn undo_step(app: &mut SolveApp) -> bool {
-    let started = matches!(&app.electronics.board.tool, Some(Tool::Track(route)) if !route.is_empty());
-    started && crate::electronics_workspace::board(app) && step_back(app)
+    routing(app) && step_back(app)
+}
+
+/// A route is started on the board: Undo takes back its clicks (the start last, which ends it)
+/// before it undoes anything made.
+pub(crate) fn routing(app: &SolveApp) -> bool {
+    matches!(&app.electronics.board.tool, Some(Tool::Track(route)) if !route.is_empty()) && crate::electronics_workspace::board(app)
 }
 
 /// Right-click while routing: the next bend style.

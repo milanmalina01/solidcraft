@@ -91,6 +91,19 @@ fn the_ribbon_tidies_names_and_shows_the_ground_map() {
 }
 
 #[test]
+fn stitch_vias_previews_the_whole_board_as_soon_as_it_opens() {
+    use solidcraft_engine::doc::ecad::stitch::Pattern;
+    let mut h = grounded_board();
+    h.app.start("ecad.board.stitch");
+    h.frames(2);
+    assert_eq!((h.app.electronics.board.stitch.pattern, h.app.electronics.board.stitch.pick.is_none()), (Pattern::Grid, true));
+    // No click on the board: the default scope is the whole board.
+    assert!(until(&mut h, |h| h.app.electronics.board.stitch.preview.is_some()), "the dry run starts on its own");
+    let preview = h.app.electronics.board.stitch.preview.clone().unwrap();
+    assert!(preview.error.is_none() && !preview.spots.is_empty(), "{preview:?}");
+}
+
+#[test]
 fn stitching_where_needed_previews_ghost_vias_and_numbers_then_places_them() {
     use solidcraft_engine::doc::ecad::stitch::Pattern;
     let mut h = grounded_board();
@@ -177,4 +190,50 @@ fn the_drc_panel_refreshes_after_an_edit_beside_the_window_and_marks_the_picked_
     run(&mut h, "ecad.board.move", json!({"items": [via], "by": [out * 2.0, 0.0]}));
     assert!(until(&mut h, |h| current(&h.app)));
     assert_eq!(clearances(&h), 0, "{:?}", cached(&h.app).map(|r| r.findings.iter().map(|f| f.message.clone()).collect::<Vec<_>>()));
+}
+
+#[test]
+fn a_route_ends_on_a_via_of_no_net_and_undo_takes_back_its_clicks_before_any_edit() {
+    use crate::toolbar::FileAction;
+    let mut h = board_with_a_resistor();
+    run(&mut h, "ecad.schematic.power", json!({"ports": [{"name": "GND", "at": "R1.1"}]}));
+    run(&mut h, "ecad.board.outline", json!({"rect": [30, 20]}));
+    // A via of no net, and a track made before the routes (the edit Undo must leave alone).
+    run(&mut h, "ecad.board.via", json!({"at": [5, 3]}));
+    run(&mut h, "ecad.board.track", json!({"layer": "top", "points": [[-12, -8], [-8, -8]], "width": 0.25}));
+    h.frames(2);
+    let start = h.app.session.board_nets().pads.iter().find(|p| p.pad.number == "1").unwrap().at();
+    let rect = crate::scenario::rect_of("electronics:board").unwrap();
+    let map = crate::electronics_workspace::PageMap::new(&h.app.electronics.page.cam, rect).unwrap();
+    let mut click_at = |h: &mut Harness, x: f64, y: f64| {
+        let p = map.to_screen(x, y);
+        h.step(&json!({"click": [p.x, p.y]})).unwrap();
+        h.frames(2);
+    };
+    h.app.start("ecad.board.track");
+    h.frames(2);
+    let tracks = h.app.session.doc.ecad.board.tracks.len();
+    click_at(&mut h, start[0], start[1]);
+    click_at(&mut h, start[0], 3.0);
+    click_at(&mut h, 5.0, 3.0);
+    let b = &h.app.session.doc.ecad.board;
+    assert_eq!(b.tracks.len(), tracks + 1, "the route ends on the via: {:?}", h.app.status);
+    let nets = h.app.session.board_nets();
+    let gnd = nets.names.iter().position(|n| n == "GND");
+    assert_eq!(nets.via_nets.last().copied().flatten(), gnd, "the via takes the route's net");
+    // Undo while routing: the last click, then the start (the route ends), only then the edit.
+    let undo = h.app.session.undo.len();
+    click_at(&mut h, start[0], start[1]);
+    click_at(&mut h, start[0] - 3.0, start[1]);
+    let points = |h: &Harness| match &h.app.electronics.board.tool {
+        Some(crate::electronics_board::Tool::Track(r)) => r.points.len(),
+        _ => usize::MAX,
+    };
+    assert_eq!(points(&h), 2);
+    FileAction::Undo.run(&mut h.app);
+    assert_eq!((points(&h), h.app.session.undo.len()), (1, undo), "one click back, nothing undone");
+    FileAction::Undo.run(&mut h.app);
+    assert_eq!((points(&h), h.app.session.undo.len()), (0, undo), "the route ends, nothing undone");
+    FileAction::Undo.run(&mut h.app);
+    assert_eq!(h.app.session.undo.len(), undo - 1, "now the last edit is undone");
 }

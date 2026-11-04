@@ -551,7 +551,7 @@ impl FileAction {
         // with unsaved changes under the report, and ask about it where it can't be answered.
         let behind_report = app.issue_report.draft.is_some();
         let available = match self {
-            Self::Undo => !app.session.undo.is_empty(),
+            Self::Undo => !app.session.undo.is_empty() || crate::electronics_board_route::routing(app),
             Self::Redo => !app.session.redo.is_empty(),
             Self::ClearRecent => !app.home.recent.is_empty(),
             Self::AgentChat => crate::agent_chat::app_bar_button_shown(app),
@@ -586,7 +586,12 @@ impl FileAction {
             }),
             Self::Save => save(app),
             Self::SaveAs => save_as(app),
-            Self::Undo => drop(app.run("edit.undo", json!({}))),
+            // As Cmd+Z: a started route steps back a click first (the native menu's Undo too).
+            Self::Undo => {
+                if !crate::tools::undo_spline_point(app) && !crate::electronics_board_route::undo_step(app) {
+                    drop(app.run("edit.undo", json!({})));
+                }
+            }
             Self::Redo => drop(app.run("edit.redo", json!({}))),
             Self::SaveJson => save_as_with_extension(app, "json"),
             Self::Export(extension) => export(app, extension),

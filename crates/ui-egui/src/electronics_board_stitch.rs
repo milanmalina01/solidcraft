@@ -166,14 +166,15 @@ fn via_size(app: &SolveApp) -> [f64; 2] {
 }
 
 /// What the tool works on: the pick, else, for the patterns that work on the whole board, the
-/// whole board ("Where needed") or every layer change. The pick goes after Place, a net change
-/// or a part picked and let go, while the pattern stays: the preview must not go with it.
+/// whole board (a grid, "Where needed") or every layer change; a fence needs its lines picked.
+/// So the preview shows as soon as the tool opens. The pick goes after Place, a net change or a
+/// part picked and let go, while the pattern stays: the preview must not go with it.
 fn effective_pick(app: &SolveApp) -> Option<StitchPick> {
     let o = &app.electronics.board.stitch;
     o.pick.clone().or(match o.pattern {
-        Pattern::Needed => Some(StitchPick::Board),
+        Pattern::Grid | Pattern::Needed => Some(StitchPick::Board),
         Pattern::LayerChange => Some(StitchPick::LayerChanges),
-        Pattern::Grid | Pattern::Fence => None,
+        Pattern::Fence => None,
     })
 }
 
