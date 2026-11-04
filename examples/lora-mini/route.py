@@ -255,7 +255,7 @@ def route_board(board, footprints, circuit, passes=10):
         b = copy_board(base[0])
         commands = list(base[1])
         records, fails = [], []
-        failed, order = route_nets(b, nets, pad_at, circuit, commands, order, records, fails)
+        failed, order = route_nets(b, nets, pad_at, circuit, commands, order, records, fails, fixed=base[0])
         print(f"pass {attempt + 1}: {len(failed)} connections unrouted")
         if best is None or len(failed) < len(best[0]):
             best = (failed, commands, b, records, fails)
@@ -296,7 +296,7 @@ def copy_board(b0):
     return b
 
 
-def route_nets(b, nets, pad_at, circuit, commands, order, records=None, fails=None):
+def route_nets(b, nets, pad_at, circuit, commands, order, records=None, fails=None, fixed=None):
     """Route every net in `order`; each route made goes to `records` (to replay or rip up), each
     connection that failed to `fails`."""
     records = [] if records is None else records
@@ -333,6 +333,8 @@ def route_nets(b, nets, pad_at, circuit, commands, order, records=None, fails=No
         pins = [p for p in nets[name] if p in pad_at]
         width = circuit.POWER_WIDTH if name in circuit.RAILS else circuit.SIGNAL_WIDTH
         b.signal = width <= circuit.SIGNAL_WIDTH
+        if fixed is not None:
+            fixed.signal = b.signal
         n = b.net(name)
         # USB D- runs beside D+ (routed just before it) as a pair.
         attract = b.nets.get(PAIRS[name]) if name in PAIRS else None
@@ -343,6 +345,8 @@ def route_nets(b, nets, pad_at, circuit, commands, order, records=None, fails=No
             src = min(rest, key=lambda p: min(math.dist(pad_at[p][1], pad_at[d][1]) for d in done))
             rest.remove(src)
             path = search(b, n, pad_at[src], width, [pad_at[d][1] for d in done], attract=attract)
+            if path is None and fixed is not None:
+                path = free_path(b, fixed, n, search(b, n, pad_at[src], width, [pad_at[d][1] for d in done], attract=attract, fixed=fixed))
             if path is None:
                 failed.append(f"{name}: {src}")
                 fails.append({"name": name, "src": src, "goals": list(done), "width": width})
@@ -432,12 +436,15 @@ def search(b, net, src, width, goals, only=None, attract=None, fixed=None):
         return False
     for s in starts:
         cost[s] = 0.0
-        heapq.heappush(openq, (heur(s[1], s[2]), s))
+        heapq.heappush(openq, (heur(s[1], s[2]), 0.0, s))
     steps = [(1, 0, 1.0), (-1, 0, 1.0), (0, 1, 1.0), (0, -1, 1.0), (1, 1, 1.414), (1, -1, 1.414), (-1, 1, 1.414), (-1, -1, 1.414)]
     # Heuristic and costs in cells.
     expanded = 0
     while openq:
-        _, s = heapq.heappop(openq)
+        _, g0, s = heapq.heappop(openq)
+        if g0 > cost.get(s, 1e18):
+            # Reached more cheaply since it was queued: not a step of the search.
+            continue
         l, i, j = s
         k = b.idx(i, j)
         if b.own[l][k] == net and (l, k) not in own_start and (only is None or in_pad(b, only, i, j, l)):
@@ -473,7 +480,7 @@ def search(b, net, src, width, goals, only=None, attract=None, fixed=None):
                 cost[t] = nc
                 prev[t] = s
                 heading[t] = (di, dj)
-                heapq.heappush(openq, (nc + heur(ni, nj), t))
+                heapq.heappush(openq, (nc + heur(ni, nj), nc, t))
         # A via: both layers free round it, off the pads.
         o = 1 - l
         if b.own[0][k] == 0 and b.own[1][k] == 0:
@@ -485,7 +492,7 @@ def search(b, net, src, width, goals, only=None, attract=None, fixed=None):
             if ok and c + vc < cost.get(t, 1e18):
                 cost[t] = c + vc
                 prev[t] = s
-                heapq.heappush(openq, (c + vc + heur(i, j), t))
+                heapq.heappush(openq, (c + vc + heur(i, j), c + vc, t))
     return None
 
 
@@ -680,6 +687,28 @@ def rebuild(fixed, records):
     return b
 
 
+def free_path(b, fixed, net, path):
+    """`path` (from a search on the fixed board) when every cell and via of it is free on `b`
+    too, else None: the cost search often finds a free path the walled one ran out of steps on."""
+    if path is None:
+        return None
+    if fixed is not None:
+        fixed.signal = b.signal
+    for k, (l, i, j) in enumerate(path):
+        if not b.passable(l, b.idx(i, j), net):
+            return None
+        if k and path[k - 1][0] != l and not via_ok(b, i, j, net):
+            return None
+    return path
+
+
+def route_valid(b, pad_at, f, fixed):
+    """One connection on `b`: the cost search's path when it is free on `b`, else the walled
+    search's; None when neither finds one."""
+    path = free_path(b, fixed, b.net(f["name"]), route_one(b, pad_at, f, fixed=fixed))
+    return path if path is not None else route_one(b, pad_at, f)
+
+
 def route_one(b, pad_at, f, fixed=None):
     """One connection on `b` as a searched path, or None. With `fixed` (the board before any
     route), cells other routes hold are open at a cost: the rip-up search."""
@@ -732,12 +761,22 @@ def rescue(fixed, b, records, fails, pad_at, rounds=3):
                 continue
             victims = hits(b, path, n, records)
             if not victims:
+                free = free_path(b, fixed, n, path)
+                if free is None:
+                    continue
+                legs = tidy(b, n, free)
+                commit(b, legs, f["width"], n)
+                records.append({"kind": "conn", "name": f["name"], "src": f["src"], "goals": f["goals"], "width": f["width"],
+                                "legs": legs, "cmd": track_command(b, legs, f["width"])})
+                fails = [x for x in fails if x is not f]
+                better = True
+                print(f"routed {f['name']}: {f['src']} on a second search")
                 continue
             kept = [r for k, r in enumerate(records) if k not in victims]
             ripped = [r for k, r in enumerate(records) if k in victims]
             b2 = rebuild(fixed, kept)
             new_records = list(kept)
-            path2 = route_one(b2, pad_at, f)
+            path2 = route_valid(b2, pad_at, f, fixed)
             if path2 is None:
                 continue
             legs = tidy(b2, n, path2)
@@ -760,7 +799,7 @@ def rescue(fixed, b, records, fails, pad_at, rounds=3):
                     end_via(b2, (p[-1][1], p[-1][2]), g)
                     new_records.append({**r, "legs": lg, "cmd": cmd})
                     continue
-                p = route_one(b2, pad_at, r)
+                p = route_valid(b2, pad_at, r, fixed)
                 if p is None:
                     lost.append(r)
                     continue
