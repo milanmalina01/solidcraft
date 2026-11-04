@@ -394,7 +394,7 @@ def ground_escapes(b, pad_at, circuit, commands, failed, records=None):
             continue
         legs = tidy(b, g, path)
         cmd = track_command(b, legs, 0.3)
-        cmd[1]["via"] = {}
+        cmd[1]["via"] = dict(VIA)
         commands.append(cmd)
         commit(b, legs, 0.3, g)
         end_via(b, (path[-1][1], path[-1][2]), g)
@@ -693,15 +693,18 @@ def track_command(b, legs, width):
     l0, first = legs[0]
     cmd = {"layer": name(l0), "width": width, "points": pts(first)}
     if len(legs) > 1:
-        cmd["via"] = {}
+        cmd["via"] = dict(VIA)
         cmd["legs"] = []
         for k, (l, cells) in enumerate(legs[1:]):
             entry = {"layer": name(l), "points": pts(cells)}
             if k < len(legs) - 2:
-                entry["via"] = {}
+                entry["via"] = dict(VIA)
             cmd["legs"].append(entry)
     return ("ecad.board.track", cmd)
 
+
+# The routes' vias: tented, so the mask covers them beside the pads.
+VIA = {"protection": "tented"}
 
 # Sense pins (see circuit.SENSE): joined at the signal width, after the rest of their rail.
 SENSE_PINS = set()
@@ -889,7 +892,7 @@ def rescue(fixed, b, records, fails, pad_at, nets, rounds=4):
                     continue
                 lg = tidy(b2, g, p)
                 cmd = track_command(b2, lg, 0.3)
-                cmd[1]["via"] = {}
+                cmd[1]["via"] = dict(VIA)
                 commit(b2, lg, 0.3, g)
                 end_via(b2, (p[-1][1], p[-1][2]), g)
                 new_records.append({**r, "legs": lg, "cmd": cmd})

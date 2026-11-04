@@ -48,7 +48,7 @@ PLACE = {
     "R4": ([9.8, 12.7], 90),  # clear of the M2 hole at (8.5, 14.6)
     "D1": ([11.9, 13.0], 180),  # its cathode beside U4.1 (CHRG)
     "J2": ([21.5, 13.0], 0),  # the battery plug from the top edge
-    "C2": ([21.8, 8.15], 0),
+    "C2": ([21.8, 8.05], 0),
     "SW1": ([24.0, 3.0], 270),  # the lever out of the right edge
     "U3": ([19.0, 3.0], 0),
     "C3": ([19.0, 6.0], 0),
@@ -65,7 +65,7 @@ PLACE = {
     "R5": ([0.5, -13.5], 0),
     "D2": ([3.3, -13.5], 180),
 }
-HOLES = [[-23.6, 14.6], [23.6, -14.6], [-23.6, -14.6], [8.5, 14.6]]
+HOLES = [[-23.6, 14.6], [23.6, -14.6], [-23.6, -14.6], [8.2, 14.9]]
 
 
 def cli():
@@ -105,6 +105,16 @@ def results_of(reply):
             if isinstance(reply.get(k), list):
                 return reply[k]
     return reply
+
+
+# Practical design-rule findings this prototype keeps, with why; the board's other findings are fixed.
+APPROVE = {
+    "fab_class": "JLCPCB's standard via, 0.3 mm hole in a 0.6 mm pad, at the profile's least drill and ring: the via their standard price is made for.",
+    "track_width_class": "The nRF52840's VBUS pin only detects USB (microamps): its branch of VBUS is a 0.15 mm signal track by design.",
+    "acute_angle": "45-degree joins of tracks of one net left by the example's grid router; kept for this prototype, to tidy by hand for a production run.",
+    "pad_entry": "Thin tracks leaving a pad near its corner, from the example's grid router; kept for this prototype, to tidy by hand for a production run.",
+    "via_near_pad": "A tented via next to a pad: the mask covers the via, so no solder wicks into it.",
+}
 
 
 def schematic_commands(force_labels=()):
@@ -247,7 +257,8 @@ def main():
     script = [("ecad.intent.set", {"accept": accept, "parts": [
         {"part": "C5", "role": "decoupling", "of": ["U1.19"]}, {"part": "C6", "role": "decoupling", "of": ["U1.23"]},
         {"part": "C7", "role": "decoupling", "of": ["U2.9"]}, {"part": "C8", "role": "bulk", "of": ["U2.9"]},
-        {"part": "C1", "role": "decoupling", "of": ["U4.4", "U1.27"]}], "note": "The decoupling as placed; proposals confirmed after a look."})]
+        {"part": "C1", "role": "decoupling", "of": ["U4.4", "U1.27"]},
+        {"part": "J4", "role": "connector", "cable": True}], "note": "The decoupling as placed; proposals confirmed after a look. J4 is the GPS header of the product's brief: a GPS module's cable plugs into it."})]
     script += list(tracks)
     hw, hh = BOARD_W / 2, BOARD_H / 2
     for layer in ("top", "bottom"):
@@ -272,7 +283,14 @@ def main():
                     break
     if fixes:
         print("fixing", len(fixes), "clearance errors with the check's own suggestion")
-    script = fixes + [
+    # The practical findings the example keeps, each kind approved with why (see the README).
+    approvals = []
+    for code, note in APPROVE.items():
+        keys = [f["key"] for f in first.get("findings", []) if f.get("code") == code and f.get("severity") == "warning"
+                and (code != "via_near_pad" or "tented" in f.get("message", ""))]
+        if keys:
+            approvals.append(("ecad.drc.approve", {"keys": keys, "note": note}))
+    script = fixes + approvals + [
         ("ecad.drc.inspect", {}),
         ("ecad.quality.inspect", {}),
         ("ecad.erc.inspect", {}),
