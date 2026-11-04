@@ -8,7 +8,7 @@ Phase 1 makes the library, draws the schematic in its sections, sets up the boar
 profile, outline, holes, the E73's antenna keep-out, design intent) and places the parts; it saves
 out/phase1.sc and reads the pads back. Phase 2 routes the board with the small grid router in
 route.py (SolidCraft has no autorouter command: each route becomes an ecad.board.track), then
-pours ground on both sides, stitches it (where needed, and a fence along the RF line), tidies the
+pours ground on both sides, stitches it where the ground map says it is weak, tidies the
 names, stamps the board marking, runs the checks and writes the PDF and the JLCPCB files into
 out/. The checks' results go to out/report.json.
 """
@@ -34,12 +34,11 @@ BOARD_W, BOARD_H = 52.0, 34.0
 PLACE = {
     "U1": ([-16.6, -1.0], 270),  # the antenna end 0.4 mm in from the left edge
     "U2": ([5.0, 1.0], 0),
-    "J3": ([-4.4, -11.6], 180),  # below the E22, the signal pin up
     "C5": ([-6.0, -0.4], 90),  # beside U1.19, upright to leave the channel free
     "C6": ([-3.6, 5.0], 90),
     "C7": ([14.6, 5.6], 270),
     "C8": ([14.6, 2.6], 90),
-    "J1": ([-13.0, 14.7], 0),  # the USB-C opening at the top edge
+    "J1": ([-13.0, 10.14], 0),  # the USB-C opening at the top edge
     "R1": ([-17.2, 7.5], 180),
     "R2": ([-9.2, 7.5], 0),
     "J5": ([-19.8, 11.3], 90),
@@ -130,6 +129,7 @@ def schematic_commands(force_labels=()):
         nets.append({"pins": pins, "name": name, "by": "wires" if local else "labels"})
     out.append(("ecad.schematic.connect", {"nets": nets}))
     out.append(("ecad.schematic.marker", {"markers": [{"kind": "no_connect", "at": p} for p in circuit.NO_CONNECT]}))
+    out.append(("ecad.schematic.edit", {"parts": [{"part": d, "dnp": True} for d in circuit.NOT_ASSEMBLED]}))
     return out
 
 
@@ -150,9 +150,6 @@ def board_setup_commands():
     x0 = -hw
     out.append(("ecad.board.keepout", {"points": [[x0, -8.6], [x0 + 3.9, -8.6], [x0 + 3.9, 6.6], [x0, 6.6]],
                                        "forbid": {"tracks": True, "vias": True, "pours": True, "components": False}}))
-    # Under the RF line the bottom stays ground: no other net's track or via (the pour stays).
-    out.append(("ecad.board.keepout", {"layers": ["bottom"], "points": [[-5.9, -11.0], [-0.9, -11.0], [-0.9, -5.8], [-5.9, -5.8]],
-                                       "forbid": {"tracks": True, "vias": True, "pours": False, "components": False}}))
     out.append(("ecad.design.info", {"title": "LoRa Mesh Node Mini", "revision": "A", "date": "2026-11-02", "author": "SolidCraft example",
                                      "notes": "nRF52840 (E73) + SX1262 (E22, EU868), USB-C charging, 1S LiPo, GPS header"}))
     out.append(("ecad.intent.set", {
@@ -163,7 +160,6 @@ def board_setup_commands():
             {"net": "VBAT", "role": "power", "voltage": {"nominal": 3.7, "peak": 4.2}, "current_a": 0.5},
             {"net": "VSYS", "role": "power", "voltage": {"nominal": 3.7, "peak": 4.2}, "current_a": 0.3},
             {"net": "3V3_GPS", "role": "power", "voltage": {"nominal": 3.3}, "current_a": 0.05},
-            {"net": "RF_ANT", "role": "rf", "f_mhz": 868, "z_target": 50},
             {"net": "VBAT_SENSE", "role": "analog", "note": "the battery's voltage through 1M/1M to AIN4"},
         ],
         "board": {"product": "prototype", "bands": [
@@ -184,7 +180,6 @@ def phase1(force_labels=()):
     script += schematic_commands(force_labels)
     script += board_setup_commands()
     script.append(("ecad.intent.inspect", {"blocking": True, "limit": 200}))
-    script.append(("ecad.board.impedance.inspect", {"layer": "top", "kind": "coplanar", "target": 50, "gap": 0.25}))
     for fp in ["0603", "LED0603", "SOT-23-5", "SOT-23", "HDR-1x6"] + list(parts.CUSTOM):
         script.append(("ecad.footprint.inspect", {"footprint": fp}))
     script.append(("ecad.board.inspect", {}))
@@ -225,25 +220,21 @@ def main():
     else:
         sys.exit("the schematic's nets differ from the circuit's: " + ", ".join(f"{r}: {g} (want {w})" for r, g, w in wrong))
     footprints = {}
-    imp = None
     for r in res:
         v = r.get("result", r) if isinstance(r, dict) else r
         if isinstance(v, dict) and isinstance(v.get("footprint"), dict) and isinstance(v["footprint"].get("pads"), list):
             footprints[v["footprint"]["name"]] = v["footprint"]["pads"]
-        if isinstance(v, dict) and "z0" in v and "gap" in v:
-            imp = v
-    rf_width = round(imp["width"], 2) if imp and imp.get("valid_range", False) else 1.0
     # The routes, worked out again only when the board or the router changed.
     import hashlib
     shape = {k: board.get(k) for k in ("footprints", "holes", "keepouts", "outline")}
     key = hashlib.sha256((json.dumps(shape, sort_keys=True) + open(os.path.join(HERE, "route.py")).read()
-                          + open(os.path.join(HERE, "circuit.py")).read() + str(rf_width)).encode()).hexdigest()[:16]
+                          + open(os.path.join(HERE, "circuit.py")).read()).encode()).hexdigest()[:16]
     cache = os.path.join(OUT, f"routes-{key}.json")
     if os.path.exists(cache):
         with open(cache) as f:
             tracks = [tuple(t) for t in json.load(f)]
     else:
-        tracks = route.route_board(board, footprints, rf_width, circuit)
+        tracks = route.route_board(board, footprints, circuit)
         with open(cache, "w") as f:
             json.dump(tracks, f)
     # The intent's proposals that only want a look, confirmed; decoupling assigned by hand.
@@ -259,7 +250,6 @@ def main():
     for layer in ("top", "bottom"):
         script.append(("ecad.board.pour", {"layer": layer, "net": "GND", "rect": [BOARD_W - 0.2, BOARD_H - 0.2], "connect": "solid"}))
     script += [
-        ("ecad.board.stitch", {"net": "GND", "pattern": "fence", "nets": ["RF_ANT"]}),
         ("ecad.board.stitch", {"net": "GND", "pattern": "needed"}),
         ("ecad.board.labels", {"mode": "fit"}),
         ("ecad.board.marking", {"side": "bottom", "at": [-12.0, 8.0], "number": "01",

@@ -9,12 +9,23 @@ Footprint sources, so each can be checked:
   1.27 mm (outer pads 1.0 x 0.8 mm, the first top pad 2.06 mm from each side, the first side pad
   2.60 mm from the top, 3.97 mm from the last side pad to the antenna end) and 15 inner pads
   0.8 x 0.8 mm. The inner pads' places are not dimensioned in the drawing: they are scaled from it
-  (about +-0.1 mm) and marked VERIFY.
+  (about +-0.1 mm) and marked VERIFY; none of them is connected on this board. The module's origin
+  is its body's middle; its pads' middle, which the placement list gives, is 2.09 mm toward the
+  pin-11..25 end (the antenna end has no pads).
 - SOT-23-5, SOT-23, 0603: generated from the JEDEC/EIA packages by ecad.footprint.generate.
-- TYPE-C-31-M-12 (USB-C), S2B-PH-SM4-TB (JST PH), MSK12C02 (slide switch), TS-1187A (tact switch),
-  U.FL-R-SMT-1(10): VERIFY. Their datasheets could not be read while this example was built (the
-  part pages were out of reach); the lands below are from the manufacturers' published patterns
-  as remembered, and must be checked against each datasheet before ordering.
+- TYPE-C-31-M-12 (USB-C, C165948): the maker's drawing "RECOMMEND P.C.B LAYOUT (COMPONENT SIDE)",
+  measured from the PCB edge: signal pads 0.3 / 0.6 x 1.14 mm with their middle 6.86 mm in, the
+  rear shell slots 0.9 x 2.0 (drill 0.6 x 1.7) at 6.29 mm, the pegs (0.6 mm holes, 5.78 mm
+  apart) at 5.79 mm, the front shell slots 0.9 x 1.7 (drill 0.6 x 1.4) at 2.11 mm, 8.65 mm apart.
+- MSK12C02 (slide switch, C431540): the maker's mounting reference: pins 1, 2, 3 at +2.25, -0.75,
+  -2.25 mm, 0.6 x 1.3 mm, 1.95 mm behind the body's middle; shell tabs 1.05 x 0.7 at +-3.675,
+  +-1.1; two 0.85 mm peg holes 3 mm apart on the middle line.
+- TS-1187A (tact switch, C318884): the maker's "P.C.B LAYOUT TOP VIEW": four 1.0 x 0.75 mm pads at
+  +-3.0, +-1.875; A-B and C-D joined inside (our 1-2 and 3-4).
+- S2B-PH-SM4-TB (JST PH, C295747): VERIFY. JST's catalogue page with its land pattern could not be
+  fetched where this was built (the maker's site refused the download); the catalogue page that
+  could be read gives only the outline (7.9 mm wide, 6 mm deep). The lands are the maker's pattern
+  as remembered.
 """
 
 # Pads: (number, [x, y], [w, h], options). Positions in mm, the footprint's top view, y up.
@@ -55,25 +66,26 @@ def _e73():
 
 
 def _usb_c():
-    """TYPE-C-31-M-12 (16-pin USB-C receptacle), opening to +y at the board's edge. VERIFY."""
+    """TYPE-C-31-M-12 (16-pin USB-C receptacle), the opening to +y: put the footprint 6.86 mm in
+    from the board's edge so the receptacle's front is flush with it."""
     pads = []
     row = [("A1", -3.2, 0.6), ("A4", -2.4, 0.6), ("B8", -1.75, 0.3), ("A5", -1.25, 0.3), ("B7", -0.75, 0.3), ("A6", -0.25, 0.3),
            ("A7", 0.25, 0.3), ("B6", 0.75, 0.3), ("A8", 1.25, 0.3), ("B5", 1.75, 0.3), ("B4", 2.4, 0.6), ("B1", 3.2, 0.6)]
     for n, x, w in row:
-        pads.append({"number": n, "at": [x, -0.05], "size": [w, 1.15]})
-    # Shell: four plated slots, tied to nothing (left unconnected: no shield net on this board).
-    for k, (x, y) in enumerate([(-4.32, 0.53), (4.32, 0.53), (-4.32, -3.67), (4.32, -3.67)]):
-        h = 2.0 if y > 0 else 1.6
-        pads.append({"number": f"S{k + 1}", "at": [x, y], "size": [1.0, h + 0.6], "shape": "oval", "kind": "through_hole", "drill": [0.6, h]})
+        pads.append({"number": n, "at": [x, 0.0], "size": [w, 1.14]})
+    # Shell: four plated slots, tied to nothing (no shield net on this board): the rear pair beside
+    # the pins, the front pair near the edge.
+    for k, (x, y, h, d) in enumerate([(-4.325, 0.57, 2.0, 1.7), (4.325, 0.57, 2.0, 1.7), (-4.325, 4.75, 1.7, 1.4), (4.325, 4.75, 1.7, 1.4)]):
+        pads.append({"number": f"S{k + 1}", "at": [x, y], "size": [0.9, h], "shape": "oval", "kind": "through_hole", "drill": [0.6, d]})
     # Two locating pegs, unplated.
     for k, x in enumerate([-2.89, 2.89]):
-        pads.append({"number": f"H{k + 1}", "at": [x, -1.7], "size": [0.65, 0.65], "shape": "round", "kind": "hole", "drill": 0.65})
-    body = [[-4.47, -6.1], [4.47, 1.25]]
+        pads.append({"number": f"H{k + 1}", "at": [x, 1.07], "size": [0.6, 0.6], "shape": "round", "kind": "hole", "drill": 0.6})
+    body = [[-4.47, -0.49], [4.47, 6.86]]
     return pads, body
 
 
 def _jst_ph2():
-    """S2B-PH-SM4-TB (JST PH, 2 pins, side entry), the opening to +y. VERIFY."""
+    """S2B-PH-SM4-TB (JST PH, 2 pins, side entry), the opening to +y. VERIFY (see above)."""
     pads = [
         {"number": "1", "at": [-1.0, -2.0], "size": [1.0, 3.5]},
         {"number": "2", "at": [1.0, -2.0], "size": [1.0, 3.5]},
@@ -85,29 +97,20 @@ def _jst_ph2():
 
 
 def _slide():
-    """MSK12C02 (SPDT slide switch), the lever to +y. VERIFY."""
-    pads = [{"number": str(k + 1), "at": [x, -1.6], "size": [0.7, 1.5]} for k, x in enumerate([-1.5, 0.0, 1.5])]
-    for k, (x, y) in enumerate([(-3.4, -1.1), (3.4, -1.1), (-3.4, 1.1), (3.4, 1.1)]):
-        pads.append({"number": f"MP{k + 1}", "at": [x, y], "size": [1.0, 0.8]})
-    body = [[-3.35, -0.75], [3.35, 0.75]]
+    """MSK12C02 (SPDT slide switch), the lever to +y; pin 2 is the common."""
+    pads = [{"number": n, "at": [x, -1.95], "size": [0.6, 1.3]} for n, x in (("1", 2.25), ("2", -0.75), ("3", -2.25))]
+    for k, (x, y) in enumerate([(-3.675, -1.1), (3.675, -1.1), (-3.675, 1.1), (3.675, 1.1)]):
+        pads.append({"number": f"MP{k + 1}", "at": [x, y], "size": [1.05, 0.7]})
+    for k, x in enumerate([-1.5, 1.5]):
+        pads.append({"number": f"H{k + 1}", "at": [x, 0.0], "size": [0.85, 0.85], "shape": "round", "kind": "hole", "drill": 0.85})
+    body = [[-4.0, -1.4], [4.0, 1.4]]
     return pads, body
 
 
 def _tact():
-    """TS-1187A (5.1 x 5.1 mm tact switch): pins 1 and 2 joined, 3 and 4 joined. VERIFY."""
-    pads = [{"number": n, "at": [x, y], "size": [1.0, 0.75]} for n, x, y in [("1", -3.0, 1.85), ("2", 3.0, 1.85), ("3", -3.0, -1.85), ("4", 3.0, -1.85)]]
+    """TS-1187A (5.1 x 5.1 mm tact switch): pins 1 and 2 joined, 3 and 4 joined."""
+    pads = [{"number": n, "at": [x, y], "size": [1.0, 0.75]} for n, x, y in [("1", -3.0, 1.875), ("2", 3.0, 1.875), ("3", -3.0, -1.875), ("4", 3.0, -1.875)]]
     body = [[-2.55, -2.55], [2.55, 2.55]]
-    return pads, body
-
-
-def _ufl():
-    """U.FL-R-SMT-1(10), the signal pin at the bottom. VERIFY."""
-    pads = [
-        {"number": "1", "at": [0.0, -1.5], "size": [1.0, 1.05]},
-        {"number": "2", "at": [-1.475, 0.0], "size": [1.05, 2.2]},
-        {"number": "3", "at": [1.475, 0.0], "size": [1.05, 2.2]},
-    ]
-    body = [[-1.3, -1.3], [1.3, 1.3]]
     return pads, body
 
 
@@ -134,7 +137,6 @@ CUSTOM = {
     "JST-PH-2-SMD": _jst_ph2,
     "SLIDE-SPDT": _slide,
     "TACT-5.1": _tact,
-    "U.FL": _ufl,
     "SWD-PADS-4": _swd,
     "SOT-23-5": _sot23_5,
 }
@@ -149,11 +151,26 @@ def _line(a, b):
 SILK = {
     "SWD-PADS-4": [_line([-4.4, -1.2], [-3.2, -1.2])],
     "TACT-5.1": [_line([-3.9, 1.5], [-3.9, 2.4]), _line([-2.0, 2.7], [2.0, 2.7]), _line([-2.0, -2.7], [2.0, -2.7])],
-    "SLIDE-SPDT": [_line([-1.85, -2.7], [-1.15, -2.7])],
+    "SLIDE-SPDT": [_line([1.95, -2.9], [2.55, -2.9])],
     "SOT-23-5": [_line([-1.6, -1.9], [-1.6, -0.5])],
     "JST-PH-2-SMD": [_line([-1.5, -4.2], [-0.5, -4.2])],
-    "U.FL": [_line([-0.5, -2.4], [0.5, -2.4])],
-    "USB-C-16P": [_line([-4.6, -5.8], [4.6, -5.8])],
+    "USB-C-16P": [_line([-4.6, -1.0], [-3.7, -1.0])],
+}
+
+
+# Placement-list rotation offsets, by footprint, saved with the library (ecad.board.cpl_rotation):
+# the assembler's reference drawing of these parts is turned from ours. From JLCPCB's assembly
+# preview of this board (its pin-1 marks and bodies against our pads): the USB-C, the JST and the
+# slide switch came out turned round (their openings and lever facing into the board), the SOT-23
+# and SOT-23-5 parts a quarter turn (bodies across our pad rows, pin 1 at the lower right where
+# ours is at the lower left). The LEDs, the modules and the tact switches matched. Check the
+# assembler's placement preview after each upload.
+ASSEMBLY_ROTATION = {
+    "USB-C-16P": 180,
+    "JST-PH-2-SMD": 180,
+    "SLIDE-SPDT": 180,
+    "SOT-23": -90,
+    "SOT-23-5": -90,
 }
 
 
@@ -177,6 +194,8 @@ def footprint_commands():
         if name in SILK:
             out.append(("ecad.footprint.set_graphics", {"footprint": name, "layer": "silkscreen", "graphics": SILK[name]}))
         out.append(("ecad.footprint.courtyard", {"footprint": name, "margin": 0.25}))
+    for name, offset in ASSEMBLY_ROTATION.items():
+        out.append(("ecad.board.cpl_rotation", {"footprint": name, "offset": offset}))
     return out
 
 

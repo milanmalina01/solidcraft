@@ -1,14 +1,16 @@
 """A small two-layer grid router for the example, so the board's tracks come from SolidCraft's
 ecad.board.track commands (SolidCraft has no autorouter command of its own).
 
-The board is a 0.1 mm grid on each layer. Every piece of copper marks the cells it covers with its
-net, and the cells within the clearance plus the widest track's half width round it as taken by
-that net; the board's edge band, the keep-outs, the holes and the modules' bodies (on the top) are
-taken by none. A net may go through free cells and its own. Each connection is an A* search over
-both layers (45 degree steps, a via a cost of its own, both layers free round it), from a pad to
-the copper its net already has; its path, its straight runs merged, becomes one ecad.board.track
-with legs and vias. The RF line is drawn by hand, as a coplanar line of the width the impedance
-tool gave.
+The board is a 0.05 mm grid on each layer. Every piece of copper marks the cells it covers with its
+net, and the cells within the clearance plus the track's half width round it as taken by that net;
+the board's edge band, the keep-outs, the holes and the modules' bodies (on the top) are taken by
+none. A net may go through free cells and its own. Each connection is an A* search over both layers
+(45 degree steps, a turn costs a little, a via a cost of its own, both layers free round it), from a
+pad to the copper its net already has. The path is then pulled tight: each run of it is replaced by
+the fewest straight 0, 45 and 90 degree segments that keep to the same free cells, so the tracks
+have no stair steps or short jogs. Each route becomes one ecad.board.track with legs and vias. USB
+D- is drawn to run beside D+ as a pair. When connections fail, the nets that failed are ripped up
+and routed first on the next pass, in a few orders, and the best pass is kept.
 """
 
 import heapq
@@ -23,10 +25,14 @@ SIGNAL_MARGIN = CLEARANCE + 0.1 + G / 2
 EDGE = 0.3 + WIDEST / 2 + G
 # A signal track's centre from an unplated hole: the edge clearance, half the width, half a cell.
 HOLE_SIG = 0.3 + 0.1 + G / 2
-# The ground-only band beside the RF line, wide enough for the pour to fill it (the 0.25 mm
-# coplanar gap, a strip of pour, the clearance), so the line's nearest neighbour is ground.
-RF_ZONE = 1.5
 VIA_COST = 50.0
+# A 45 degree turn and a sharper one, in cells: enough to prefer long straight runs.
+TURN_45 = 3.0
+TURN_90 = 8.0
+# A cell beside the pair partner's keep-out costs this share of a step (D- hugs D+).
+PAIR_SHARE = 0.55
+# The second line of each pair, and the first it runs beside.
+PAIRS = {"USB_DN": "USB_DP"}
 # The cells round a via that must be free: its 0.3 mm radius and a 0.15 mm hair past a pad.
 VIA_REACH = range(-int(0.45 / G), int(0.45 / G) + 1)
 MULTI = 65535
@@ -184,7 +190,7 @@ def pad_shapes(board, footprints):
     return out
 
 
-def route_board(board, footprints, rf_width, circuit):
+def route_board(board, footprints, circuit, passes=10):
     w, h = board["size"] if isinstance(board.get("size"), list) else (52.0, 34.0)
     b = Board(w, h)
     pads = pad_shapes(board, footprints)
@@ -240,30 +246,12 @@ def route_board(board, footprints, rf_width, circuit):
     commands = []
     pad_at = {ref: (net, at, half, angle, layers, q.get("shape", "rect")) for ref, net, at, half, angle, layers, q in pads}
 
-    # The RF line by hand: out of the E22's ANT pad to the left, then down to the U.FL.
-    # Out of the pad at the pad's own width (its neighbours are 1.27 mm away), then the 50 ohm width.
-    ant, ufl = pad_at["U2.21"], pad_at["J3.1"]
-    out = [ant[1][0] - ant[2][0] - 1.2, ant[1][1]]
-    corner = [ufl[1][0], ant[1][1]]
-    nrf = b.net("RF_ANT")
-    for pts, wdt in (([ant[1], out], 0.8), ([out, corner, ufl[1]], rf_width)):
-        commands.append(("ecad.board.track", {"layer": "top", "width": wdt, "points": [list(p) for p in pts]}))
-        for a, c in zip(pts, pts[1:]):
-            add_track(b, 0, a, c, wdt, nrf)
-    # Beside the RF line on its layer only ground (the quality check wants ground as its
-    # neighbour within max(2W, 3h)).
-    g = b.net("GND")
-    for a, c in zip([ant[1], out, corner], [out, corner, ufl[1]]):
-        box = box_of([a, c], RF_ZONE)
-        b.mark(0, seg_test(a, c, rf_width / 2), box, g, RF_ZONE, RF_ZONE)
-
     nets = dict(circuit.SIGNALS)
     nets.update({k: v for k, v in circuit.RAILS.items() if k != "GND"})
-    nets.pop("RF_ANT", None)
     base = (b, list(commands))
     best = None
     order = None
-    for attempt in range(10):
+    for attempt in range(passes):
         b = copy_board(base[0])
         commands = list(base[1])
         failed, order = route_nets(b, nets, pad_at, circuit, commands, order)
@@ -272,13 +260,17 @@ def route_board(board, footprints, rf_width, circuit):
             best = (failed, commands)
         if not failed:
             break
-        # Rip up and route again, what failed first.
+        # Rip up and route again, what failed first; when a pass did no better than the best, the
+        # rest go the other way round (longest first), so the next pass is not the same again.
         bad = []
         for f in failed:
             n = f.split(":")[0]
             if n in nets and n not in bad:
                 bad.append(n)
-        order = bad + [n for n in order if n not in bad]
+        rest = [n for n in order if n not in bad]
+        if len(failed) >= len(best[0]) and attempt % 2 == 1:
+            rest = rest[::-1]
+        order = bad + rest
     failed, commands = best
     if failed:
         print("unrouted:", ", ".join(failed))
@@ -317,9 +309,9 @@ def route_nets(b, nets, pad_at, circuit, commands, order):
         if path is None:
             failed.append(f"GND link: {a_ref}")
             continue
-        commands.append(track_command(b, path, 0.3))
-        for (l, i, j), (l2, i2, j2) in zip(path, path[1:]):
-            add_track(b, l, b.xy(i, j), b.xy(i2, j2), 0.3, g)
+        legs = tidy(b, g, path)
+        commands.append(track_command(b, legs, 0.3))
+        commit(b, legs, 0.3, g)
     escaped = False
     for name in order:
         # The ground escapes once the USB-C's own lines are in, before the rest crowd them.
@@ -330,26 +322,22 @@ def route_nets(b, nets, pad_at, circuit, commands, order):
         width = circuit.POWER_WIDTH if name in circuit.RAILS else circuit.SIGNAL_WIDTH
         b.signal = width <= circuit.SIGNAL_WIDTH
         n = b.net(name)
+        # USB D- runs beside D+ (routed just before it) as a pair.
+        attract = b.nets.get(PAIRS[name]) if name in PAIRS else None
         # Each pin joins the copper the net already has, nearest first.
         done = [pins[0]]
         rest = pins[1:]
         while rest:
             src = min(rest, key=lambda p: min(math.dist(pad_at[p][1], pad_at[d][1]) for d in done))
             rest.remove(src)
-            path = search(b, n, pad_at[src], width, [pad_at[d][1] for d in done])
+            path = search(b, n, pad_at[src], width, [pad_at[d][1] for d in done], attract=attract)
             if path is None:
                 failed.append(f"{name}: {src}")
                 done.append(src)
                 continue
-            commands.append(track_command(b, path, width))
-            for (l, i, j), (l2, i2, j2) in zip(path, path[1:]):
-                a, c = b.xy(i, j), b.xy(i2, j2)
-                if l == l2:
-                    add_track(b, l, a, c, width, n)
-                else:
-                    b.vias.append((i, j))
-                    for ll in (0, 1):
-                        add_track(b, ll, a, a, 0.6, n)
+            legs = tidy(b, n, path)
+            commands.append(track_command(b, legs, width))
+            commit(b, legs, width, n)
             done.append(src)
     if not escaped:
         ground_escapes(b, pad_at, circuit, commands, failed)
@@ -368,11 +356,11 @@ def ground_escapes(b, pad_at, circuit, commands, failed):
         if path is None:
             failed.append(f"GND escape: {ref}")
             continue
-        cmd = track_command(b, path, 0.3)
+        legs = tidy(b, g, path)
+        cmd = track_command(b, legs, 0.3)
         cmd[1]["via"] = {}
         commands.append(cmd)
-        for (l, i, j), (l2, i2, j2) in zip(path, path[1:]):
-            add_track(b, 0, b.xy(i, j), b.xy(i2, j2), 0.3, g)
+        commit(b, legs, 0.3, g)
         end = b.xy(path[-1][1], path[-1][2])
         b.vias.append((path[-1][1], path[-1][2]))
         for ll in (0, 1):
@@ -380,8 +368,9 @@ def ground_escapes(b, pad_at, circuit, commands, failed):
     b.signal = signal
 
 
-def search(b, net, src, width, goals, only=None):
-    """A path from the pad `src` to copper of `net`, as [(layer, i, j)]; None when there is none."""
+def search(b, net, src, width, goals, only=None, attract=None):
+    """A path from the pad `src` to copper of `net`, as [(layer, i, j)]; None when there is none.
+    With `attract`, cells hugging that net's keep-out cost less (a pair's second line)."""
     _, at, half, angle, layers, shape = src
     starts = []
     test = pad_test(at, [max(half[0] - G, G / 2), max(half[1] - G, G / 2)], angle, shape)
@@ -408,6 +397,15 @@ def search(b, net, src, width, goals, only=None):
     openq = []
     cost = {}
     prev = {}
+    heading = {}
+    grid = b.block_sig if b.signal else b.block
+
+    def hugs(l, i, j):
+        g = grid[l]
+        for a, c2 in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+            if b.inside(i + a, j + c2) and g[b.idx(i + a, j + c2)] == attract:
+                return True
+        return False
     for s in starts:
         cost[s] = 0.0
         heapq.heappush(openq, (heur(s[1], s[2]), s))
@@ -438,10 +436,17 @@ def search(b, net, src, width, goals, only=None):
             if di and dj and not (b.passable(l, b.idx(i + di, j), net) and b.passable(l, b.idx(i, j + dj), net)):
                 continue
             t = (l, ni, nj)
+            h0 = heading.get(s)
+            if h0 is not None and h0 != (di, dj):
+                # A turn: 45 degrees when the headings' dot product is positive, else sharper.
+                dc += TURN_45 if h0[0] * di + h0[1] * dj > 0 else TURN_90
+            if attract is not None and hugs(l, ni, nj):
+                dc *= PAIR_SHARE
             nc = c + dc
             if nc < cost.get(t, 1e18):
                 cost[t] = nc
                 prev[t] = s
+                heading[t] = (di, dj)
                 heapq.heappush(openq, (nc + heur(ni, nj), t))
         # A via: both layers free round it, off the pads.
         o = 1 - l
@@ -516,37 +521,110 @@ def in_pad(b, pad, i, j, l):
     return l in layers and pad_test(at, half, angle, shape)(*b.xy(i, j), 0.0)
 
 
-def track_command(b, path, width):
-    """One ecad.board.track for a path: a leg per layer, a via between."""
+def _legs(path):
+    """A path's runs on one layer: [(layer, [(i, j), ...])]; a via sits where one run ends and the
+    next starts, at the same cell."""
     legs = []
-    cur = [path[0]]
-    for p in path[1:]:
-        if p[0] != cur[-1][0]:
-            legs.append(cur)
-            cur = [p]
+    cur_l, cur = path[0][0], [(path[0][1], path[0][2])]
+    for l, i, j in path[1:]:
+        if l != cur_l:
+            legs.append((cur_l, cur))
+            cur_l, cur = l, [(i, j)]
         else:
-            cur.append(p)
-    legs.append(cur)
+            cur.append((i, j))
+    legs.append((cur_l, cur))
+    return legs
 
-    def points(leg):
-        pts = [leg[0]]
-        for k in range(1, len(leg) - 1):
-            a, m, c = leg[k - 1], leg[k], leg[k + 1]
-            if (m[1] - a[1], m[2] - a[2]) != (c[1] - m[1], c[2] - m[2]):
-                pts.append(m)
-        if len(leg) > 1:
-            pts.append(leg[-1])
-        return [list(b.xy(p[1], p[2])) for p in pts]
 
+def _sign(v):
+    return (v > 0) - (v < 0)
+
+
+def clear_line(b, net, l, a, c):
+    """The straight 0/45/90 degree run from cell `a` to `c` keeps to cells `net` may use."""
+    dx, dy = c[0] - a[0], c[1] - a[1]
+    if dx and dy and abs(dx) != abs(dy):
+        return False
+    si, sj = _sign(dx), _sign(dy)
+    i, j = a
+    for _ in range(max(abs(dx), abs(dy))):
+        ni, nj = i + si, j + sj
+        if not b.inside(ni, nj) or not b.passable(l, b.idx(ni, nj), net):
+            return False
+        if si and sj and not (b.passable(l, b.idx(ni, j), net) and b.passable(l, b.idx(i, nj), net)):
+            return False
+        i, j = ni, nj
+    return True
+
+
+def connect(b, net, l, a, c):
+    """The fewest 0/45/90 degree segments from `a` to `c` on free cells: the corner between them
+    ([] for a straight run, [corner] for two), or None."""
+    dx, dy = c[0] - a[0], c[1] - a[1]
+    if dx == 0 or dy == 0 or abs(dx) == abs(dy):
+        return [] if clear_line(b, net, l, a, c) else None
+    m = min(abs(dx), abs(dy))
+    diag = (_sign(dx) * m, _sign(dy) * m)
+    for corner in ((a[0] + diag[0], a[1] + diag[1]), (c[0] - diag[0], c[1] - diag[1])):
+        if clear_line(b, net, l, a, corner) and clear_line(b, net, l, corner, c):
+            return [corner]
+    return None
+
+
+def pull(b, net, l, cells):
+    """A run of cells as the fewest straight segments: from each kept point, the farthest later
+    corner it reaches in one or two segments on free cells."""
+    if len(cells) < 2:
+        return list(cells)
+    corners = [cells[0]]
+    for k in range(1, len(cells) - 1):
+        a, m, c = cells[k - 1], cells[k], cells[k + 1]
+        if (m[0] - a[0], m[1] - a[1]) != (c[0] - m[0], c[1] - m[1]):
+            corners.append(m)
+    corners.append(cells[-1])
+    out = [corners[0]]
+    i = 0
+    while i < len(corners) - 1:
+        for k in range(len(corners) - 1, i, -1):
+            mid = connect(b, net, l, corners[i], corners[k])
+            if mid is not None:
+                out += mid + [corners[k]]
+                i = k
+                break
+        else:
+            out.append(corners[i + 1])
+            i += 1
+    return out
+
+
+def tidy(b, net, path):
+    """A searched path as legs of the fewest straight segments each."""
+    return [(l, pull(b, net, l, cells)) for l, cells in _legs(path)]
+
+
+def commit(b, legs, width, net):
+    """A route's copper on the board: its segments, and a via where a leg starts after another."""
+    for k, (l, pts) in enumerate(legs):
+        for a, c in zip(pts, pts[1:]):
+            add_track(b, l, b.xy(*a), b.xy(*c), width, net)
+        if k:
+            at = b.xy(*pts[0])
+            b.vias.append(pts[0])
+            for ll in (0, 1):
+                add_track(b, ll, at, at, 0.6, net)
+
+
+def track_command(b, legs, width):
+    """One ecad.board.track for a tidied route: a leg per layer, a via between."""
     name = lambda l: "top" if l == 0 else "bottom"  # noqa: E731
-    first = points(legs[0])
-    cmd = {"layer": name(legs[0][0][0]), "width": width, "points": first}
+    pts = lambda cells: [list(b.xy(*p)) for p in cells]  # noqa: E731
+    l0, first = legs[0]
+    cmd = {"layer": name(l0), "width": width, "points": pts(first)}
     if len(legs) > 1:
         cmd["via"] = {}
         cmd["legs"] = []
-        for k, leg in enumerate(legs[1:]):
-            pts = points(leg)
-            entry = {"layer": name(leg[0][0]), "points": pts}
+        for k, (l, cells) in enumerate(legs[1:]):
+            entry = {"layer": name(l), "points": pts(cells)}
             if k < len(legs) - 2:
                 entry["via"] = {}
             cmd["legs"].append(entry)
