@@ -731,6 +731,17 @@ def hits(b, path, net, records):
     """The recorded routes whose copper holds a cell of `path` that `net` may not use on `b`."""
     out = set()
     cells = [(l, b.xy(i, j)) for l, i, j in path if not b.passable(l, b.idx(i, j), net)]
+    # Round each via of the path: the room it needs on both layers.
+    for k in range(1, len(path)):
+        if path[k][0] != path[k - 1][0]:
+            _, i, j = path[k]
+            for a in VIA_REACH:
+                for c2 in VIA_REACH:
+                    if b.inside(i + a, j + c2):
+                        kk = b.idx(i + a, j + c2)
+                        for l in (0, 1):
+                            if not b.passable(l, kk, net):
+                                cells.append((l, b.xy(i + a, j + c2)))
     for k, r in enumerate(records):
         if r["name"] == "GND" and r["kind"] == "link":
             continue
