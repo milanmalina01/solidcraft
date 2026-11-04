@@ -486,7 +486,9 @@ def search(b, net, src, width, goals, only=None, attract=None, fixed=None):
         if b.own[0][k] == 0 and b.own[1][k] == 0:
             # Clear of every pad (its own too: no via in a pad), of other nets on both layers and
             # of other vias' holes.
-            ok = via_ok(P, i, j, net)
+            # In a cost search the via keeps its distance from the vias routes made (a via is
+            # never worth ripping up a route for); the copper round it may cost.
+            ok = via_ok(P, i, j, net) and (fixed is None or not near_via(b, i, j))
             vc = VIA_COST + (RIP_COST * 4 if fixed is not None and ok and not via_ok(b, i, j, net) else 0.0)
             t = (o, i, j)
             if ok and c + vc < cost.get(t, 1e18):
@@ -499,10 +501,15 @@ def search(b, net, src, width, goals, only=None, attract=None, fixed=None):
 VIA_GAP = int(0.9 / G)
 
 
+def near_via(b, i, j):
+    """Another via's hole within 0.9 mm of the cell."""
+    return any(abs(i - vi) <= VIA_GAP and abs(j - vj) <= VIA_GAP and math.hypot(i - vi, j - vj) <= VIA_GAP for vi, vj in b.vias)
+
+
 def via_ok(b, i, j, net):
     """A via fits at the cell: both layers free round it for `net`, no pad near, no other via's
     hole within 0.9 mm."""
-    if any(abs(i - vi) <= VIA_GAP and abs(j - vj) <= VIA_GAP and math.hypot(i - vi, j - vj) <= VIA_GAP for vi, vj in b.vias):
+    if near_via(b, i, j):
         return False
     for a in VIA_REACH:
         for c2 in VIA_REACH:
@@ -751,7 +758,7 @@ def hits(b, path, net, records):
     return out
 
 
-def rescue(fixed, b, records, fails, pad_at, rounds=3):
+def rescue(fixed, b, records, fails, pad_at, rounds=4):
     for _ in range(rounds):
         better = False
         for f in list(fails):
