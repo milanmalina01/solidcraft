@@ -973,7 +973,7 @@ pub(crate) fn click(app: &mut SolveApp, map: PageMap, p: Pos2, free: bool, doubl
         let (points, curves) = drawn(app, &route, to.at, layer, width);
         let (clashes, truncated, _) = track_clashes(app, route.net.or(to.net), layer, width, &points, &curves);
         // Copper of no net that the route ends on joins it and takes its net: not a clash.
-        let joined = joins(&to);
+        let joined = joined_copper(&to);
         let text = match clashes.iter().find(|c| joined.as_ref() != Some(&c.item)) {
             Some(c) => Some(clash_text(app, c, "electronics.board_clash")),
             None => truncated.then(|| tr("electronics.board_clash_unchecked")),
@@ -994,7 +994,7 @@ pub(crate) fn click(app: &mut SolveApp, map: PageMap, p: Pos2, free: bool, doubl
 
 /// The copper of no net a route ends on, which the track joins (and so gives its net): a via or a
 /// track with nothing connected to it yet. `None` for anything else.
-fn joins(to: &Target) -> Option<DrcItem> {
+fn joined_copper(to: &Target) -> Option<DrcItem> {
     if to.net.is_some() {
         return None;
     }
