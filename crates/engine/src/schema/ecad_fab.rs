@@ -24,8 +24,8 @@ pub struct JlcExportParams {
     /// (`out/board-bom.csv`, `out/board-cpl.csv`).
     pub path: String,
     pub stem: Option<String>,
-    /// Rotation offsets by library footprint name, in degrees, for this export only, over the
-    /// board's own table.
+    /// Rotation offsets by library footprint name, in degrees, for this export only, in place of
+    /// the library footprints' own.
     pub rotations: Option<BTreeMap<String, f64>>,
 }
 
@@ -44,7 +44,8 @@ pub struct VerifyOutputsParams {
 pub struct CplRotationParams {
     /// The library footprint's name.
     pub footprint: String,
-    /// Degrees added to each placed copy's rotation; left out or 0 clears it.
+    /// Degrees added to each placed copy's rotation, -360 to 360 (kept as -180 to 180); left
+    /// out or 0 clears it. Kept with the library footprint, so it travels with it.
     pub offset: Option<f64>,
 }
 
@@ -93,6 +94,6 @@ pub struct JlcExportResult {
 
 #[derive(Debug, Serialize, JsonSchema)]
 pub struct CplRotationResult {
-    /// The board's whole table after the change.
+    /// Every library footprint's offset after the change, by name (those with none left out).
     pub offsets: BTreeMap<String, f64>,
 }

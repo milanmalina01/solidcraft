@@ -173,6 +173,11 @@ fn the_fab_files_read_back_as_the_board_and_the_assembly_lists_match_its_parts()
     run(&mut s, "ecad.component.edit", json!({"component": "R0603", "lcsc": "C25804"}));
     let r = run(&mut s, "ecad.board.cpl_rotation", json!({"footprint": "R0603", "offset": 90}));
     assert_eq!(r["offsets"], json!({"R0603": 90.0}));
+    let kept = s.doc.ecad.footprints.iter().find(|f| f.name == "R0603").map(|f| f.assembly_rotation);
+    assert_eq!(kept, Some(90.0), "the offset is the library footprint's, so it travels with it");
+    let r = run(&mut s, "ecad.board.cpl_rotation", json!({"footprint": "R0603", "offset": 270}));
+    assert_eq!(r["offsets"], json!({"R0603": -90.0}), "kept as -180 to 180");
+    run(&mut s, "ecad.board.cpl_rotation", json!({"footprint": "R0603", "offset": 90}));
     let dir = temp_dir("jlc");
     let zip = dir.join("board.zip");
     let (doc, undo) = (s.doc.clone(), s.undo.len());
@@ -240,18 +245,36 @@ fn the_fab_files_read_back_as_the_board_and_the_assembly_lists_match_its_parts()
     assert_eq!(listed, want, "each placed part once");
     let missing: Vec<String> = serde_json::from_value(r["missing_lcsc"].clone()).unwrap();
     assert!(!missing.is_empty() && missing.iter().all(|d| !d.starts_with('R')), "{missing:?}");
-    // The placement list: a row per footprint, at its origin, its rotation plus the offset.
+    // The placement list: a row per footprint, at the middle of its pads, its rotation plus the
+    // library footprint's offset.
     let cpl = std::fs::read_to_string(dir.join("board-cpl.csv")).unwrap();
     let rows: Vec<Vec<&str>> = cpl.lines().skip(1).map(|l| l.split(',').collect()).collect();
     assert_eq!(cpl.lines().next(), Some("Designator,Mid X,Mid Y,Layer,Rotation"));
     assert_eq!(rows.len(), placed.len());
     let r1 = rows.iter().find(|r| r[0] == "R1").unwrap();
     assert_eq!(r1[1..], ["-10mm", "0mm", "Top", "90"], "R1 at (-10, 0), turned 0° plus R0603's 90°");
+    // A part marked do-not-populate leaves both lists.
+    run(&mut s, "ecad.schematic.edit", json!({"parts": [{"part": "R2", "dnp": true}]}));
+    run(&mut s, "ecad.board.export.jlc", json!({"path": dir.join("dnp.zip").to_string_lossy()}));
+    let bom = std::fs::read_to_string(dir.join("dnp-bom.csv")).unwrap();
+    let cpl = std::fs::read_to_string(dir.join("dnp-cpl.csv")).unwrap();
+    assert!(bom.lines().any(|l| l == "10k,R1,R0603,C25804") && !bom.contains(",R2,") && !bom.contains("\"R1,R2\""), "{bom}");
+    assert!(cpl.lines().all(|l| !l.starts_with("R2,")) && cpl.lines().any(|l| l.starts_with("R1,")), "{cpl}");
+    run(&mut s, "ecad.schematic.edit", json!({"parts": [{"part": "R2", "dnp": false}]}));
     // A zip short of a copper layer doesn't pass.
     let short: Vec<fab::FabFile> = files.into_iter().filter(|f| !f.name.ends_with(".G1")).collect();
     std::fs::write(dir.join("short.zip"), fab::zip(&short).unwrap()).unwrap();
     let v = run(&mut s, "ecad.board.verify_outputs", json!({"path": dir.join("short.zip").to_string_lossy()}));
     assert_eq!((v["ok"].clone(), v["copper_layers"].clone(), v["expected_layers"].clone()), (json!(false), json!(3), json!(4)), "{v}");
+    // A footprint whose pads sit off its origin (a module with its antenna past the pads) is placed
+    // by the middle of its pads.
+    run(&mut s, "ecad.pad.add", json!({"footprint": "R0603", "pads": [{"number": "T", "at": [0, 4], "size": [0.5, 0.5]}]}));
+    let lo = s.doc.ecad.footprints.iter().find(|f| f.name == "R0603").and_then(|f| f.copper_bbox()).unwrap();
+    run(&mut s, "ecad.board.export.jlc", json!({"path": dir.join("off.zip").to_string_lossy()}));
+    let cpl = std::fs::read_to_string(dir.join("off-cpl.csv")).unwrap();
+    let r1: Vec<&str> = cpl.lines().find(|l| l.starts_with("R1,")).unwrap().split(',').collect();
+    let want = format!("{}mm", (lo[0][1] + lo[1][1]) / 2.0);
+    assert_eq!((r1[1], r1[2]), ("-10mm", want.as_str()), "{cpl}");
     // Clearing the offset is one undo step; an unknown footprint is refused.
     let undo = s.undo.len();
     let r = run(&mut s, "ecad.board.cpl_rotation", json!({"footprint": "R0603"}));

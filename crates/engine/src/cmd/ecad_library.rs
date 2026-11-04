@@ -151,7 +151,7 @@ pub(super) fn new_symbol(id: u64, name: String, description: String) -> SymbolIt
 
 /// An empty library footprint named `name`.
 pub(super) fn new_footprint(id: u64, name: String, description: String) -> FootprintItem {
-    FootprintItem { id, name, description, pads: Vec::new(), graphics: Vec::new() }
+    FootprintItem { id, name, description, pads: Vec::new(), graphics: Vec::new(), assembly_rotation: 0.0 }
 }
 
 fn symbol_create(s: &mut Session, p: &Value) -> Result<Value> {

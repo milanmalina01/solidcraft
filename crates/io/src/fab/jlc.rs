@@ -54,6 +54,9 @@ pub fn bom(ecad: &Electronics) -> Vec<BomRow> {
     let mut groups: BTreeMap<(String, String, String), Vec<String>> = BTreeMap::new();
     for f in &ecad.board.footprints {
         let Some(p) = ecad.placed(f) else { continue };
+        if p.part.dnp {
+            continue;
+        }
         let c = p.resolved.component;
         let value = p.part.value.clone().filter(|v| !v.is_empty()).unwrap_or_else(|| c.value.clone());
         let comment = if value.is_empty() { c.name.clone() } else { value };
@@ -70,17 +73,26 @@ pub fn bom(ecad: &Electronics) -> Vec<BomRow> {
     rows
 }
 
-/// The placement list, with each library footprint's rotation offset from `offsets` (by name).
-pub fn cpl(ecad: &Electronics, offsets: &BTreeMap<String, f64>) -> Vec<CplRow> {
+/// The placement list: each placed part but those marked not to populate, at the middle of its
+/// footprint's pads (the land pattern's centre, which assemblers place by; a module's origin may be
+/// elsewhere on its body), turned by its rotation plus its library footprint's assembly offset, or
+/// the one `overrides` gives for that footprint's name.
+pub fn cpl(ecad: &Electronics, overrides: &BTreeMap<String, f64>) -> Vec<CplRow> {
     let mut rows: Vec<CplRow> = ecad
         .board
         .footprints
         .iter()
         .filter_map(|f| {
             let p = ecad.placed(f)?;
-            let offset = offsets.get(&p.resolved.footprint.name).copied().unwrap_or(0.0);
+            if p.part.dnp {
+                return None;
+            }
+            let fp = p.resolved.footprint;
+            let offset = overrides.get(&fp.name).copied().unwrap_or(fp.assembly_rotation);
             let rotation = (f64::from(f.rotation) + offset).rem_euclid(360.0);
-            Some(CplRow { designator: p.part.designator.clone(), at: f.at, bottom: f.side == Side::Bottom, rotation })
+            let centre = fp.copper_bbox().map_or([0.0, 0.0], |[lo, hi]| [(lo[0] + hi[0]) / 2.0, (lo[1] + hi[1]) / 2.0]);
+            let at = f.placement().apply(centre);
+            Some(CplRow { designator: p.part.designator.clone(), at, bottom: f.side == Side::Bottom, rotation })
         })
         .collect();
     rows.sort_by(|a, b| natural(&a.designator, &b.designator));

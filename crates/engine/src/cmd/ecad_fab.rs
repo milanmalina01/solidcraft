@@ -9,9 +9,10 @@ use serde_json::Value;
 use solidcraft_io::fab::{self, FabFile, Options, Verified};
 
 use super::CommandSpec;
-use super::ecad::{parse, reply};
-use super::ecad_board::store_board;
+use super::ecad::{load_footprint, parse, reply, store_footprint};
+
 use crate::params::bad;
+use crate::schema::ecad_component::ComponentRef;
 use crate::schema::ecad_fab::{
     CplRotationParams, CplRotationResult, FabExportParams, FabExportResult, FabFileOut, JlcExportParams, JlcExportResult, VerifyOutputsParams,
     VerifyOutputsResult,
@@ -45,7 +46,7 @@ pub static COMMANDS: &[CommandSpec] = &[
         .contract(&JLC_CONTRACT)
         .output(output_schema_for::<JlcExportResult>)
         .params(
-            "path (the .zip), stem?, rotations? {footprint: degrees} (over the board's own table, this export only) → {files, bom_rows, cpl_rows, missing_lcsc, verified}: the Gerber and drill files in one zip for the fab's upload page, and beside it <zip stem>-bom.csv (Comment, Designator, Footprint, LCSC Part #: one row per value, footprint and LCSC part) and <zip stem>-cpl.csv (Designator, Mid X, Mid Y, Layer, Rotation: each footprint's origin, its side, its rotation plus its library footprint's offset from ecad.board.cpl_rotation). The files are read back and checked as ecad.board.verify_outputs does. Changes nothing in the design",
+            "path (the .zip), stem?, rotations? {footprint: degrees} (in place of the library footprints' own, this export only) → {files, bom_rows, cpl_rows, missing_lcsc, verified}: the Gerber and drill files in one zip for the fab's upload page, and beside it <zip stem>-bom.csv (Comment, Designator, Footprint, LCSC Part #: one row per value, footprint and LCSC part) and <zip stem>-cpl.csv (Designator, Mid X, Mid Y, Layer, Rotation: each part at the middle of its footprint's pads, its side, its rotation plus its library footprint's offset from ecad.board.cpl_rotation; parts marked do-not-populate are in neither list). The files are read back and checked as ecad.board.verify_outputs does. Changes nothing in the design",
         ),
     CommandSpec::new("ecad.board.verify_outputs", "Verify Outputs", crate::checked!("ecad.board.verify_outputs", verify_outputs))
         .icon("inspect")
@@ -62,7 +63,7 @@ pub static COMMANDS: &[CommandSpec] = &[
         .contract(&ROTATION_CONTRACT)
         .output(output_schema_for::<CplRotationResult>)
         .params(
-            "footprint (a library footprint's name), offset? (degrees, -360 to 360; left out or 0 clears it) → {offsets}: the placement list's rotation offset for every placed copy of the footprint, kept with the board (for a library footprint drawn turned from the assembler's reference for it). One undo step",
+            "footprint (a library footprint's name), offset? (degrees, -360 to 360, kept as -180 to 180; left out or 0 clears it) → {offsets}: the placement list's rotation offset for every placed copy of the footprint, kept with the library footprint so it travels with it (for a footprint drawn turned from the assembler's reference for the part). One undo step",
         ),
 ];
 
@@ -177,11 +178,8 @@ fn export_jlc(s: &mut Session, p: &Value) -> Result<Value> {
     let Some(base) = lower.strip_suffix(".zip").map(|b| path.get(..b.len()).unwrap_or(b).to_string()) else {
         return Err(bad(CMD, format!("`path` must name a .zip file (got `{path}`)")));
     };
-    let mut offsets = s.doc.ecad.board.cpl_rotations.clone();
-    if let Some(extra) = p.rotations {
-        check_offsets(CMD, &extra)?;
-        offsets.extend(extra);
-    }
+    let offsets = p.rotations.unwrap_or_default();
+    check_offsets(CMD, &offsets)?;
     if s.doc.ecad.board.footprints.is_empty() {
         return Err(bad(CMD, "the board has no footprints to assemble"));
     }
@@ -226,24 +224,16 @@ fn verify_outputs(s: &mut Session, p: &Value) -> Result<Value> {
 fn cpl_rotation(s: &mut Session, p: &Value) -> Result<Value> {
     const CMD: &str = "ecad.board.cpl_rotation";
     let p: CplRotationParams = parse(CMD, p)?;
-    let name = p.footprint.trim().to_string();
-    if !s.doc.ecad.footprints.iter().any(|f| f.name == name) {
-        return Err(bad(CMD, format!("no library footprint is named `{name}`")));
+    let offset = p.offset.unwrap_or(0.0);
+    let mut one = BTreeMap::new();
+    one.insert(p.footprint.trim().to_string(), offset);
+    check_offsets(CMD, &one)?;
+    let mut fp = load_footprint(s, &ComponentRef::Name(p.footprint.trim().to_string()), CMD)?;
+    fp.assembly_rotation = offset.rem_euclid(360.0);
+    if fp.assembly_rotation > 180.0 {
+        fp.assembly_rotation -= 360.0;
     }
-    let mut board = s.doc.ecad.board.clone();
-    match p.offset.filter(|o| *o != 0.0) {
-        Some(o) => {
-            let mut one = BTreeMap::new();
-            one.insert(name, o);
-            check_offsets(CMD, &one)?;
-            board.cpl_rotations.extend(one);
-        }
-        None => {
-            board.cpl_rotations.remove(&name);
-        }
-    }
-    check_offsets(CMD, &board.cpl_rotations)?;
-    let offsets = board.cpl_rotations.clone();
-    store_board(s, board, CMD)?;
+    store_footprint(s, fp, &[], false, CMD)?;
+    let offsets = s.doc.ecad.footprints.iter().filter(|f| f.assembly_rotation != 0.0).map(|f| (f.name.clone(), f.assembly_rotation)).collect();
     reply(CplRotationResult { offsets })
 }

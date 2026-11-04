@@ -35,7 +35,14 @@ pub struct FootprintItem {
     /// Silkscreen, fabrication and courtyard graphics, each with its `layer` and `side`.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub graphics: Vec<super::Graphic>,
+    /// Degrees added to each placed copy's rotation in the assembly placement list, for a
+    /// footprint drawn turned from the assembler's reference for the part; -360 to 360.
+    #[serde(default, skip_serializing_if = "is_zero")]
+    pub assembly_rotation: f64,
 }
+
+/// The largest assembly rotation offset, in degrees.
+pub const MAX_ASSEMBLY_ROTATION: f64 = 360.0;
 
 /// A pad: copper (or a bare hole) at one place in the footprint.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -297,7 +304,7 @@ impl Pad {
 
 /// What a variant without a footprint has: nothing.
 pub static NO_FOOTPRINT: FootprintItem =
-    FootprintItem { id: 0, name: String::new(), description: String::new(), pads: Vec::new(), graphics: Vec::new() };
+    FootprintItem { id: 0, name: String::new(), description: String::new(), pads: Vec::new(), graphics: Vec::new(), assembly_rotation: 0.0 };
 
 impl FootprintItem {
     /// Whether it has nothing to draw: no pads and no graphics.
@@ -322,6 +329,9 @@ impl FootprintItem {
         }
         check_item_name("footprint", &self.name)?;
         check_text("description", &self.description, MAX_DESCRIPTION)?;
+        if !(self.assembly_rotation.is_finite() && self.assembly_rotation.abs() <= MAX_ASSEMBLY_ROTATION) {
+            return Err(format!("footprint `{}`: `assembly_rotation` must be -360 to 360 degrees", self.name));
+        }
         self.validate_drawing().map_err(|e| format!("footprint `{}`: {e}", self.name))
     }
 

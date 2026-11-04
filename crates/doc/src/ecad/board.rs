@@ -147,10 +147,6 @@ pub struct Board {
     /// The quality checks' parameters the board sets, by `code.param` (`pi.layer_change.reach`).
     #[serde(skip_serializing_if = "BTreeMap::is_empty")]
     pub quality_params: BTreeMap<String, ParamSetting>,
-    /// The assembly placement list's rotation offset of each library footprint, by name, in
-    /// degrees (see `ecad.board.cpl_rotation`); not saved while empty.
-    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
-    pub cpl_rotations: BTreeMap<String, f64>,
     /// The id the next board object gets; ids are never reused.
     #[serde(skip_serializing_if = "is_zero")]
     pub next_id: u64,
@@ -181,7 +177,6 @@ impl Default for Board {
             quality_approvals: Vec::new(),
             quality_levels: BTreeMap::new(),
             quality_params: BTreeMap::new(),
-            cpl_rotations: BTreeMap::new(),
             next_id: 0,
         }
     }
