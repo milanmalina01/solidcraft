@@ -11,6 +11,9 @@ the fewest straight 0, 45 and 90 degree segments that keep to the same free cell
 have no stair steps or short jogs. Each route becomes one ecad.board.track with legs and vias. USB
 D- is drawn to run beside D+ as a pair. When connections fail, the nets that failed are ripped up
 and routed first on the next pass, in a few orders, and the best pass is kept.
+
+The bottom is the ground plane, so a step on it costs more (BOTTOM_COST) and nothing crosses under a
+clock's top run (CLOCKS). Tracks drawn by hand go in first (`pre`, see build.py's PRE_ROUTES).
 """
 
 import heapq
@@ -26,6 +29,9 @@ EDGE = 0.3 + WIDEST / 2 + G
 # A signal track's centre from an unplated hole: the edge clearance, half the width, half a cell.
 HOLE_SIG = 0.3 + 0.075 + G / 2
 VIA_COST = 50.0
+# A step on the bottom costs this many steps on the top: the bottom is the ground plane, so a route
+# stays on the top unless going round costs much more.
+BOTTOM_COST = 1.3
 # A 45 degree turn and a sharper one, in cells: enough to prefer long straight runs.
 TURN_45 = 3.0
 TURN_90 = 8.0
@@ -33,6 +39,8 @@ TURN_90 = 8.0
 PAIR_SHARE = 0.55
 # The second line of each pair, and the first it runs beside.
 PAIRS = {"USB_DN": "USB_DP"}
+# Clocks, whose return current runs in the plane under them: no slot across them.
+CLOCKS = ("LORA_SCK",)
 # The cells round a via that must be free: its 0.3 mm radius and a 0.15 mm hair past a pad.
 VIA_REACH = range(-int(0.45 / G), int(0.45 / G) + 1)
 MULTI = 65535
@@ -190,12 +198,31 @@ def pad_shapes(board, footprints):
     return out
 
 
-def route_board(board, footprints, circuit, passes=10):
+def add_pre_routes(b, pre, nets, commands, circuit):
+    """Tracks drawn by hand, on the board before any route: the pins they join leave their net's
+    list, and the net's anchor pin is joined to the rest of the net first (a search from it does
+    not stop on this copper, its own)."""
+    b.pre = {}
+    for name, p in pre.items():
+        n = b.net(name)
+        before = [g[:] for g in b.own]
+        width = circuit.POWER_WIDTH if name in circuit.RAILS else circuit.SIGNAL_WIDTH
+        for track in p["tracks"]:
+            legs = [(0 if layer == "top" else 1, [b.cell(*q) for q in pts]) for layer, pts in track]
+            commands.append(track_command(b, legs, width))
+            commit(b, legs, width, n)
+        cells = {(l, k) for l in (0, 1) for k in range(b.nx * b.ny) if b.own[l][k] == n and before[l][k] != n}
+        if p.get("anchor"):
+            b.pre[n] = (p["anchor"], cells, p["pins"])
+        nets[name] = [q for q in nets[name] if q not in p["pins"]]
+
+
+def route_board(board, footprints, circuit, passes=10, pre=None):
     global SENSE_WIDTH
     SENSE_PINS.clear()
     SENSE_PINS.update(p for pins in getattr(circuit, "SENSE", {}).values() for p in pins)
     SENSE_WIDTH = circuit.SIGNAL_WIDTH
-    w, h = board["size"] if isinstance(board.get("size"), list) else (52.0, 34.0)
+    w, h = board["size"]
     b = Board(w, h)
     pads = pad_shapes(board, footprints)
     # The modules' bodies: no top-layer copper under them but their own pads.
@@ -249,9 +276,11 @@ def route_board(board, footprints, circuit, passes=10):
                     b.block_sig[l][b.idx(i, j)] = MULTI
     commands = []
     pad_at = {ref: (net, at, half, angle, layers, q.get("shape", "rect")) for ref, net, at, half, angle, layers, q in pads}
+    b.pad_at = pad_at
 
     nets = dict(circuit.SIGNALS)
     nets.update({k: v for k, v in circuit.RAILS.items() if k != "GND"})
+    add_pre_routes(b, pre or {}, nets, commands, circuit)
     base = (b, list(commands))
     best = None
     order = None
@@ -260,7 +289,7 @@ def route_board(board, footprints, circuit, passes=10):
         commands = list(base[1])
         records, fails = [], []
         failed, order = route_nets(b, nets, pad_at, circuit, commands, order, records, fails, fixed=base[0])
-        print(f"pass {attempt + 1}: {len(failed)} connections unrouted")
+        print(f"pass {attempt + 1}: {len(failed)} connections unrouted", failed, flush=True)
         # A pass near the best gets the rip-up rescue before it is weighed.
         if fails and (best is None or len(failed) <= len(best[0]) + 4):
             b, records, fails = rescue(base[0], b, records, fails, pad_at, nets)
@@ -314,10 +343,11 @@ def route_nets(b, nets, pad_at, circuit, commands, order, records=None, fails=No
     # The 3V3 trunk first (it reaches both modules), then the other rails, then the signals,
     # shortest first; on a later pass, what failed before goes first.
     if order is None:
-        # The USB lines, then the module-to-module lines that need the channel between the
-        # modules on the top layer (a rail run through it first walls it off), then the rails.
-        first = ["USB_DP", "USB_DN", "VBUS", "CC1", "CC2", "LORA_NSS", "LORA_SCK", "LORA_MOSI", "LORA_MISO", "LORA_RST",
-                 "LORA_BUSY", "LORA_DIO1", "SWDIO", "SWCLK", "3V3", "VBAT", "VSYS", "3V3_GPS"]
+        # The USB lines, the charger's short ones, the SPI lines straight across the channel between
+        # the modules and the GPS lines, the lines that must change layer beside them, then 3V3,
+        # the debug lines and the long ones.
+        first = ["USB_DP", "USB_DN", "VBUS", "CC1", "CC2", "CHG_LED_A", "CHG_LED", "PROG", "LORA_NSS", "LORA_SCK", "LORA_MOSI", "LORA_MISO", "3V3_GPS", "GPS_TX", "GPS_RX",
+                 "GPS_PPS", "GPS_EN", "LORA_RXEN", "GPS_PWR_N", "3V3", "SWDIO", "SWCLK", "LED_STAT", "BTN_USER", "NRESET", "VBAT_SENSE", "VBAT", "VSYS"]
         order = [n for n in first if n in nets] + sorted((n for n in nets if n not in first), key=lambda n: span(nets[n]))
     # The ground links (see circuit.GND_LINKS) before anything else.
     g = b.net("GND")
@@ -333,8 +363,8 @@ def route_nets(b, nets, pad_at, circuit, commands, order, records=None, fails=No
         records.append({"kind": "link", "name": "GND", "src": a_ref, "goals": [z_ref], "width": 0.3, "legs": legs, "cmd": commands[-1]})
     escaped = False
     for name in order:
-        # The ground escapes once the USB-C's own lines are in, before the rest crowd them.
-        if not escaped and name not in ("USB_DP", "USB_DN", "VBUS", "CC1", "CC2") and not name.startswith("LORA_") and name not in ("SWDIO", "SWCLK"):
+        # The ground escapes before the lines that close in the capacitors beside U1.
+        if not escaped and name == "LORA_RXEN":
             escaped = True
             ground_escapes(b, pad_at, circuit, commands, failed, records)
         sense = getattr(circuit, "SENSE", {}).get(name, [])
@@ -354,7 +384,7 @@ def route_nets(b, nets, pad_at, circuit, commands, order, records=None, fails=No
         while rest:
             # The rail's own pins first, then its sense pins at the signal width.
             main = [p for p in rest if p not in sense] or rest
-            src = min(main, key=lambda p: min(math.dist(pad_at[p][1], pad_at[d][1]) for d in done))
+            src = anchor_of(b, n, rest) or min(main, key=lambda p: min(math.dist(pad_at[p][1], pad_at[d][1]) for d in done))
             rest.remove(src)
             if src in sense:
                 width = circuit.SIGNAL_WIDTH
@@ -378,6 +408,12 @@ def route_nets(b, nets, pad_at, circuit, commands, order, records=None, fails=No
     if not escaped:
         ground_escapes(b, pad_at, circuit, commands, failed, records)
     return failed, order
+
+
+def anchor_of(b, net, rest):
+    """The pin that joins a net's hand-drawn copper to the rest, while it is still to be joined."""
+    a = getattr(b, "pre", {}).get(net)
+    return a[0] if a and a[0] in rest else None
 
 
 def ground_escapes(b, pad_at, circuit, commands, failed, records=None):
@@ -453,6 +489,15 @@ def search(b, net, src, width, goals, only=None, attract=None, fixed=None, avoid
                 if b.inside(ii, jj) and ptest(*b.xy(ii, jj), 0.0):
                     for pl in players:
                         unjoined.add((pl, b.idx(ii, jj)))
+    held = getattr(b, "pre", {}).get(net)
+    if held and pad_center(held[0], src, b):
+        unjoined |= held[1]
+        for ref in held[2]:
+            _, pat, phalf, pangle, players, pshape = b.pad_at[ref]
+            ptest = pad_test(pat, phalf, pangle, pshape)
+            pr = int(math.hypot(*phalf) / G) + 2
+            pi, pj = b.cell(*pat)
+            unjoined |= {(pl, b.idx(ii, jj)) for jj in range(pj - pr, pj + pr + 1) for ii in range(pi - pr, pi + pr + 1) for pl in players if b.inside(ii, jj) and ptest(*b.xy(ii, jj), 0.0)}
     openq = []
     cost = {}
     prev = {}
@@ -471,6 +516,7 @@ def search(b, net, src, width, goals, only=None, attract=None, fixed=None, avoid
     steps = [(1, 0, 1.0), (-1, 0, 1.0), (0, 1, 1.0), (0, -1, 1.0), (1, 1, 1.414), (1, -1, 1.414), (-1, 1, 1.414), (-1, -1, 1.414)]
     # Heuristic and costs in cells.
     expanded = 0
+    clock = net in clocks(b)
     while openq:
         _, g0, s = heapq.heappop(openq)
         if g0 > cost.get(s, 1e18):
@@ -494,6 +540,9 @@ def search(b, net, src, width, goals, only=None, attract=None, fixed=None, avoid
             nk = b.idx(ni, nj)
             if not P.passable(l, nk, net):
                 continue
+            # A clock's top run does not cross what the bottom already has.
+            if clock and l == 0 and not P.passable(1, nk, net):
+                continue
             # A diagonal step may not cut a blocked corner.
             if di and dj and not (P.passable(l, b.idx(i + di, j), net) and P.passable(l, b.idx(i, j + dj), net)):
                 continue
@@ -506,6 +555,8 @@ def search(b, net, src, width, goals, only=None, attract=None, fixed=None, avoid
                 dc += TURN_45 if h0[0] * di + h0[1] * dj > 0 else TURN_90
             if attract is not None and hugs(l, ni, nj):
                 dc *= PAIR_SHARE
+            if l == 1:
+                dc *= BOTTOM_COST
             nc = c + dc
             if nc < cost.get(t, 1e18):
                 cost[t] = nc
@@ -527,6 +578,11 @@ def search(b, net, src, width, goals, only=None, attract=None, fixed=None, avoid
                 prev[t] = s
                 heapq.heappush(openq, (c + vc + heur(i, j), c + vc, t))
     return None
+
+
+def pad_center(ref, src, b):
+    """`src` is the pad `ref`."""
+    return b.pad_at.get(ref) == src
 
 
 VIA_GAP = int(0.9 / G)
@@ -695,11 +751,19 @@ def tidy(b, net, path, width=0.15):
     return [(l, unjog(b, net, l, pull(b, net, l, cells), width)) for l, cells in _legs(path)]
 
 
+def clocks(b):
+    return {b.nets[n] for n in CLOCKS if n in b.nets}
+
+
 def commit(b, legs, width, net):
-    """A route's copper on the board: its segments, and a via where a leg starts after another."""
+    """A route's copper on the board: its segments, and a via where a leg starts after another. A
+    clock's top run keeps the bottom plane under it whole: nothing else crosses it there."""
     for k, (l, pts) in enumerate(legs):
         for a, c in zip(pts, pts[1:]):
             add_track(b, l, b.xy(*a), b.xy(*c), width, net)
+            if l == 0 and net in clocks(b):
+                p, q = b.xy(*a), b.xy(*c)
+                b.mark(1, seg_test(p, q, width / 2), box_of([p, q], width / 2), MULTI, MARGIN)
         if k:
             at = b.xy(*pts[0])
             b.vias.append(pts[0])
@@ -839,7 +903,7 @@ def route_net(b, name, pins, width, pad_at, fixed):
     lost = []
     while rest:
         main = [p for p in rest if p not in SENSE_PINS] or rest
-        src = min(main, key=lambda p: min(math.dist(pad_at[p][1], pad_at[d][1]) for d in done))
+        src = anchor_of(b, n, rest) or min(main, key=lambda p: min(math.dist(pad_at[p][1], pad_at[d][1]) for d in done))
         rest.remove(src)
         w = SENSE_WIDTH if src in SENSE_PINS else width
         f = {"name": name, "src": src, "goals": list(done), "width": w, "unjoined": list(rest + lost)}

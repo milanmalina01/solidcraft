@@ -15,7 +15,7 @@ EU868 LoRa, USB-C charging of a single-cell LiPo, and a header for a GPS module.
   for the assembly order; `out/lora-mini.pdf` every printed page; `out/report.json` the checks'
   results.
 
-Build it again (20 to 40 minutes, most of it routing):
+Build it again (15 to 25 minutes, most of it routing):
 
 ```bash
 cargo build --profile ci -p solidcraft-cli
@@ -27,12 +27,17 @@ python3 examples/lora-mini/build.py
 
 ## The board
 
-52 x 34 mm, 2 layers, 1.6 mm, the "JLCPCB 2-layer standard" fab profile (its figures read from
+46 x 30 mm, 2 layers, 1.6 mm, the "JLCPCB 2-layer standard" fab profile (its figures read from
 jlcpcb.com's PCB capabilities page on 2026-11-04), 0.15 mm signal tracks and gaps and 0.4 mm power
-tracks, four 2.2 mm holes for M2 screws, ground poured on both sides and stitched where the ground
-map says it is weak. The E73's ceramic antenna sits at the left edge over a keep-out with no copper
+tracks, four 2.2 mm holes for M2 screws in the corners, ground poured on both sides and stitched
+over the board, under the modules, the USB-C, the buttons and the battery plug. The bottom is the
+main ground plane: tracks stay on the top where they can (the router's bottom cost, and nothing
+crosses under SCK), and the bottom plane is in one piece but for a small pocket by the USB-C tied by
+R2's ground via. The E73's ceramic antenna sits at the left edge over a keep-out with no copper
 on either layer, the module 0.4 mm inside the edge (Ebyte asks only for the antenna to be clear, not
-to overhang). The E22 carries its own IPEX antenna socket (Ebyte's manual: "IPEX and stamp hole are
+to overhang). USB-C and buttons on the top edge; slide switch and battery plug out of the right
+edge; GPS header J4 along the bottom edge. The board's identity is on its back, behind U1 (text and
+QR code; no serial box or date, which fit nowhere clear of the tracks). The E22 carries its own IPEX antenna socket (Ebyte's manual: "IPEX and stamp hole are
 optional"), so the antenna cable plugs into the module: the board has no RF line and no U.FL, and
 the module's ANT stamp pad is left unconnected. Design intent: the EU868 band (863-870 MHz) and
 2.4 GHz BLE.
@@ -44,15 +49,22 @@ quality checks no error, warning or critical finding, the electrical check 0 err
 gate passes, and `ecad.board.verify_outputs` rebuilds the board's nets from the written Gerber and
 drill files. Every connection is routed (`route.py`: an A* search per connection, each route pulled
 tight to the fewest 0/45/90 degree segments, USB D- run beside D+, a rip-up rescue that routes the
-nets in the way again whole); four ground pads whose own via did not fit join through the pours.
-No via is without a net.
+nets in the way again whole; `build.py`'s `PRE_ROUTES` draws 3V3 round U1, RST, BUSY and DIO1 by
+hand first and its `HAND_ROUTES` finishes SWCLK, NRESET, the battery sense and C6's ground); three
+ground pads whose own via did not fit (U1.5, U1.21, J1.B1) join through the pours. No via is
+without a net.
+
+The ground map (`ecad.board.ground.inspect`, 10 mA on every mm2 into the largest plane, target
+0.5 mV): top copper 0.49 mV at worst; bottom 0 over the plane and 0.54 mV in that pocket.
 
 Kept on purpose, each approved in the design with its reason (the build's `APPROVE` and
 `APPROVE_QUALITY`): JLCPCB's standard 0.3/0.6 mm via at the profile's least drill and ring; the
-nRF52840's VBUS sense pin joined by a 0.15 mm track (it detects USB, microamps); 45-degree same-net
-joins and thin tracks leaving a pad near its corner, from the router; tented vias next to pads; the
-ground stitching's plane-rise figures; and solid ground joins. Eight short 45-degree chamfers
-(0.07-0.28 mm) remain at corners where a square corner would break clearance.
+nRF52840's VBUS sense pin joined by a 0.15 mm track (it detects USB, microamps); narrow same-net
+angles (38 to 67 degrees) and thin tracks leaving a pad near its corner, from the router and the
+hand routes; the 0.54 mV pocket and the 11 mm via-free circle behind the QR code (against 5.8 mm at
+2.4 GHz; the board has no RF line); and solid ground joins: 46 approvals, none of a critical
+finding. Tented vias next to pads stay as information. Ten short 45-degree chamfers (0.07-0.28 mm)
+remain at corners where a square corner would break clearance.
 
 ## Parts
 
@@ -124,6 +136,9 @@ Not verified:
   fetched where this was built; the outline page gives 7.9 x 6 mm only. The lands are JST's
   pattern as remembered: compare them with JST's drawing before ordering.
 - The E73's 15 inner pads (Ebyte gives no dimensions; none is connected here).
+- The tented ground vias under the E22 and E73 (and the USB-C, buttons and battery plug): the design
+  rules allow them and they keep clear of every pad, but Ebyte's manuals were not re-read for them
+  here: check before ordering.
 - The rotation offsets: from JLCPCB's preview, not from its footprint data.
 - The USB-C shell slots have the maker's 0.15 mm ring; JLCPCB lists 0.18 mm as the least ring for
   a plated hole (0.25 mm advised). JLCPCB stocks and places this part; check their DFM report.
@@ -134,5 +149,5 @@ Not verified:
 ## Ordering
 
 Upload `lora-mini-jlcpcb.zip` as the board, choose assembly on the top side, and give the BOM and
-CPL files. Check the placement preview: pin 1 of each part, the USB-C and battery openings at the
-board's edges, the slide switch's lever out of the right edge. This example never places an order.
+CPL files. Check the placement preview: pin 1 of each part, the USB-C opening at the top edge, the
+battery opening and the slide switch's lever out of the right edge. This example never places an order.
