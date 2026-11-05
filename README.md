@@ -10,7 +10,7 @@
 > - Print-ready PDF export: cover page, schematic sections with cross-references, block diagram, power tree, parts list and board pages
 > - JLCPCB ordering files: Gerber, drill, BOM and placement lists
 >
-> **See it:** the [LoRa Mesh Node Mini](examples/lora-mini/) example and its [PDF](examples/lora-mini/out/lora-mini.pdf). This test board is not finished: 4 connections are still unrouted, and its footprints and parts have not been fully verified.
+> **See it:** the [LoRa Mesh Node Mini](examples/lora-mini/) example and its [PDF](examples/lora-mini/out/lora-mini.pdf). This test board is routed and passes its checks, but it has not been manufactured or powered yet, and some of its footprints and JLCPCB placement settings still need checking.
 
 <p align="center">
   <img src="assets/icons/app/linux/exports/hicolor/256x256/apps/io.tangencylabs.solidcraft.png" width="96" height="96" alt="SolidCraft" />
