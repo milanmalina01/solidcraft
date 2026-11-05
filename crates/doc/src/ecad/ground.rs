@@ -12,9 +12,11 @@
 //! - **Vias.** A via of the net, and a through-hole pad of it, joins the cell its centre is in on
 //!   each layer of its span to the same cell on the next: a plated barrel of the hole's diameter,
 //!   [`PLATING`] thick, as long as the board's thickness over the layers' gaps.
-//! - **Reference.** The ground pads of the board's power entry (a connector the intent keeps as
-//!   one, with the net and a power net on its pads), else the largest single shape of the net's
-//!   pour fills on any layer, as one equipotential at 0.
+//! - **Reference.** The largest single shape of the net's pour fills on any layer, as one
+//!   equipotential at 0, so a cell's rise says how well it is tied to the main plane, not how far
+//!   it is from one corner of the board (the whole board's current through one connector would
+//!   swamp every via's effect). With no fill: the ground pads of the power entry (a connector
+//!   the intent keeps as one, with the net and a power net on its pads).
 //! - **Isolated.** Copper joined to the reference by nothing is isolated: no number, and listed
 //!   on its own.
 //! - **Solve.** The potentials solve a sparse system (a conductance matrix: symmetric, positive
@@ -336,8 +338,8 @@ impl Model {
                 m.link(p.at(), drill, (0, nl - 1));
             }
         }
-        // The reference: the power entry's ground pads, else the largest plane shape.
-        let entry = power_entry(ecad, nets, net);
+        // The reference: the largest plane shape, else the power entry's ground pads.
+        let entry = if biggest.is_none() { power_entry(ecad, nets, net) } else { None };
         let mut placed = false;
         if let Some(designator) = entry {
             for p in nets.pads.iter().filter(|p| p.designator == designator && p.net == Some(net)) {

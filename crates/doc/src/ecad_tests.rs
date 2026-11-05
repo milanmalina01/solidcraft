@@ -1628,6 +1628,19 @@ fn strip(vias: &[f64]) -> Electronics {
 }
 
 #[test]
+fn ground_rises_from_the_main_plane_and_from_the_power_entry_only_without_one() {
+    use super::ground::{Ask as GroundAsk, Model, Reference};
+    let mut e = scratch("current");
+    run(&mut e, json!([["intent", {"parts": [{"part": "J1", "role": "connector"}]}]]));
+    let m = Model::build(&e, &e.board_nets(), &GroundAsk::default()).unwrap();
+    assert_eq!(m.reference_is, Reference::Entry("J1".into()));
+    // With a plane, the whole board's current through one connector no longer swamps every via.
+    run(&mut e, json!([["pour", {"layer": "bottom", "net": "GND", "rect": [30, 20], "remove_islands": false}]]));
+    let m = Model::build(&e, &e.board_nets(), &GroundAsk::default()).unwrap();
+    assert!(matches!(m.reference_is, Reference::Plane { layer: CopperLayer::Bottom, .. }), "{:?}", m.reference_is);
+}
+
+#[test]
 fn a_strip_tied_at_one_end_rises_as_worked_out_by_hand() {
     use super::ground::{Ask as GroundAsk, Model, Reference};
     let e = strip(&[]);
