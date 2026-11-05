@@ -247,7 +247,7 @@ def main():
         with open(cache) as f:
             tracks = [tuple(t) for t in json.load(f)]
     else:
-        tracks = route.route_board(board, footprints, circuit, passes=6)
+        tracks = route.route_board(board, footprints, circuit, passes=2)
         with open(cache, "w") as f:
             json.dump(tracks, f)
     # The intent's proposals that only want a look, confirmed; decoupling assigned by hand.
