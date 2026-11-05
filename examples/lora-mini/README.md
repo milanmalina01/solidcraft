@@ -37,6 +37,23 @@ optional"), so the antenna cable plugs into the module: the board has no RF line
 the module's ANT stamp pad is left unconnected. Design intent: the EU868 band (863-870 MHz) and
 2.4 GHz BLE.
 
+## Where it stands
+
+The last build (`out/report.json`): the design rule check has 0 errors and 0 warnings, the
+quality checks no error, warning or critical finding, the electrical check 0 errors, the release
+gate passes, and `ecad.board.verify_outputs` rebuilds the board's nets from the written Gerber and
+drill files. Every connection is routed (`route.py`: an A* search per connection, each route pulled
+tight to the fewest 0/45/90 degree segments, USB D- run beside D+, a rip-up rescue that routes the
+nets in the way again whole); four ground pads whose own via did not fit join through the pours.
+No via is without a net.
+
+Kept on purpose, each approved in the design with its reason (the build's `APPROVE` and
+`APPROVE_QUALITY`): JLCPCB's standard 0.3/0.6 mm via at the profile's least drill and ring; the
+nRF52840's VBUS sense pin joined by a 0.15 mm track (it detects USB, microamps); 45-degree same-net
+joins and thin tracks leaving a pad near its corner, from the router; tented vias next to pads; the
+ground stitching's plane-rise figures; and solid ground joins. Eight short 45-degree chamfers
+(0.07-0.28 mm) remain at corners where a square corner would break clearance.
+
 ## Parts
 
 Each LCSC number below was checked against JLCPCB's parts library on 2026-11-04 (its parts search;

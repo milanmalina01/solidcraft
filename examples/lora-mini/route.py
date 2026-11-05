@@ -327,7 +327,7 @@ def route_nets(b, nets, pad_at, circuit, commands, order, records=None, fails=No
         if path is None:
             failed.append(f"GND link: {a_ref}")
             continue
-        legs = tidy(b, g, path)
+        legs = tidy(b, g, path, 0.3)
         commands.append(track_command(b, legs, 0.3))
         commit(b, legs, 0.3, g)
         records.append({"kind": "link", "name": "GND", "src": a_ref, "goals": [z_ref], "width": 0.3, "legs": legs, "cmd": commands[-1]})
@@ -370,7 +370,7 @@ def route_nets(b, nets, pad_at, circuit, commands, order, records=None, fails=No
                 fails.append({"name": name, "src": src, "goals": list(done), "width": width, "unjoined": list(rest + lost)})
                 lost.append(src)
                 continue
-            legs = tidy(b, n, path)
+            legs = tidy(b, n, path, width)
             commands.append(track_command(b, legs, width))
             commit(b, legs, width, n)
             records.append({"kind": "conn", "name": name, "src": src, "goals": list(done), "width": width, "unjoined": list(rest + lost), "legs": legs, "cmd": commands[-1]})
@@ -392,7 +392,7 @@ def ground_escapes(b, pad_at, circuit, commands, failed, records=None):
         if path is None:
             failed.append(f"GND escape: {ref}")
             continue
-        legs = tidy(b, g, path)
+        legs = tidy(b, g, path, 0.3)
         cmd = track_command(b, legs, 0.3)
         cmd[1]["via"] = dict(VIA)
         commands.append(cmd)
@@ -623,8 +623,9 @@ def clear_line(b, net, l, a, c):
         ni, nj = i + si, j + sj
         if not b.inside(ni, nj) or not b.passable(l, b.idx(ni, nj), net):
             return False
-        if si and sj and not (b.passable(l, b.idx(ni, j), net) and b.passable(l, b.idx(i, nj), net)):
-            return False
+        # A straight 45-degree run needs no corner rule: the cells beside it are half a cell off
+        # its centre line, which the margins already allow for (the search keeps the rule, so
+        # its own steps never cut a corner).
         i, j = ni, nj
     return True
 
@@ -669,9 +670,29 @@ def pull(b, net, l, cells):
     return out
 
 
-def tidy(b, net, path):
-    """A searched path as legs of the fewest straight segments each."""
-    return [(l, pull(b, net, l, cells)) for l, cells in _legs(path)]
+def unjog(b, net, l, pts, width):
+    """`pts` without segments shorter than the track's width away from its ends: such a segment
+    is dropped and the points either side joined in one or two segments where that keeps to free
+    cells."""
+    least = width / G
+    changed = True
+    while changed:
+        changed = False
+        for k in range(1, len(pts) - 2):
+            a, c = pts[k], pts[k + 1]
+            if math.hypot(c[0] - a[0], c[1] - a[1]) >= least - 1e-9:
+                continue
+            mid = connect(b, net, l, pts[k - 1], pts[k + 2])
+            if mid is not None:
+                pts = pts[:k] + mid + pts[k + 2:]
+                changed = True
+                break
+    return pts
+
+
+def tidy(b, net, path, width=0.15):
+    """A searched path as legs of the fewest straight segments each, with no short jogs."""
+    return [(l, unjog(b, net, l, pull(b, net, l, cells), width)) for l, cells in _legs(path)]
 
 
 def commit(b, legs, width, net):
@@ -827,7 +848,7 @@ def route_net(b, name, pins, width, pad_at, fixed):
             failed.append(f)
             lost.append(src)
             continue
-        legs = tidy(b, n, path)
+        legs = tidy(b, n, path, w)
         commit(b, legs, w, n)
         recs.append({"kind": "conn", **f, "legs": legs, "cmd": track_command(b, legs, w)})
         done.append(src)
@@ -855,7 +876,7 @@ def rescue(fixed, b, records, fails, pad_at, nets, rounds=4):
                 free = free_path(b, fixed, n, path)
                 if free is None:
                     continue
-                legs = tidy(b, n, free)
+                legs = tidy(b, n, free, f["width"])
                 commit(b, legs, f["width"], n)
                 records.append({"kind": "conn", "name": f["name"], "src": f["src"], "goals": f["goals"], "width": f["width"],
                                 "legs": legs, "cmd": track_command(b, legs, f["width"])})
@@ -871,7 +892,7 @@ def rescue(fixed, b, records, fails, pad_at, nets, rounds=4):
             path2 = route_valid(b2, pad_at, f, fixed)
             if path2 is None:
                 continue
-            legs = tidy(b2, n, path2)
+            legs = tidy(b2, n, path2, f["width"])
             commit(b2, legs, f["width"], n)
             new_records.append({"kind": "conn", "name": f["name"], "src": f["src"], "goals": f["goals"], "width": f["width"],
                                 "legs": legs, "cmd": track_command(b2, legs, f["width"])})
@@ -890,7 +911,7 @@ def rescue(fixed, b, records, fails, pad_at, nets, rounds=4):
                 if p is None:
                     lost_escapes += 1
                     continue
-                lg = tidy(b2, g, p)
+                lg = tidy(b2, g, p, 0.3)
                 cmd = track_command(b2, lg, 0.3)
                 cmd[1]["via"] = dict(VIA)
                 commit(b2, lg, 0.3, g)

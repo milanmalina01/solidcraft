@@ -722,6 +722,61 @@
    {
     "approved": true,
     "args": {
+     "a": "the start of track 194",
+     "b": "U1.3",
+     "layer": "top",
+     "share": "85"
+    },
+    "at": [
+     -18.75,
+     -8.1
+    ],
+    "by": "agent",
+    "class": "practical",
+    "code": "pad_entry",
+    "fix": [
+     {
+      "command": "ecad.board.track.reshape",
+      "says": "reshape track 194 so it leaves the pad from the middle of its edge"
+     }
+    ],
+    "items": [
+     {
+      "end": 0,
+      "id": 194,
+      "kind": "track_end",
+      "ref": "the start of track 194"
+     },
+     {
+      "id": 29,
+      "kind": "pad",
+      "pad": "3",
+      "ref": "U1.3"
+     }
+    ],
+    "key": "pad_entry|p29.3|t194.0",
+    "layer": "top",
+    "limit": {
+     "bound": "max",
+     "param": "pad_entry.corner",
+     "units": "ratio",
+     "value": 1.0
+    },
+    "margin": 0.15,
+    "measured": {
+     "units": "ratio",
+     "value": 0.85
+    },
+    "message": "track 194 (0.15 mm) leaves pad U1.3 at its corner, 85 % of the way from the edge's middle: enter a pad near the middle of its edge",
+    "message_key": "electronics.drc_msg_pad_entry",
+    "note": "Thin tracks leaving a pad near its corner, from the example's grid router; kept for this prototype, to tidy by hand for a production run.",
+    "section": "routing-dfm#pad-entry",
+    "severity": "warning",
+    "verify": "the limit comes from public summaries of fab DFM guides, not from a standard: verify it with your fab"
+   },
+   {
+    "approved": true,
+    "args": {
      "a": "the end of track 38",
      "angle": "45",
      "b": "track 112",
@@ -1126,8 +1181,8 @@
      "meets": "pad"
     },
     "at": [
-     22.9,
-     8.4648
+     23.2648,
+     8.6
     ],
     "by": "agent",
     "class": "practical",
@@ -1450,6 +1505,63 @@
      "value": 45.0
     },
     "message": "the gap between track 141 and pad Q1.2 opens at 45\u00b0: a pocket under 70\u00b0 can trap etchant; turn the track so both sides open wider",
+    "message_key": "electronics.drc_msg_acute_angle",
+    "note": "45-degree joins of tracks of one net left by the example's grid router; kept for this prototype, to tidy by hand for a production run.",
+    "section": "routing-dfm#corners",
+    "severity": "warning",
+    "verify": "the limit comes from public summaries of fab DFM guides, not from a standard: verify it with your fab"
+   },
+   {
+    "approved": true,
+    "args": {
+     "a": "the end of track 143",
+     "angle": "45",
+     "b": "J2.1",
+     "layer": "top",
+     "limit": "70",
+     "meets": "pad"
+    },
+    "at": [
+     20.8353,
+     9.25
+    ],
+    "by": "agent",
+    "class": "practical",
+    "code": "acute_angle",
+    "fix": [
+     {
+      "command": "ecad.board.track.reshape",
+      "says": "reshape track 143 so it leaves the pad square to its edge"
+     }
+    ],
+    "items": [
+     {
+      "end": 1,
+      "id": 143,
+      "kind": "track_end",
+      "ref": "the end of track 143"
+     },
+     {
+      "id": 14,
+      "kind": "pad",
+      "pad": "1",
+      "ref": "J2.1"
+     }
+    ],
+    "key": "acute_angle|p14.1|t143.1",
+    "layer": "top",
+    "limit": {
+     "bound": "min",
+     "param": "profile.acute_angle",
+     "units": "degrees",
+     "value": 70.0
+    },
+    "margin": -25.0,
+    "measured": {
+     "units": "degrees",
+     "value": 45.0
+    },
+    "message": "the gap between track 143 and pad J2.1 opens at 45\u00b0: a pocket under 70\u00b0 can trap etchant; turn the track so both sides open wider",
     "message_key": "electronics.drc_msg_acute_angle",
     "note": "45-degree joins of tracks of one net left by the example's grid router; kept for this prototype, to tidy by hand for a production run.",
     "section": "routing-dfm#corners",
@@ -1913,7 +2025,7 @@
    {
     "approved": true,
     "args": {
-     "count": "59",
+     "count": "103",
      "required": "0.15",
      "value": "0.15"
     },
@@ -1943,7 +2055,7 @@
      "units": "mm",
      "value": 0.15
     },
-    "message": "59 features are at the JLCPCB 2-layer standard profile's least ring (0.15 mm): a design one step looser leaves room for the process",
+    "message": "103 features are at the JLCPCB 2-layer standard profile's least ring (0.15 mm): a design one step looser leaves room for the process",
     "message_key": "electronics.drc_msg_fab_class",
     "note": "JLCPCB's standard via, 0.3 mm hole in a 0.6 mm pad, at the profile's least drill and ring: the via their standard price is made for.",
     "section": "manufacturing#profiles",
@@ -1952,7 +2064,7 @@
    {
     "approved": true,
     "args": {
-     "count": "55",
+     "count": "99",
      "required": "0.3",
      "value": "0.3"
     },
@@ -1982,7 +2094,7 @@
      "units": "mm",
      "value": 0.3
     },
-    "message": "55 features are at the JLCPCB 2-layer standard profile's least drill (0.3 mm): a design one step looser leaves room for the process",
+    "message": "99 features are at the JLCPCB 2-layer standard profile's least drill (0.3 mm): a design one step looser leaves room for the process",
     "message_key": "electronics.drc_msg_fab_class",
     "note": "JLCPCB's standard via, 0.3 mm hole in a 0.6 mm pad, at the profile's least drill and ring: the via their standard price is made for.",
     "section": "manufacturing#profiles",
@@ -1990,73 +2102,23 @@
    }
   ],
   "counts": {
-   "approved": 36,
+   "approved": 38,
    "at_limit": 0,
    "by_class": {
     "cosmetic": 0,
-    "critical": 1,
-    "practical": 7
+    "critical": 0,
+    "practical": 8
    },
    "by_code": {
-    "courtyard_overlap": 1,
-    "via_near_pad": 7
+    "via_near_pad": 8
    },
-   "errors": 1,
-   "infos": 7,
+   "errors": 0,
+   "infos": 8,
    "pending_user": 0,
    "stale": 0,
    "warnings": 0
   },
   "findings": [
-   {
-    "approved": false,
-    "args": {
-     "a": "C2",
-     "b": "SW1",
-     "required": "0",
-     "value": "-0.1"
-    },
-    "at": [
-     21.15,
-     7.35
-    ],
-    "class": "critical",
-    "code": "courtyard_overlap",
-    "fix": [
-     {
-      "command": "ecad.board.move",
-      "says": "move C2 or SW1 0.1 mm apart"
-     }
-    ],
-    "items": [
-     {
-      "id": 3,
-      "kind": "footprint",
-      "ref": "C2"
-     },
-     {
-      "id": 26,
-      "kind": "footprint",
-      "ref": "SW1"
-     }
-    ],
-    "key": "courtyard_overlap|f26|f3",
-    "limit": {
-     "bound": "min",
-     "param": "courtyard.gap",
-     "units": "mm",
-     "value": 0.0
-    },
-    "margin": -0.1,
-    "measured": {
-     "units": "mm",
-     "value": -0.1
-    },
-    "message": "the courtyards of C2 and SW1 overlap",
-    "message_key": "electronics.drc_msg_courtyard_overlap",
-    "section": "placement#spacing",
-    "severity": "error"
-   },
    {
     "approved": false,
     "args": {
@@ -2069,7 +2131,7 @@
     },
     "at": [
      -9.3,
-     -7.55
+     -7.6
     ],
     "class": "practical",
     "code": "via_near_pad",
@@ -2222,6 +2284,60 @@
    {
     "approved": false,
     "args": {
+     "a": "via 95",
+     "b": "C2.2",
+     "layer": "top",
+     "protection": "tented",
+     "required": "0.25",
+     "value": "0.222"
+    },
+    "at": [
+     23.55,
+     9.1
+    ],
+    "class": "practical",
+    "code": "via_near_pad",
+    "fix": [
+     {
+      "command": "ecad.board.move",
+      "says": "move via 95 0.03 mm further from the pad, joined to it by a short track"
+     }
+    ],
+    "items": [
+     {
+      "id": 95,
+      "kind": "via",
+      "ref": "via 95"
+     },
+     {
+      "id": 3,
+      "kind": "pad",
+      "pad": "2",
+      "ref": "C2.2"
+     }
+    ],
+    "key": "via_near_pad|p3.2|v95",
+    "layer": "top",
+    "limit": {
+     "bound": "min",
+     "param": "profile.via_to_pad",
+     "units": "mm",
+     "value": 0.25
+    },
+    "margin": -0.028,
+    "measured": {
+     "units": "mm",
+     "value": 0.222
+    },
+    "message": "via 95 (tented) is 0.222 mm from pad C2.2; keep 0.25 mm, so a solder mask web stays between them and the solder doesn't wick into the via",
+    "message_key": "electronics.drc_msg_via_near_pad",
+    "section": "routing-dfm#vias",
+    "severity": "info",
+    "verify": "the limit comes from public summaries of fab DFM guides, not from a standard: verify it with your fab"
+   },
+   {
+    "approved": false,
+    "args": {
      "a": "via 113",
      "b": "R1.2",
      "layer": "top",
@@ -2338,7 +2454,7 @@
      "value": "0.2"
     },
     "at": [
-     21.95,
+     22.05,
      2.95
     ],
     "class": "practical",
@@ -2446,1124 +2562,15 @@
  },
  "quality": {
   "counts": {
-   "approved": 0,
+   "approved": 18,
    "errors": 0,
    "infos": 18,
    "pending_user": 0,
    "stale": 0,
-   "warnings": 21
+   "warnings": 0
   },
   "engine": "solidcraft-engine 0.25.0, quality checks 1",
   "findings": [
-   {
-    "approved": false,
-    "args": {
-     "layer": "bottom",
-     "layers": "top, bottom",
-     "nets": "GND",
-     "required": "0.5",
-     "value": "50.7988"
-    },
-    "at": [
-     -2.363,
-     7.529
-    ],
-    "class": "practical",
-    "code": "pi.stitching",
-    "family": "pi",
-    "fix": [
-     {
-      "command": "ecad.board.stitch",
-      "params": {
-       "net": "GND",
-       "pattern": "needed"
-      },
-      "says": "add stitching vias where the planes are weakest, solving again after each"
-     }
-    ],
-    "key": "pi.stitching|tie|z201|z202",
-    "limit": {
-     "bound": "max",
-     "param": "pi.stitching.tie_mv",
-     "units": "mV",
-     "value": 0.5
-    },
-    "margin": -50.2988,
-    "measured": {
-     "units": "mV",
-     "value": 50.7988
-    },
-    "message": "GND's planes (top, bottom) are tied to the power entry J1 weakly: at (-2.4, 7.5) on bottom they rise 50.8 mV when every mm\u00b2 of its copper draws 10 mA, past 0.5 mV",
-    "message_key": "electronics.quality_msg_pi_stitching",
-    "nets": [
-     "GND"
-    ],
-    "principle": "Planes of one ground tied by vias closer than a tenth of a wavelength stay one conductor at the frequencies of concern instead of a cavity that resonates.",
-    "section": "power-ground#stitching",
-    "severity": "warning",
-    "status": "fail"
-   },
-   {
-    "approved": false,
-    "args": {
-     "f_mhz": "2483.5",
-     "layers": "top, bottom",
-     "nets": "GND",
-     "required": "5.8213",
-     "value": "20.9476"
-    },
-    "at": [
-     25.2,
-     -10.8
-    ],
-    "class": "practical",
-    "code": "pi.stitching",
-    "family": "pi",
-    "fix": [
-     {
-      "command": "ecad.board.stitch",
-      "params": {
-       "net": "GND",
-       "pattern": "grid"
-      },
-      "says": "add a grid of stitching vias: by default its pitch keeps every via-free circle within \u03bbg/10"
-     }
-    ],
-    "key": "pi.stitching|z201|z202",
-    "limit": {
-     "bound": "max",
-     "param": "pi.stitching.fraction",
-     "units": "mm",
-     "value": 5.8213
-    },
-    "margin": -15.1262,
-    "measured": {
-     "units": "mm",
-     "value": 20.9476
-    },
-    "message": "where GND's planes overlap (top, bottom), the largest circle with no via joining them is 21 mm across at (25.2, -10.8); \u03bbg/10 at 2483.5 MHz is 5.8 mm",
-    "message_key": "electronics.quality_msg_pi_stitching",
-    "nets": [
-     "GND"
-    ],
-    "principle": "Planes of one ground tied by vias closer than a tenth of a wavelength stay one conductor at the frequencies of concern instead of a cavity that resonates.",
-    "regime": "the top of the BLE 2.4 GHz band, 2483.5 MHz; \u03b5r 4.3, \u03bbg 58 mm",
-    "section": "power-ground#stitching",
-    "severity": "warning",
-    "status": "fail"
-   },
-   {
-    "approved": false,
-    "args": {
-     "a": "Q1",
-     "pad": "Q1.1",
-     "pin": "pin 1",
-     "required": "0.5",
-     "value": "0.3",
-     "why": "0.3 mm across, below 0.5 mm"
-    },
-    "at": [
-     -9.95,
-     -11.275
-    ],
-    "class": "practical",
-    "code": "silk.polarity",
-    "family": "silk",
-    "fix": [
-     {
-      "command": "ecad.footprint.set_graphics",
-      "says": "make SOT-23's mark at pin 1 at least 0.5 mm, outside the body, clear of pads"
-     }
-    ],
-    "key": "silk.polarity|f17",
-    "limit": {
-     "bound": "min",
-     "param": "silk.polarity.min_size",
-     "units": "mm",
-     "value": 0.5
-    },
-    "margin": -0.2,
-    "measured": {
-     "units": "mm",
-     "value": 0.3
-    },
-    "message": "Q1's polarity mark at its pin 1 (Q1.1) is weak: 0.3 mm across, below 0.5 mm",
-    "message_key": "electronics.quality_msg_silk_polarity_weak",
-    "objects": [
-     {
-      "id": 17,
-      "key": "f17",
-      "kind": "footprint",
-      "ref": "Q1"
-     }
-    ],
-    "principle": "A part that can be placed turned round needs a visible, unambiguous mark at pin 1 or the cathode, outside its body, or nobody can check it after placement.",
-    "regime": "practical: it can be placed turned round",
-    "section": "silkscreen-assembly#polarity",
-    "severity": "warning",
-    "status": "fail"
-   },
-   {
-    "approved": false,
-    "args": {
-     "a": "U1",
-     "pad": "U1.1",
-     "pin": "pin 1",
-     "reach": "1"
-    },
-    "at": [
-     -21.63,
-     -7.3
-    ],
-    "class": "practical",
-    "code": "silk.polarity",
-    "family": "silk",
-    "fix": [
-     {
-      "command": "ecad.footprint.set_graphics",
-      "says": "add a mark of 0.5 mm or more to E73-2G4M08S1C's silk within 1 mm of pin 1, outside the body, nowhere else alike (a dot, a bar, or K at a cathode)"
-     }
-    ],
-    "key": "silk.polarity|f29",
-    "message": "U1 has no silk mark within 1 mm of its pin 1 (U1.1) that tells its ends apart",
-    "message_key": "electronics.quality_msg_silk_polarity",
-    "objects": [
-     {
-      "id": 29,
-      "key": "f29",
-      "kind": "footprint",
-      "ref": "U1"
-     }
-    ],
-    "principle": "A part that can be placed turned round needs a visible, unambiguous mark at pin 1 or the cathode, outside its body, or nobody can check it after placement.",
-    "regime": "practical: it can be placed turned round",
-    "section": "silkscreen-assembly#polarity",
-    "severity": "warning",
-    "status": "fail"
-   },
-   {
-    "approved": false,
-    "args": {
-     "a": "U2",
-     "pad": "U2.1",
-     "pin": "pin 1",
-     "reach": "1"
-    },
-    "at": [
-     11.85,
-     -8.0
-    ],
-    "class": "practical",
-    "code": "silk.polarity",
-    "family": "silk",
-    "fix": [
-     {
-      "command": "ecad.footprint.set_graphics",
-      "says": "add a mark of 0.5 mm or more to E22-900M22S's silk within 1 mm of pin 1, outside the body, nowhere else alike (a dot, a bar, or K at a cathode)"
-     }
-    ],
-    "key": "silk.polarity|f30",
-    "message": "U2 has no silk mark within 1 mm of its pin 1 (U2.1) that tells its ends apart",
-    "message_key": "electronics.quality_msg_silk_polarity",
-    "objects": [
-     {
-      "id": 30,
-      "key": "f30",
-      "kind": "footprint",
-      "ref": "U2"
-     }
-    ],
-    "principle": "A part that can be placed turned round needs a visible, unambiguous mark at pin 1 or the cathode, outside its body, or nobody can check it after placement.",
-    "regime": "practical: it can be placed turned round",
-    "section": "silkscreen-assembly#polarity",
-    "severity": "warning",
-    "status": "fail"
-   },
-   {
-    "approved": false,
-    "args": {
-     "a": "J4.2",
-     "nets": "GND",
-     "required": "1",
-     "value": "2",
-     "why": "planes on top, bottom"
-    },
-    "at": [
-     -10.94,
-     -14.5
-    ],
-    "class": "practical",
-    "code": "dfm.pad_to_pour",
-    "family": "dfm",
-    "fix": [
-     {
-      "command": "ecad.board.pour.connect",
-      "params": {
-       "connect": "thermal",
-       "footprint": "J4",
-       "pads": [
-        "2"
-       ]
-      },
-      "says": "relieve pad J4.2 with thermal spokes"
-     }
-    ],
-    "key": "dfm.pad_to_pour|p15.2|solid",
-    "limit": {
-     "bound": "max",
-     "param": "",
-     "units": "planes",
-     "value": 1.0
-    },
-    "margin": -1.0,
-    "measured": {
-     "units": "planes",
-     "value": 2.0
-    },
-    "message": "through-hole pad J4.2 joins planes on top, bottom solid: they sink the soldering heat, so the joint is hard to make",
-    "message_key": "electronics.quality_msg_dfm_pad_to_pour_solid",
-    "nets": [
-     "GND"
-    ],
-    "objects": [
-     {
-      "id": 15,
-      "key": "p15.2",
-      "kind": "pad",
-      "pad": "2",
-      "ref": "J4.2"
-     }
-    ],
-    "principle": "How a pour meets a pad trades solderability against current and inductance: through-hole pins need reliefs, small chips need the same at both ends, decoupling needs a via and high current needs width.",
-    "section": "routing-dfm#pad-to-pour",
-    "severity": "warning",
-    "status": "fail"
-   },
-   {
-    "approved": false,
-    "args": {
-     "a": "C1",
-     "b": "C1.2",
-     "nets": "GND",
-     "pad": "C1.2",
-     "size": "0603"
-    },
-    "at": [
-     16.4,
-     11.4
-    ],
-    "class": "practical",
-    "code": "dfm.pad_to_pour",
-    "family": "dfm",
-    "fix": [
-     {
-      "command": "ecad.board.pour.connect",
-      "params": {
-       "connect": "thermal",
-       "footprint": "C1",
-       "pads": [
-        "2"
-       ]
-      },
-      "says": "relieve pad C1.2 so both ends heat alike"
-     }
-    ],
-    "key": "dfm.pad_to_pour|chip|f1",
-    "message": "0603 chip C1 has pad C1.2 joined solid to the GND pour and pad C1.1 not: unequal heat at the two ends",
-    "message_key": "electronics.quality_msg_dfm_pad_to_pour_chip",
-    "nets": [
-     "GND"
-    ],
-    "objects": [
-     {
-      "id": 1,
-      "key": "f1",
-      "kind": "footprint",
-      "ref": "C1"
-     },
-     {
-      "id": 1,
-      "key": "p1.2",
-      "kind": "pad",
-      "pad": "2",
-      "ref": "C1.2"
-     }
-    ],
-    "principle": "How a pour meets a pad trades solderability against current and inductance: through-hole pins need reliefs, small chips need the same at both ends, decoupling needs a via and high current needs width.",
-    "section": "routing-dfm#pad-to-pour",
-    "severity": "warning",
-    "status": "fail"
-   },
-   {
-    "approved": false,
-    "args": {
-     "a": "C10",
-     "b": "C10.2",
-     "nets": "GND",
-     "pad": "C10.2",
-     "size": "0603"
-    },
-    "at": [
-     -6.1,
-     -13.7
-    ],
-    "class": "practical",
-    "code": "dfm.pad_to_pour",
-    "family": "dfm",
-    "fix": [
-     {
-      "command": "ecad.board.pour.connect",
-      "params": {
-       "connect": "thermal",
-       "footprint": "C10",
-       "pads": [
-        "2"
-       ]
-      },
-      "says": "relieve pad C10.2 so both ends heat alike"
-     }
-    ],
-    "key": "dfm.pad_to_pour|chip|f2",
-    "message": "0603 chip C10 has pad C10.2 joined solid to the GND pour and pad C10.1 not: unequal heat at the two ends",
-    "message_key": "electronics.quality_msg_dfm_pad_to_pour_chip",
-    "nets": [
-     "GND"
-    ],
-    "objects": [
-     {
-      "id": 2,
-      "key": "f2",
-      "kind": "footprint",
-      "ref": "C10"
-     },
-     {
-      "id": 2,
-      "key": "p2.2",
-      "kind": "pad",
-      "pad": "2",
-      "ref": "C10.2"
-     }
-    ],
-    "principle": "How a pour meets a pad trades solderability against current and inductance: through-hole pins need reliefs, small chips need the same at both ends, decoupling needs a via and high current needs width.",
-    "section": "routing-dfm#pad-to-pour",
-    "severity": "warning",
-    "status": "fail"
-   },
-   {
-    "approved": false,
-    "args": {
-     "a": "C2",
-     "b": "C2.2",
-     "nets": "GND",
-     "pad": "C2.2",
-     "size": "0603"
-    },
-    "at": [
-     22.6,
-     8.05
-    ],
-    "class": "practical",
-    "code": "dfm.pad_to_pour",
-    "family": "dfm",
-    "fix": [
-     {
-      "command": "ecad.board.pour.connect",
-      "params": {
-       "connect": "thermal",
-       "footprint": "C2",
-       "pads": [
-        "2"
-       ]
-      },
-      "says": "relieve pad C2.2 so both ends heat alike"
-     }
-    ],
-    "key": "dfm.pad_to_pour|chip|f3",
-    "message": "0603 chip C2 has pad C2.2 joined solid to the GND pour and pad C2.1 not: unequal heat at the two ends",
-    "message_key": "electronics.quality_msg_dfm_pad_to_pour_chip",
-    "nets": [
-     "GND"
-    ],
-    "objects": [
-     {
-      "id": 3,
-      "key": "f3",
-      "kind": "footprint",
-      "ref": "C2"
-     },
-     {
-      "id": 3,
-      "key": "p3.2",
-      "kind": "pad",
-      "pad": "2",
-      "ref": "C2.2"
-     }
-    ],
-    "principle": "How a pour meets a pad trades solderability against current and inductance: through-hole pins need reliefs, small chips need the same at both ends, decoupling needs a via and high current needs width.",
-    "section": "routing-dfm#pad-to-pour",
-    "severity": "warning",
-    "status": "fail"
-   },
-   {
-    "approved": false,
-    "args": {
-     "a": "C3",
-     "b": "C3.2",
-     "nets": "GND",
-     "pad": "C3.2",
-     "size": "0603"
-    },
-    "at": [
-     19.8,
-     6.0
-    ],
-    "class": "practical",
-    "code": "dfm.pad_to_pour",
-    "family": "dfm",
-    "fix": [
-     {
-      "command": "ecad.board.pour.connect",
-      "params": {
-       "connect": "thermal",
-       "footprint": "C3",
-       "pads": [
-        "2"
-       ]
-      },
-      "says": "relieve pad C3.2 so both ends heat alike"
-     }
-    ],
-    "key": "dfm.pad_to_pour|chip|f4",
-    "message": "0603 chip C3 has pad C3.2 joined solid to the GND pour and pad C3.1 not: unequal heat at the two ends",
-    "message_key": "electronics.quality_msg_dfm_pad_to_pour_chip",
-    "nets": [
-     "GND"
-    ],
-    "objects": [
-     {
-      "id": 4,
-      "key": "f4",
-      "kind": "footprint",
-      "ref": "C3"
-     },
-     {
-      "id": 4,
-      "key": "p4.2",
-      "kind": "pad",
-      "pad": "2",
-      "ref": "C3.2"
-     }
-    ],
-    "principle": "How a pour meets a pad trades solderability against current and inductance: through-hole pins need reliefs, small chips need the same at both ends, decoupling needs a via and high current needs width.",
-    "section": "routing-dfm#pad-to-pour",
-    "severity": "warning",
-    "status": "fail"
-   },
-   {
-    "approved": false,
-    "args": {
-     "a": "C4",
-     "b": "C4.2",
-     "nets": "GND",
-     "pad": "C4.2",
-     "size": "0603"
-    },
-    "at": [
-     19.8,
-     0.0
-    ],
-    "class": "practical",
-    "code": "dfm.pad_to_pour",
-    "family": "dfm",
-    "fix": [
-     {
-      "command": "ecad.board.pour.connect",
-      "params": {
-       "connect": "thermal",
-       "footprint": "C4",
-       "pads": [
-        "2"
-       ]
-      },
-      "says": "relieve pad C4.2 so both ends heat alike"
-     }
-    ],
-    "key": "dfm.pad_to_pour|chip|f5",
-    "message": "0603 chip C4 has pad C4.2 joined solid to the GND pour and pad C4.1 not: unequal heat at the two ends",
-    "message_key": "electronics.quality_msg_dfm_pad_to_pour_chip",
-    "nets": [
-     "GND"
-    ],
-    "objects": [
-     {
-      "id": 5,
-      "key": "f5",
-      "kind": "footprint",
-      "ref": "C4"
-     },
-     {
-      "id": 5,
-      "key": "p5.2",
-      "kind": "pad",
-      "pad": "2",
-      "ref": "C4.2"
-     }
-    ],
-    "principle": "How a pour meets a pad trades solderability against current and inductance: through-hole pins need reliefs, small chips need the same at both ends, decoupling needs a via and high current needs width.",
-    "section": "routing-dfm#pad-to-pour",
-    "severity": "warning",
-    "status": "fail"
-   },
-   {
-    "approved": false,
-    "args": {
-     "a": "C5",
-     "b": "C5.2",
-     "nets": "GND",
-     "pad": "C5.2",
-     "size": "0603"
-    },
-    "at": [
-     -6.05,
-     2.7
-    ],
-    "class": "practical",
-    "code": "dfm.pad_to_pour",
-    "family": "dfm",
-    "fix": [
-     {
-      "command": "ecad.board.pour.connect",
-      "params": {
-       "connect": "thermal",
-       "footprint": "C5",
-       "pads": [
-        "2"
-       ]
-      },
-      "says": "relieve pad C5.2 so both ends heat alike"
-     }
-    ],
-    "key": "dfm.pad_to_pour|chip|f6",
-    "message": "0603 chip C5 has pad C5.2 joined solid to the GND pour and pad C5.1 not: unequal heat at the two ends",
-    "message_key": "electronics.quality_msg_dfm_pad_to_pour_chip",
-    "nets": [
-     "GND"
-    ],
-    "objects": [
-     {
-      "id": 6,
-      "key": "f6",
-      "kind": "footprint",
-      "ref": "C5"
-     },
-     {
-      "id": 6,
-      "key": "p6.2",
-      "kind": "pad",
-      "pad": "2",
-      "ref": "C5.2"
-     }
-    ],
-    "principle": "How a pour meets a pad trades solderability against current and inductance: through-hole pins need reliefs, small chips need the same at both ends, decoupling needs a via and high current needs width.",
-    "section": "routing-dfm#pad-to-pour",
-    "severity": "warning",
-    "status": "fail"
-   },
-   {
-    "approved": false,
-    "args": {
-     "a": "C6",
-     "b": "C6.2",
-     "nets": "GND",
-     "pad": "C6.2",
-     "size": "0603"
-    },
-    "at": [
-     -3.6,
-     5.8
-    ],
-    "class": "practical",
-    "code": "dfm.pad_to_pour",
-    "family": "dfm",
-    "fix": [
-     {
-      "command": "ecad.board.pour.connect",
-      "params": {
-       "connect": "thermal",
-       "footprint": "C6",
-       "pads": [
-        "2"
-       ]
-      },
-      "says": "relieve pad C6.2 so both ends heat alike"
-     }
-    ],
-    "key": "dfm.pad_to_pour|chip|f7",
-    "message": "0603 chip C6 has pad C6.2 joined solid to the GND pour and pad C6.1 not: unequal heat at the two ends",
-    "message_key": "electronics.quality_msg_dfm_pad_to_pour_chip",
-    "nets": [
-     "GND"
-    ],
-    "objects": [
-     {
-      "id": 7,
-      "key": "f7",
-      "kind": "footprint",
-      "ref": "C6"
-     },
-     {
-      "id": 7,
-      "key": "p7.2",
-      "kind": "pad",
-      "pad": "2",
-      "ref": "C6.2"
-     }
-    ],
-    "principle": "How a pour meets a pad trades solderability against current and inductance: through-hole pins need reliefs, small chips need the same at both ends, decoupling needs a via and high current needs width.",
-    "section": "routing-dfm#pad-to-pour",
-    "severity": "warning",
-    "status": "fail"
-   },
-   {
-    "approved": false,
-    "args": {
-     "a": "C7",
-     "b": "C7.2",
-     "nets": "GND",
-     "pad": "C7.2",
-     "size": "0603"
-    },
-    "at": [
-     14.6,
-     4.8
-    ],
-    "class": "practical",
-    "code": "dfm.pad_to_pour",
-    "family": "dfm",
-    "fix": [
-     {
-      "command": "ecad.board.pour.connect",
-      "params": {
-       "connect": "thermal",
-       "footprint": "C7",
-       "pads": [
-        "2"
-       ]
-      },
-      "says": "relieve pad C7.2 so both ends heat alike"
-     }
-    ],
-    "key": "dfm.pad_to_pour|chip|f8",
-    "message": "0603 chip C7 has pad C7.2 joined solid to the GND pour and pad C7.1 not: unequal heat at the two ends",
-    "message_key": "electronics.quality_msg_dfm_pad_to_pour_chip",
-    "nets": [
-     "GND"
-    ],
-    "objects": [
-     {
-      "id": 8,
-      "key": "f8",
-      "kind": "footprint",
-      "ref": "C7"
-     },
-     {
-      "id": 8,
-      "key": "p8.2",
-      "kind": "pad",
-      "pad": "2",
-      "ref": "C7.2"
-     }
-    ],
-    "principle": "How a pour meets a pad trades solderability against current and inductance: through-hole pins need reliefs, small chips need the same at both ends, decoupling needs a via and high current needs width.",
-    "section": "routing-dfm#pad-to-pour",
-    "severity": "warning",
-    "status": "fail"
-   },
-   {
-    "approved": false,
-    "args": {
-     "a": "C8",
-     "b": "C8.2",
-     "nets": "GND",
-     "pad": "C8.2",
-     "size": "0603"
-    },
-    "at": [
-     14.6,
-     3.4
-    ],
-    "class": "practical",
-    "code": "dfm.pad_to_pour",
-    "family": "dfm",
-    "fix": [
-     {
-      "command": "ecad.board.pour.connect",
-      "params": {
-       "connect": "thermal",
-       "footprint": "C8",
-       "pads": [
-        "2"
-       ]
-      },
-      "says": "relieve pad C8.2 so both ends heat alike"
-     }
-    ],
-    "key": "dfm.pad_to_pour|chip|f9",
-    "message": "0603 chip C8 has pad C8.2 joined solid to the GND pour and pad C8.1 not: unequal heat at the two ends",
-    "message_key": "electronics.quality_msg_dfm_pad_to_pour_chip",
-    "nets": [
-     "GND"
-    ],
-    "objects": [
-     {
-      "id": 9,
-      "key": "f9",
-      "kind": "footprint",
-      "ref": "C8"
-     },
-     {
-      "id": 9,
-      "key": "p9.2",
-      "kind": "pad",
-      "pad": "2",
-      "ref": "C8.2"
-     }
-    ],
-    "principle": "How a pour meets a pad trades solderability against current and inductance: through-hole pins need reliefs, small chips need the same at both ends, decoupling needs a via and high current needs width.",
-    "section": "routing-dfm#pad-to-pour",
-    "severity": "warning",
-    "status": "fail"
-   },
-   {
-    "approved": false,
-    "args": {
-     "a": "C9",
-     "b": "C9.2",
-     "nets": "GND",
-     "pad": "C9.2",
-     "size": "0603"
-    },
-    "at": [
-     17.1,
-     -2.8
-    ],
-    "class": "practical",
-    "code": "dfm.pad_to_pour",
-    "family": "dfm",
-    "fix": [
-     {
-      "command": "ecad.board.pour.connect",
-      "params": {
-       "connect": "thermal",
-       "footprint": "C9",
-       "pads": [
-        "2"
-       ]
-      },
-      "says": "relieve pad C9.2 so both ends heat alike"
-     }
-    ],
-    "key": "dfm.pad_to_pour|chip|f10",
-    "message": "0603 chip C9 has pad C9.2 joined solid to the GND pour and pad C9.1 not: unequal heat at the two ends",
-    "message_key": "electronics.quality_msg_dfm_pad_to_pour_chip",
-    "nets": [
-     "GND"
-    ],
-    "objects": [
-     {
-      "id": 10,
-      "key": "f10",
-      "kind": "footprint",
-      "ref": "C9"
-     },
-     {
-      "id": 10,
-      "key": "p10.2",
-      "kind": "pad",
-      "pad": "2",
-      "ref": "C9.2"
-     }
-    ],
-    "principle": "How a pour meets a pad trades solderability against current and inductance: through-hole pins need reliefs, small chips need the same at both ends, decoupling needs a via and high current needs width.",
-    "section": "routing-dfm#pad-to-pour",
-    "severity": "warning",
-    "status": "fail"
-   },
-   {
-    "approved": false,
-    "args": {
-     "a": "D2",
-     "b": "D2.1",
-     "nets": "GND",
-     "pad": "D2.1",
-     "size": "0603"
-    },
-    "at": [
-     4.1,
-     -13.5
-    ],
-    "class": "practical",
-    "code": "dfm.pad_to_pour",
-    "family": "dfm",
-    "fix": [
-     {
-      "command": "ecad.board.pour.connect",
-      "params": {
-       "connect": "thermal",
-       "footprint": "D2",
-       "pads": [
-        "1"
-       ]
-      },
-      "says": "relieve pad D2.1 so both ends heat alike"
-     }
-    ],
-    "key": "dfm.pad_to_pour|chip|f12",
-    "message": "0603 chip D2 has pad D2.1 joined solid to the GND pour and pad D2.2 not: unequal heat at the two ends",
-    "message_key": "electronics.quality_msg_dfm_pad_to_pour_chip",
-    "nets": [
-     "GND"
-    ],
-    "objects": [
-     {
-      "id": 12,
-      "key": "f12",
-      "kind": "footprint",
-      "ref": "D2"
-     },
-     {
-      "id": 12,
-      "key": "p12.1",
-      "kind": "pad",
-      "pad": "1",
-      "ref": "D2.1"
-     }
-    ],
-    "principle": "How a pour meets a pad trades solderability against current and inductance: through-hole pins need reliefs, small chips need the same at both ends, decoupling needs a via and high current needs width.",
-    "section": "routing-dfm#pad-to-pour",
-    "severity": "warning",
-    "status": "fail"
-   },
-   {
-    "approved": false,
-    "args": {
-     "a": "R1",
-     "b": "R1.2",
-     "nets": "GND",
-     "pad": "R1.2",
-     "size": "0603"
-    },
-    "at": [
-     -18.0,
-     7.5
-    ],
-    "class": "practical",
-    "code": "dfm.pad_to_pour",
-    "family": "dfm",
-    "fix": [
-     {
-      "command": "ecad.board.pour.connect",
-      "params": {
-       "connect": "thermal",
-       "footprint": "R1",
-       "pads": [
-        "2"
-       ]
-      },
-      "says": "relieve pad R1.2 so both ends heat alike"
-     }
-    ],
-    "key": "dfm.pad_to_pour|chip|f18",
-    "message": "0603 chip R1 has pad R1.2 joined solid to the GND pour and pad R1.1 not: unequal heat at the two ends",
-    "message_key": "electronics.quality_msg_dfm_pad_to_pour_chip",
-    "nets": [
-     "GND"
-    ],
-    "objects": [
-     {
-      "id": 18,
-      "key": "f18",
-      "kind": "footprint",
-      "ref": "R1"
-     },
-     {
-      "id": 18,
-      "key": "p18.2",
-      "kind": "pad",
-      "pad": "2",
-      "ref": "R1.2"
-     }
-    ],
-    "principle": "How a pour meets a pad trades solderability against current and inductance: through-hole pins need reliefs, small chips need the same at both ends, decoupling needs a via and high current needs width.",
-    "section": "routing-dfm#pad-to-pour",
-    "severity": "warning",
-    "status": "fail"
-   },
-   {
-    "approved": false,
-    "args": {
-     "a": "R2",
-     "b": "R2.2",
-     "nets": "GND",
-     "pad": "R2.2",
-     "size": "0603"
-    },
-    "at": [
-     -9.65,
-     7.6
-    ],
-    "class": "practical",
-    "code": "dfm.pad_to_pour",
-    "family": "dfm",
-    "fix": [
-     {
-      "command": "ecad.board.pour.connect",
-      "params": {
-       "connect": "thermal",
-       "footprint": "R2",
-       "pads": [
-        "2"
-       ]
-      },
-      "says": "relieve pad R2.2 so both ends heat alike"
-     }
-    ],
-    "key": "dfm.pad_to_pour|chip|f19",
-    "message": "0603 chip R2 has pad R2.2 joined solid to the GND pour and pad R2.1 not: unequal heat at the two ends",
-    "message_key": "electronics.quality_msg_dfm_pad_to_pour_chip",
-    "nets": [
-     "GND"
-    ],
-    "objects": [
-     {
-      "id": 19,
-      "key": "f19",
-      "kind": "footprint",
-      "ref": "R2"
-     },
-     {
-      "id": 19,
-      "key": "p19.2",
-      "kind": "pad",
-      "pad": "2",
-      "ref": "R2.2"
-     }
-    ],
-    "principle": "How a pour meets a pad trades solderability against current and inductance: through-hole pins need reliefs, small chips need the same at both ends, decoupling needs a via and high current needs width.",
-    "section": "routing-dfm#pad-to-pour",
-    "severity": "warning",
-    "status": "fail"
-   },
-   {
-    "approved": false,
-    "args": {
-     "a": "R3",
-     "b": "R3.2",
-     "nets": "GND",
-     "pad": "R3.2",
-     "size": "0603"
-    },
-    "at": [
-     11.1,
-     15.4
-    ],
-    "class": "practical",
-    "code": "dfm.pad_to_pour",
-    "family": "dfm",
-    "fix": [
-     {
-      "command": "ecad.board.pour.connect",
-      "params": {
-       "connect": "thermal",
-       "footprint": "R3",
-       "pads": [
-        "2"
-       ]
-      },
-      "says": "relieve pad R3.2 so both ends heat alike"
-     }
-    ],
-    "key": "dfm.pad_to_pour|chip|f20",
-    "message": "0603 chip R3 has pad R3.2 joined solid to the GND pour and pad R3.1 not: unequal heat at the two ends",
-    "message_key": "electronics.quality_msg_dfm_pad_to_pour_chip",
-    "nets": [
-     "GND"
-    ],
-    "objects": [
-     {
-      "id": 20,
-      "key": "f20",
-      "kind": "footprint",
-      "ref": "R3"
-     },
-     {
-      "id": 20,
-      "key": "p20.2",
-      "kind": "pad",
-      "pad": "2",
-      "ref": "R3.2"
-     }
-    ],
-    "principle": "How a pour meets a pad trades solderability against current and inductance: through-hole pins need reliefs, small chips need the same at both ends, decoupling needs a via and high current needs width.",
-    "section": "routing-dfm#pad-to-pour",
-    "severity": "warning",
-    "status": "fail"
-   },
-   {
-    "approved": false,
-    "args": {
-     "a": "R7",
-     "b": "R7.2",
-     "nets": "GND",
-     "pad": "R7.2",
-     "size": "0603"
-    },
-    "at": [
-     15.5,
-     -4.3
-    ],
-    "class": "practical",
-    "code": "dfm.pad_to_pour",
-    "family": "dfm",
-    "fix": [
-     {
-      "command": "ecad.board.pour.connect",
-      "params": {
-       "connect": "thermal",
-       "footprint": "R7",
-       "pads": [
-        "2"
-       ]
-      },
-      "says": "relieve pad R7.2 so both ends heat alike"
-     }
-    ],
-    "key": "dfm.pad_to_pour|chip|f24",
-    "message": "0603 chip R7 has pad R7.2 joined solid to the GND pour and pad R7.1 not: unequal heat at the two ends",
-    "message_key": "electronics.quality_msg_dfm_pad_to_pour_chip",
-    "nets": [
-     "GND"
-    ],
-    "objects": [
-     {
-      "id": 24,
-      "key": "f24",
-      "kind": "footprint",
-      "ref": "R7"
-     },
-     {
-      "id": 24,
-      "key": "p24.2",
-      "kind": "pad",
-      "pad": "2",
-      "ref": "R7.2"
-     }
-    ],
-    "principle": "How a pour meets a pad trades solderability against current and inductance: through-hole pins need reliefs, small chips need the same at both ends, decoupling needs a via and high current needs width.",
-    "section": "routing-dfm#pad-to-pour",
-    "severity": "warning",
-    "status": "fail"
-   },
    {
     "approved": false,
     "args": {
@@ -3796,9 +2803,834 @@
     "section": "routing-dfm#pad-to-pour",
     "severity": "info",
     "status": "fail"
+   },
+   {
+    "approved": false,
+    "args": {
+     "a": "C10",
+     "b": "C10.2",
+     "other": "C10.1",
+     "pad": "C10.2",
+     "required": "2",
+     "size": "0603",
+     "value": "8.4988"
+    },
+    "at": [
+     -6.1,
+     -13.7
+    ],
+    "class": "practical",
+    "code": "dfm.tombstone",
+    "family": "dfm",
+    "fix": [
+     {
+      "command": "ecad.board.track.edit",
+      "says": "neck the copper at pad C10.2 (a narrow track into the pour or a relief), or give pad C10.1 as much"
+     }
+    ],
+    "key": "dfm.tombstone|f2",
+    "limit": {
+     "bound": "max",
+     "param": "dfm.tombstone.ratio",
+     "units": "ratio",
+     "value": 2.0
+    },
+    "margin": -6.4988,
+    "measured": {
+     "units": "ratio",
+     "value": 8.4988
+    },
+    "message": "0603 chip C10: pad C10.2 has 8.73 mm\u00b2 of copper within 1.5 mm and pad C10.1 has 1.03 mm\u00b2 (with the pads), 8.5\u00d7 the heat sinking: at 0603 a note",
+    "message_key": "electronics.quality_msg_dfm_tombstone",
+    "objects": [
+     {
+      "id": 2,
+      "key": "f2",
+      "kind": "footprint",
+      "ref": "C10"
+     },
+     {
+      "id": 2,
+      "key": "p2.2",
+      "kind": "pad",
+      "pad": "2",
+      "ref": "C10.2"
+     }
+    ],
+    "principle": "When one end of a small chip sits on much more copper, its solder melts later and surface tension stands the part on end.",
+    "regime": "0603 chip",
+    "section": "routing-dfm#pad-to-pour",
+    "severity": "info",
+    "status": "fail"
+   },
+   {
+    "approved": false,
+    "args": {
+     "a": "C2",
+     "b": "C2.2",
+     "other": "C2.1",
+     "pad": "C2.2",
+     "required": "2",
+     "size": "0603",
+     "value": "5.7464"
+    },
+    "at": [
+     23.1,
+     8.15
+    ],
+    "class": "practical",
+    "code": "dfm.tombstone",
+    "family": "dfm",
+    "fix": [
+     {
+      "command": "ecad.board.track.edit",
+      "says": "neck the copper at pad C2.2 (a narrow track into the pour or a relief), or give pad C2.1 as much"
+     }
+    ],
+    "key": "dfm.tombstone|f3",
+    "limit": {
+     "bound": "max",
+     "param": "dfm.tombstone.ratio",
+     "units": "ratio",
+     "value": 2.0
+    },
+    "margin": -3.7464,
+    "measured": {
+     "units": "ratio",
+     "value": 5.7464
+    },
+    "message": "0603 chip C2: pad C2.2 has 9.86 mm\u00b2 of copper within 1.5 mm and pad C2.1 has 1.71 mm\u00b2 (with the pads), 5.7\u00d7 the heat sinking: at 0603 a note",
+    "message_key": "electronics.quality_msg_dfm_tombstone",
+    "objects": [
+     {
+      "id": 3,
+      "key": "f3",
+      "kind": "footprint",
+      "ref": "C2"
+     },
+     {
+      "id": 3,
+      "key": "p3.2",
+      "kind": "pad",
+      "pad": "2",
+      "ref": "C2.2"
+     }
+    ],
+    "principle": "When one end of a small chip sits on much more copper, its solder melts later and surface tension stands the part on end.",
+    "regime": "0603 chip",
+    "section": "routing-dfm#pad-to-pour",
+    "severity": "info",
+    "status": "fail"
+   },
+   {
+    "approved": false,
+    "args": {
+     "a": "C3",
+     "b": "C3.2",
+     "other": "C3.1",
+     "pad": "C3.2",
+     "required": "2",
+     "size": "0603",
+     "value": "4.7479"
+    },
+    "at": [
+     19.8,
+     6.0
+    ],
+    "class": "practical",
+    "code": "dfm.tombstone",
+    "family": "dfm",
+    "fix": [
+     {
+      "command": "ecad.board.track.edit",
+      "says": "neck the copper at pad C3.2 (a narrow track into the pour or a relief), or give pad C3.1 as much"
+     }
+    ],
+    "key": "dfm.tombstone|f4",
+    "limit": {
+     "bound": "max",
+     "param": "dfm.tombstone.ratio",
+     "units": "ratio",
+     "value": 2.0
+    },
+    "margin": -2.7479,
+    "measured": {
+     "units": "ratio",
+     "value": 4.7479
+    },
+    "message": "0603 chip C3: pad C3.2 has 6.97 mm\u00b2 of copper within 1.5 mm and pad C3.1 has 1.47 mm\u00b2 (with the pads), 4.7\u00d7 the heat sinking: at 0603 a note",
+    "message_key": "electronics.quality_msg_dfm_tombstone",
+    "objects": [
+     {
+      "id": 4,
+      "key": "f4",
+      "kind": "footprint",
+      "ref": "C3"
+     },
+     {
+      "id": 4,
+      "key": "p4.2",
+      "kind": "pad",
+      "pad": "2",
+      "ref": "C3.2"
+     }
+    ],
+    "principle": "When one end of a small chip sits on much more copper, its solder melts later and surface tension stands the part on end.",
+    "regime": "0603 chip",
+    "section": "routing-dfm#pad-to-pour",
+    "severity": "info",
+    "status": "fail"
+   },
+   {
+    "approved": false,
+    "args": {
+     "a": "C4",
+     "b": "C4.2",
+     "other": "C4.1",
+     "pad": "C4.2",
+     "required": "2",
+     "size": "0603",
+     "value": "5.6212"
+    },
+    "at": [
+     19.8,
+     0.0
+    ],
+    "class": "practical",
+    "code": "dfm.tombstone",
+    "family": "dfm",
+    "fix": [
+     {
+      "command": "ecad.board.track.edit",
+      "says": "neck the copper at pad C4.2 (a narrow track into the pour or a relief), or give pad C4.1 as much"
+     }
+    ],
+    "key": "dfm.tombstone|f5",
+    "limit": {
+     "bound": "max",
+     "param": "dfm.tombstone.ratio",
+     "units": "ratio",
+     "value": 2.0
+    },
+    "margin": -3.6212,
+    "measured": {
+     "units": "ratio",
+     "value": 5.6212
+    },
+    "message": "0603 chip C4: pad C4.2 has 7.31 mm\u00b2 of copper within 1.5 mm and pad C4.1 has 1.3 mm\u00b2 (with the pads), 5.6\u00d7 the heat sinking: at 0603 a note",
+    "message_key": "electronics.quality_msg_dfm_tombstone",
+    "objects": [
+     {
+      "id": 5,
+      "key": "f5",
+      "kind": "footprint",
+      "ref": "C4"
+     },
+     {
+      "id": 5,
+      "key": "p5.2",
+      "kind": "pad",
+      "pad": "2",
+      "ref": "C4.2"
+     }
+    ],
+    "principle": "When one end of a small chip sits on much more copper, its solder melts later and surface tension stands the part on end.",
+    "regime": "0603 chip",
+    "section": "routing-dfm#pad-to-pour",
+    "severity": "info",
+    "status": "fail"
+   },
+   {
+    "approved": false,
+    "args": {
+     "a": "C5",
+     "b": "C5.2",
+     "other": "C5.1",
+     "pad": "C5.2",
+     "required": "2",
+     "size": "0603",
+     "value": "3.2263"
+    },
+    "at": [
+     -6.05,
+     2.7
+    ],
+    "class": "practical",
+    "code": "dfm.tombstone",
+    "family": "dfm",
+    "fix": [
+     {
+      "command": "ecad.board.track.edit",
+      "says": "neck the copper at pad C5.2 (a narrow track into the pour or a relief), or give pad C5.1 as much"
+     }
+    ],
+    "key": "dfm.tombstone|f6",
+    "limit": {
+     "bound": "max",
+     "param": "dfm.tombstone.ratio",
+     "units": "ratio",
+     "value": 2.0
+    },
+    "margin": -1.2263,
+    "measured": {
+     "units": "ratio",
+     "value": 3.2263
+    },
+    "message": "0603 chip C5: pad C5.2 has 6.81 mm\u00b2 of copper within 1.5 mm and pad C5.1 has 2.11 mm\u00b2 (with the pads), 3.2\u00d7 the heat sinking: at 0603 a note",
+    "message_key": "electronics.quality_msg_dfm_tombstone",
+    "objects": [
+     {
+      "id": 6,
+      "key": "f6",
+      "kind": "footprint",
+      "ref": "C5"
+     },
+     {
+      "id": 6,
+      "key": "p6.2",
+      "kind": "pad",
+      "pad": "2",
+      "ref": "C5.2"
+     }
+    ],
+    "principle": "When one end of a small chip sits on much more copper, its solder melts later and surface tension stands the part on end.",
+    "regime": "0603 chip",
+    "section": "routing-dfm#pad-to-pour",
+    "severity": "info",
+    "status": "fail"
+   },
+   {
+    "approved": false,
+    "args": {
+     "a": "C7",
+     "b": "C7.2",
+     "other": "C7.1",
+     "pad": "C7.2",
+     "required": "2",
+     "size": "0603",
+     "value": "3.9682"
+    },
+    "at": [
+     14.6,
+     4.8
+    ],
+    "class": "practical",
+    "code": "dfm.tombstone",
+    "family": "dfm",
+    "fix": [
+     {
+      "command": "ecad.board.track.edit",
+      "says": "neck the copper at pad C7.2 (a narrow track into the pour or a relief), or give pad C7.1 as much"
+     }
+    ],
+    "key": "dfm.tombstone|f8",
+    "limit": {
+     "bound": "max",
+     "param": "dfm.tombstone.ratio",
+     "units": "ratio",
+     "value": 2.0
+    },
+    "margin": -1.9682,
+    "measured": {
+     "units": "ratio",
+     "value": 3.9682
+    },
+    "message": "0603 chip C7: pad C7.2 has 9.37 mm\u00b2 of copper within 1.5 mm and pad C7.1 has 2.36 mm\u00b2 (with the pads), 4\u00d7 the heat sinking: at 0603 a note",
+    "message_key": "electronics.quality_msg_dfm_tombstone",
+    "objects": [
+     {
+      "id": 8,
+      "key": "f8",
+      "kind": "footprint",
+      "ref": "C7"
+     },
+     {
+      "id": 8,
+      "key": "p8.2",
+      "kind": "pad",
+      "pad": "2",
+      "ref": "C7.2"
+     }
+    ],
+    "principle": "When one end of a small chip sits on much more copper, its solder melts later and surface tension stands the part on end.",
+    "regime": "0603 chip",
+    "section": "routing-dfm#pad-to-pour",
+    "severity": "info",
+    "status": "fail"
+   },
+   {
+    "approved": false,
+    "args": {
+     "a": "C8",
+     "b": "C8.2",
+     "other": "C8.1",
+     "pad": "C8.2",
+     "required": "2",
+     "size": "0603",
+     "value": "6.3507"
+    },
+    "at": [
+     14.6,
+     3.4
+    ],
+    "class": "practical",
+    "code": "dfm.tombstone",
+    "family": "dfm",
+    "fix": [
+     {
+      "command": "ecad.board.track.edit",
+      "says": "neck the copper at pad C8.2 (a narrow track into the pour or a relief), or give pad C8.1 as much"
+     }
+    ],
+    "key": "dfm.tombstone|f9",
+    "limit": {
+     "bound": "max",
+     "param": "dfm.tombstone.ratio",
+     "units": "ratio",
+     "value": 2.0
+    },
+    "margin": -4.3507,
+    "measured": {
+     "units": "ratio",
+     "value": 6.3507
+    },
+    "message": "0603 chip C8: pad C8.2 has 10.64 mm\u00b2 of copper within 1.5 mm and pad C8.1 has 1.67 mm\u00b2 (with the pads), 6.4\u00d7 the heat sinking: at 0603 a note",
+    "message_key": "electronics.quality_msg_dfm_tombstone",
+    "objects": [
+     {
+      "id": 9,
+      "key": "f9",
+      "kind": "footprint",
+      "ref": "C8"
+     },
+     {
+      "id": 9,
+      "key": "p9.2",
+      "kind": "pad",
+      "pad": "2",
+      "ref": "C8.2"
+     }
+    ],
+    "principle": "When one end of a small chip sits on much more copper, its solder melts later and surface tension stands the part on end.",
+    "regime": "0603 chip",
+    "section": "routing-dfm#pad-to-pour",
+    "severity": "info",
+    "status": "fail"
+   },
+   {
+    "approved": false,
+    "args": {
+     "a": "C9",
+     "b": "C9.2",
+     "other": "C9.1",
+     "pad": "C9.2",
+     "required": "2",
+     "size": "0603",
+     "value": "6.7714"
+    },
+    "at": [
+     17.1,
+     -2.8
+    ],
+    "class": "practical",
+    "code": "dfm.tombstone",
+    "family": "dfm",
+    "fix": [
+     {
+      "command": "ecad.board.track.edit",
+      "says": "neck the copper at pad C9.2 (a narrow track into the pour or a relief), or give pad C9.1 as much"
+     }
+    ],
+    "key": "dfm.tombstone|f10",
+    "limit": {
+     "bound": "max",
+     "param": "dfm.tombstone.ratio",
+     "units": "ratio",
+     "value": 2.0
+    },
+    "margin": -4.7714,
+    "measured": {
+     "units": "ratio",
+     "value": 6.7714
+    },
+    "message": "0603 chip C9: pad C9.2 has 7.11 mm\u00b2 of copper within 1.5 mm and pad C9.1 has 1.05 mm\u00b2 (with the pads), 6.8\u00d7 the heat sinking: at 0603 a note",
+    "message_key": "electronics.quality_msg_dfm_tombstone",
+    "objects": [
+     {
+      "id": 10,
+      "key": "f10",
+      "kind": "footprint",
+      "ref": "C9"
+     },
+     {
+      "id": 10,
+      "key": "p10.2",
+      "kind": "pad",
+      "pad": "2",
+      "ref": "C9.2"
+     }
+    ],
+    "principle": "When one end of a small chip sits on much more copper, its solder melts later and surface tension stands the part on end.",
+    "regime": "0603 chip",
+    "section": "routing-dfm#pad-to-pour",
+    "severity": "info",
+    "status": "fail"
+   },
+   {
+    "approved": false,
+    "args": {
+     "a": "D2",
+     "b": "D2.1",
+     "other": "D2.2",
+     "pad": "D2.1",
+     "required": "2",
+     "size": "0603",
+     "value": "17.4302"
+    },
+    "at": [
+     4.1,
+     -13.5
+    ],
+    "class": "practical",
+    "code": "dfm.tombstone",
+    "family": "dfm",
+    "fix": [
+     {
+      "command": "ecad.board.track.edit",
+      "says": "neck the copper at pad D2.1 (a narrow track into the pour or a relief), or give pad D2.2 as much"
+     }
+    ],
+    "key": "dfm.tombstone|f12",
+    "limit": {
+     "bound": "max",
+     "param": "dfm.tombstone.ratio",
+     "units": "ratio",
+     "value": 2.0
+    },
+    "margin": -15.4302,
+    "measured": {
+     "units": "ratio",
+     "value": 17.4302
+    },
+    "message": "0603 chip D2: pad D2.1 has 11.24 mm\u00b2 of copper within 1.5 mm and pad D2.2 has 0.64 mm\u00b2 (with the pads), 17.4\u00d7 the heat sinking: at 0603 a note",
+    "message_key": "electronics.quality_msg_dfm_tombstone",
+    "objects": [
+     {
+      "id": 12,
+      "key": "f12",
+      "kind": "footprint",
+      "ref": "D2"
+     },
+     {
+      "id": 12,
+      "key": "p12.1",
+      "kind": "pad",
+      "pad": "1",
+      "ref": "D2.1"
+     }
+    ],
+    "principle": "When one end of a small chip sits on much more copper, its solder melts later and surface tension stands the part on end.",
+    "regime": "0603 chip",
+    "section": "routing-dfm#pad-to-pour",
+    "severity": "info",
+    "status": "fail"
+   },
+   {
+    "approved": false,
+    "args": {
+     "a": "R1",
+     "b": "R1.2",
+     "other": "R1.1",
+     "pad": "R1.2",
+     "required": "2",
+     "size": "0603",
+     "value": "6.8535"
+    },
+    "at": [
+     -18.0,
+     7.5
+    ],
+    "class": "practical",
+    "code": "dfm.tombstone",
+    "family": "dfm",
+    "fix": [
+     {
+      "command": "ecad.board.track.edit",
+      "says": "neck the copper at pad R1.2 (a narrow track into the pour or a relief), or give pad R1.1 as much"
+     }
+    ],
+    "key": "dfm.tombstone|f18",
+    "limit": {
+     "bound": "max",
+     "param": "dfm.tombstone.ratio",
+     "units": "ratio",
+     "value": 2.0
+    },
+    "margin": -4.8535,
+    "measured": {
+     "units": "ratio",
+     "value": 6.8535
+    },
+    "message": "0603 chip R1: pad R1.2 has 5.38 mm\u00b2 of copper within 1.5 mm and pad R1.1 has 0.78 mm\u00b2 (with the pads), 6.9\u00d7 the heat sinking: at 0603 a note",
+    "message_key": "electronics.quality_msg_dfm_tombstone",
+    "objects": [
+     {
+      "id": 18,
+      "key": "f18",
+      "kind": "footprint",
+      "ref": "R1"
+     },
+     {
+      "id": 18,
+      "key": "p18.2",
+      "kind": "pad",
+      "pad": "2",
+      "ref": "R1.2"
+     }
+    ],
+    "principle": "When one end of a small chip sits on much more copper, its solder melts later and surface tension stands the part on end.",
+    "regime": "0603 chip",
+    "section": "routing-dfm#pad-to-pour",
+    "severity": "info",
+    "status": "fail"
+   },
+   {
+    "approved": false,
+    "args": {
+     "a": "R2",
+     "b": "R2.2",
+     "other": "R2.1",
+     "pad": "R2.2",
+     "required": "2",
+     "size": "0603",
+     "value": "7.1133"
+    },
+    "at": [
+     -9.65,
+     7.6
+    ],
+    "class": "practical",
+    "code": "dfm.tombstone",
+    "family": "dfm",
+    "fix": [
+     {
+      "command": "ecad.board.track.edit",
+      "says": "neck the copper at pad R2.2 (a narrow track into the pour or a relief), or give pad R2.1 as much"
+     }
+    ],
+    "key": "dfm.tombstone|f19",
+    "limit": {
+     "bound": "max",
+     "param": "dfm.tombstone.ratio",
+     "units": "ratio",
+     "value": 2.0
+    },
+    "margin": -5.1133,
+    "measured": {
+     "units": "ratio",
+     "value": 7.1133
+    },
+    "message": "0603 chip R2: pad R2.2 has 5.34 mm\u00b2 of copper within 1.5 mm and pad R2.1 has 0.75 mm\u00b2 (with the pads), 7.1\u00d7 the heat sinking: at 0603 a note",
+    "message_key": "electronics.quality_msg_dfm_tombstone",
+    "objects": [
+     {
+      "id": 19,
+      "key": "f19",
+      "kind": "footprint",
+      "ref": "R2"
+     },
+     {
+      "id": 19,
+      "key": "p19.2",
+      "kind": "pad",
+      "pad": "2",
+      "ref": "R2.2"
+     }
+    ],
+    "principle": "When one end of a small chip sits on much more copper, its solder melts later and surface tension stands the part on end.",
+    "regime": "0603 chip",
+    "section": "routing-dfm#pad-to-pour",
+    "severity": "info",
+    "status": "fail"
+   },
+   {
+    "approved": false,
+    "args": {
+     "a": "R3",
+     "b": "R3.2",
+     "other": "R3.1",
+     "pad": "R3.2",
+     "required": "2",
+     "size": "0603",
+     "value": "14.0861"
+    },
+    "at": [
+     11.1,
+     15.4
+    ],
+    "class": "practical",
+    "code": "dfm.tombstone",
+    "family": "dfm",
+    "fix": [
+     {
+      "command": "ecad.board.track.edit",
+      "says": "neck the copper at pad R3.2 (a narrow track into the pour or a relief), or give pad R3.1 as much"
+     }
+    ],
+    "key": "dfm.tombstone|f20",
+    "limit": {
+     "bound": "max",
+     "param": "dfm.tombstone.ratio",
+     "units": "ratio",
+     "value": 2.0
+    },
+    "margin": -12.0861,
+    "measured": {
+     "units": "ratio",
+     "value": 14.0861
+    },
+    "message": "0603 chip R3: pad R3.2 has 9.4 mm\u00b2 of copper within 1.5 mm and pad R3.1 has 0.67 mm\u00b2 (with the pads), 14.1\u00d7 the heat sinking: at 0603 a note",
+    "message_key": "electronics.quality_msg_dfm_tombstone",
+    "objects": [
+     {
+      "id": 20,
+      "key": "f20",
+      "kind": "footprint",
+      "ref": "R3"
+     },
+     {
+      "id": 20,
+      "key": "p20.2",
+      "kind": "pad",
+      "pad": "2",
+      "ref": "R3.2"
+     }
+    ],
+    "principle": "When one end of a small chip sits on much more copper, its solder melts later and surface tension stands the part on end.",
+    "regime": "0603 chip",
+    "section": "routing-dfm#pad-to-pour",
+    "severity": "info",
+    "status": "fail"
+   },
+   {
+    "approved": false,
+    "args": {
+     "a": "R4",
+     "b": "R4.1",
+     "other": "R4.2",
+     "pad": "R4.1",
+     "required": "2",
+     "size": "0603",
+     "value": "2.7248"
+    },
+    "at": [
+     9.8,
+     11.9
+    ],
+    "class": "practical",
+    "code": "dfm.tombstone",
+    "family": "dfm",
+    "fix": [
+     {
+      "command": "ecad.board.track.edit",
+      "says": "neck the copper at pad R4.1 (a narrow track into the pour or a relief), or give pad R4.2 as much"
+     }
+    ],
+    "key": "dfm.tombstone|f21",
+    "limit": {
+     "bound": "max",
+     "param": "dfm.tombstone.ratio",
+     "units": "ratio",
+     "value": 2.0
+    },
+    "margin": -0.7248,
+    "measured": {
+     "units": "ratio",
+     "value": 2.7248
+    },
+    "message": "0603 chip R4: pad R4.1 has 1.76 mm\u00b2 of copper within 1.5 mm and pad R4.2 has 0.65 mm\u00b2 (with the pads), 2.7\u00d7 the heat sinking: at 0603 a note",
+    "message_key": "electronics.quality_msg_dfm_tombstone",
+    "objects": [
+     {
+      "id": 21,
+      "key": "f21",
+      "kind": "footprint",
+      "ref": "R4"
+     },
+     {
+      "id": 21,
+      "key": "p21.1",
+      "kind": "pad",
+      "pad": "1",
+      "ref": "R4.1"
+     }
+    ],
+    "principle": "When one end of a small chip sits on much more copper, its solder melts later and surface tension stands the part on end.",
+    "regime": "0603 chip",
+    "section": "routing-dfm#pad-to-pour",
+    "severity": "info",
+    "status": "fail"
+   },
+   {
+    "approved": false,
+    "args": {
+     "a": "R7",
+     "b": "R7.2",
+     "other": "R7.1",
+     "pad": "R7.2",
+     "required": "2",
+     "size": "0603",
+     "value": "7.1809"
+    },
+    "at": [
+     15.5,
+     -4.3
+    ],
+    "class": "practical",
+    "code": "dfm.tombstone",
+    "family": "dfm",
+    "fix": [
+     {
+      "command": "ecad.board.track.edit",
+      "says": "neck the copper at pad R7.2 (a narrow track into the pour or a relief), or give pad R7.1 as much"
+     }
+    ],
+    "key": "dfm.tombstone|f24",
+    "limit": {
+     "bound": "max",
+     "param": "dfm.tombstone.ratio",
+     "units": "ratio",
+     "value": 2.0
+    },
+    "margin": -5.1809,
+    "measured": {
+     "units": "ratio",
+     "value": 7.1809
+    },
+    "message": "0603 chip R7: pad R7.2 has 6.75 mm\u00b2 of copper within 1.5 mm and pad R7.1 has 0.94 mm\u00b2 (with the pads), 7.2\u00d7 the heat sinking: at 0603 a note",
+    "message_key": "electronics.quality_msg_dfm_tombstone",
+    "objects": [
+     {
+      "id": 24,
+      "key": "f24",
+      "kind": "footprint",
+      "ref": "R7"
+     },
+     {
+      "id": 24,
+      "key": "p24.2",
+      "kind": "pad",
+      "pad": "2",
+      "ref": "R7.2"
+     }
+    ],
+    "principle": "When one end of a small chip sits on much more copper, its solder melts later and surface tension stands the part on end.",
+    "regime": "0603 chip",
+    "section": "routing-dfm#pad-to-pour",
+    "severity": "info",
+    "status": "fail"
    }
   ],
-  "more": 14,
   "not_applicable": [
    {
     "code": "esd.ground",
@@ -3895,56 +3727,19 @@
     },
     "practical": {
      "errors": 0,
-     "fail": 39,
+     "fail": 18,
      "infos": 18,
      "not_applicable": 2,
      "review": 0,
-     "warnings": 21
+     "warnings": 0
     }
    },
    "by_code": {
-    "dfm.pad_to_pour": 16,
     "dfm.tombstone": 15,
-    "pi.stitching": 2,
     "si.pair": 2,
-    "si.skew": 1,
-    "silk.polarity": 3
+    "si.skew": 1
    },
-   "worst": [
-    {
-     "code": "pi.stitching",
-     "key": "pi.stitching|tie|z201|z202",
-     "margin": -50.2988,
-     "message": "GND's planes (top, bottom) are tied to the power entry J1 weakly: at (-2.4, 7.5) on bottom they rise 50.8 mV when every mm\u00b2 of its copper draws 10 mA, past 0.5 mV",
-     "units": "mV"
-    },
-    {
-     "code": "pi.stitching",
-     "key": "pi.stitching|z201|z202",
-     "margin": -15.1262,
-     "message": "where GND's planes overlap (top, bottom), the largest circle with no via joining them is 21 mm across at (25.2, -10.8); \u03bbg/10 at 2483.5 MHz is 5.8 mm",
-     "units": "mm"
-    },
-    {
-     "code": "dfm.pad_to_pour",
-     "key": "dfm.pad_to_pour|p15.2|solid",
-     "margin": -1.0,
-     "message": "through-hole pad J4.2 joins planes on top, bottom solid: they sink the soldering heat, so the joint is hard to make",
-     "units": "planes"
-    },
-    {
-     "code": "silk.polarity",
-     "key": "silk.polarity|f17",
-     "margin": -0.2,
-     "message": "Q1's polarity mark at its pin 1 (Q1.1) is weak: 0.3 mm across, below 0.5 mm",
-     "units": "mm"
-    },
-    {
-     "code": "silk.polarity",
-     "key": "silk.polarity|f29",
-     "message": "U1 has no silk mark within 1 mm of its pin 1 (U1.1) that tells its ends apart"
-    }
-   ]
+   "worst": []
   }
  },
  "erc": {
@@ -5540,7 +5335,7 @@
   ]
  },
  "check": {
-  "done": false,
+  "done": true,
   "engine": "solidcraft-engine 0.25.0, checks 1, quality checks 1",
   "gates": [
    {
@@ -5565,32 +5360,11 @@
     "status": "pass"
    },
    {
-    "blocking": [
-     {
-      "at": [
-       21.15,
-       7.35
-      ],
-      "code": "courtyard_overlap",
-      "fix": {
-       "command": "ecad.board.move",
-       "says": "move C2 or SW1 0.1 mm apart"
-      },
-      "key": "courtyard_overlap|f26|f3",
-      "margin": -0.1,
-      "message": "the courtyards of C2 and SW1 overlap",
-      "section": "placement#spacing",
-      "units": "mm"
-     }
-    ],
-    "by_code": {
-     "courtyard_overlap": 1
-    },
     "counts": {
-     "open": 1
+     "open": 0
     },
     "gate": "critical",
-    "status": "fail"
+    "status": "pass"
    },
    {
     "counts": {
@@ -5600,141 +5374,18 @@
     "status": "pass"
    },
    {
-    "blocking": [
-     {
-      "at": [
-       -2.36,
-       7.53
-      ],
-      "code": "pi.stitching",
-      "fix": {
-       "command": "ecad.board.stitch",
-       "params": {
-        "net": "GND",
-        "pattern": "needed"
-       },
-       "says": "add stitching vias where the planes are weakest, solving again after each"
-      },
-      "key": "pi.stitching|tie|z201|z202",
-      "margin": -50.299,
-      "message": "GND's planes (top, bottom) are tied to the power entry J1 weakly: at (-2.4, 7.5) on bottom they rise 50.8 mV when every mm\u00b2 of its copper draws 10 mA,\u2026",
-      "section": "power-ground#stitching",
-      "units": "mV"
-     },
-     {
-      "at": [
-       -9.95,
-       -11.28
-      ],
-      "code": "silk.polarity",
-      "fix": {
-       "command": "ecad.footprint.set_graphics",
-       "says": "make SOT-23's mark at pin 1 at least 0.5 mm, outside the body, clear of pads"
-      },
-      "key": "silk.polarity|f17",
-      "margin": -0.2,
-      "message": "Q1's polarity mark at its pin 1 (Q1.1) is weak: 0.3 mm across, below 0.5 mm",
-      "section": "silkscreen-assembly#polarity",
-      "units": "mm"
-     },
-     {
-      "at": [
-       -10.94,
-       -14.5
-      ],
-      "code": "dfm.pad_to_pour",
-      "fix": {
-       "command": "ecad.board.pour.connect",
-       "params": {
-        "connect": "thermal",
-        "footprint": "J4",
-        "pads": [
-         "2"
-        ]
-       },
-       "says": "relieve pad J4.2 with thermal spokes"
-      },
-      "key": "dfm.pad_to_pour|p15.2|solid",
-      "margin": -1.0,
-      "message": "through-hole pad J4.2 joins planes on top, bottom solid: they sink the soldering heat, so the joint is hard to make",
-      "section": "routing-dfm#pad-to-pour",
-      "units": "planes"
-     },
-     {
-      "at": [
-       25.2,
-       -10.8
-      ],
-      "code": "pi.stitching",
-      "fix": {
-       "command": "ecad.board.stitch",
-       "params": {
-        "net": "GND",
-        "pattern": "grid"
-       },
-       "says": "add a grid of stitching vias: by default its pitch keeps every via-free circle within \u03bbg/10"
-      },
-      "key": "pi.stitching|z201|z202",
-      "margin": -15.126,
-      "message": "where GND's planes overlap (top, bottom), the largest circle with no via joining them is 21 mm across at (25.2, -10.8); \u03bbg/10 at 2483.5 MHz is 5.8 mm",
-      "section": "power-ground#stitching",
-      "units": "mm"
-     },
-     {
-      "at": [
-       -21.63,
-       -7.3
-      ],
-      "code": "silk.polarity",
-      "fix": {
-       "command": "ecad.footprint.set_graphics",
-       "says": "add a mark of 0.5 mm or more to E73-2G4M08S1C's silk within 1 mm of pin 1, outside the body, nowhere\u2026"
-      },
-      "key": "silk.polarity|f29",
-      "margin": -1.0,
-      "message": "U1 has no silk mark within 1 mm of its pin 1 (U1.1) that tells its ends apart",
-      "section": "silkscreen-assembly#polarity",
-      "units": "findings"
-     },
-     {
-      "at": [
-       16.4,
-       11.4
-      ],
-      "code": "dfm.pad_to_pour",
-      "fix": {
-       "command": "ecad.board.pour.connect",
-       "params": {
-        "connect": "thermal",
-        "footprint": "C1",
-        "pads": [
-         "2"
-        ]
-       },
-       "says": "relieve pad C1.2 so both ends heat alike"
-      },
-      "key": "dfm.pad_to_pour|chip|f1",
-      "margin": -1.0,
-      "message": "0603 chip C1 has pad C1.2 joined solid to the GND pour and pad C1.1 not: unequal heat at the two ends",
-      "section": "routing-dfm#pad-to-pour",
-      "units": "findings"
-     }
-    ],
     "by_code": {
-     "dfm.pad_to_pour": 16,
      "dfm.tombstone": 15,
-     "pi.stitching": 2,
      "si.pair": 2,
      "si.skew": 1,
-     "silk.polarity": 3,
-     "via_near_pad": 7
+     "via_near_pad": 8
     },
     "counts": {
-     "approved": 36,
-     "open": 46
+     "approved": 56,
+     "open": 26
     },
     "gate": "practical",
-    "status": "warn"
+    "status": "waived"
    },
    {
     "counts": {
@@ -5745,34 +5396,7 @@
     "status": "pass"
    }
   ],
-  "next": [
-   {
-    "command": "ecad.drc.inspect",
-    "do": "fix the 1 critical findings (the codes in params): ecad.drc.inspect gives each one's fix",
-    "gate": "critical",
-    "params": {
-     "codes": [
-      "courtyard_overlap"
-     ],
-     "limit": 10
-    },
-    "read": "placement#spacing"
-   },
-   {
-    "command": "ecad.quality.inspect",
-    "do": "fix the 46 practical findings (the codes in params): ecad.quality.inspect gives each one's fix",
-    "gate": "practical",
-    "params": {
-     "codes": [
-      "dfm.pad_to_pour",
-      "pi.stitching",
-      "silk.polarity"
-     ],
-     "limit": 10
-    },
-    "read": "power-ground#stitching"
-   }
-  ],
+  "next": [],
   "not_verified": [
    "esd.ground (1 place not checked): needs intent: tvs or esd_array parts with the connector pins they\u2026",
    "esd.path (1 place not checked): needs intent: tvs or esd_array parts with the connector pins they\u2026",
@@ -5796,18 +5420,18 @@
    "at_limit": 0,
    "by_class": {
     "cosmetic": 0,
-    "critical": 1,
-    "practical": 46
+    "critical": 0,
+    "practical": 26
    },
-   "drc_errors": 1,
+   "drc_errors": 0,
    "drc_warnings": 0,
    "intent_coverage": "22/22",
-   "length_mm": 509.7263,
+   "length_mm": 510.2562,
    "on_board": "32/32",
    "quality_critical": 0,
    "quality_not_checked": 9,
    "routed": "93/93",
-   "vias": 55
+   "vias": 99
   },
   "stage": "release",
   "waivers": [
@@ -5827,14 +5451,14 @@
     "note": "The nRF52840's VBUS pin only detects USB (microamps): its branch of VBUS is a 0.15 mm signal track b\u2026"
    }
   ],
-  "waivers_more": 33
+  "waivers_more": 53
  },
  "jlc": {
   "bom_rows": 20,
   "cpl_rows": 30,
   "files": [
    {
-    "bytes": 223095,
+    "bytes": 223226,
     "function": "zip",
     "path": "/home/user/solidcraft/examples/lora-mini/out/lora-mini-jlcpcb.zip"
    },
@@ -5857,8 +5481,8 @@
    "opens": [],
    "pads": 163,
    "plated": [
-    65,
-    65
+    109,
+    109
    ],
    "problems": [],
    "shorts": [],
@@ -5875,8 +5499,8 @@
   "opens": [],
   "pads": 163,
   "plated": [
-   65,
-   65
+   109,
+   109
   ],
   "problems": [],
   "shorts": [],
@@ -5888,7 +5512,7 @@
  "pdf": {
   "files": [
    {
-    "bytes": 377700,
+    "bytes": 394453,
     "pages": [
      1,
      2,
