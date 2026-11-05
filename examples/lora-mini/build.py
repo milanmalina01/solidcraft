@@ -107,6 +107,12 @@ def results_of(reply):
     return reply
 
 
+# Practical quality findings this prototype keeps, with why.
+APPROVE_QUALITY = {
+    "pi.stitching": "Both sides poured with ground and stitched (a grid and where the ground map is weakest); its largest currents are the charger's 300 mA and the LoRa module's 120 mA transmit peak, far below the check's load of 10 mA on every mm2 of copper.",
+    "dfm.pad_to_pour": "Solid joins kept for the ground's sake: the board is reflowed by the assembler, and J4 (hand-fitted, not assembled) takes a hotter iron.",
+}
+
 # Practical design-rule findings this prototype keeps, with why; the board's other findings are fixed.
 APPROVE = {
     "fab_class": "JLCPCB's standard via, 0.3 mm hole in a 0.6 mm pad, at the profile's least drill and ring: the via their standard price is made for.",
@@ -262,7 +268,7 @@ def main():
     script += list(tracks)
     hw, hh = BOARD_W / 2, BOARD_H / 2
     for layer in ("top", "bottom"):
-        script.append(("ecad.board.pour", {"layer": layer, "net": "GND", "rect": [BOARD_W - 0.2, BOARD_H - 0.2], "connect": "thermal"}))
+        script.append(("ecad.board.pour", {"layer": layer, "net": "GND", "rect": [BOARD_W - 0.2, BOARD_H - 0.2], "connect": "solid"}))
     script += [
         ("ecad.board.stitch", {"net": "GND", "pattern": "grid"}),
         ("ecad.board.stitch", {"net": "GND", "pattern": "needed"}),
@@ -273,8 +279,8 @@ def main():
     # A first rule check; the clearance errors it can fix by narrowing a track (the router's
     # corners inside a pad) are fixed with the check's own suggestion, then everything is checked.
     mid = os.path.join(OUT, "phase2.sc")
-    first = results_of(run(script + [("ecad.drc.inspect", {"limit": 2000})], "phase2a", start=phase1_sc, save=mid))[-1]
-    first = first.get("result", first) if isinstance(first, dict) else first
+    both = results_of(run(script + [("ecad.drc.inspect", {"limit": 2000}), ("ecad.quality.inspect", {"limit": 2000})], "phase2a", start=phase1_sc, save=mid))
+    first, quality = [x.get("result", x) if isinstance(x, dict) else x for x in both[-2:]]
     fixes = []
     for f in first.get("findings", []):
         if f.get("severity") == "error" and f.get("code") == "clearance":
@@ -291,6 +297,10 @@ def main():
                 and (code != "via_near_pad" or "tented" in f.get("message", ""))]
         if keys:
             approvals.append(("ecad.drc.approve", {"keys": keys, "note": note}))
+    for code, note in APPROVE_QUALITY.items():
+        keys = [f["key"] for f in quality.get("findings", []) if f.get("code") == code and f.get("severity") == "warning"]
+        if keys:
+            approvals.append(("ecad.quality.approve", {"keys": keys, "note": note}))
     script = fixes + approvals + [
         ("ecad.drc.inspect", {}),
         ("ecad.quality.inspect", {}),

@@ -149,6 +149,8 @@ def _line(a, b):
 # Silkscreen polarity and pin-1 marks: a short line beside pin 1 (or the cathode), outside the
 # pads by the silk-to-pad gap.
 SILK = {
+    # The E22's pin 1 (bottom right in the top view): a bar just outside the module's edge.
+    "E22-900M22S": [_line([7.95, -9.4], [7.95, -8.6])],
     # The E73's pin 1: a bar just outside the module's edge beside it (the body hides the rest).
     "E73-2G4M08S1C": [_line([7.4, -5.4], [7.4, -4.6])],
     "SWD-PADS-4": [_line([-4.4, -1.2], [-3.2, -1.2])],
