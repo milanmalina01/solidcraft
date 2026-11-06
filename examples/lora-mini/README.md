@@ -4,6 +4,11 @@ A small LoRa mesh node, designed headlessly with SolidCraft's commands and laid 
 2-layer board with full assembly: an nRF52840 module for Bluetooth and USB, an SX1262 module for
 EU868 LoRa, USB-C charging of a single-cell LiPo, and a header for a GPS module.
 
+**Don't order this board: its USB-C footprint is a mirror image of the part.** `parts.py` faces the
+opening the other way but keeps the row in the drawing's left-to-right order, so on a real connector
+D+ and D- swap and CC1 and CC2 land on SBU1 and SBU2. Power and ground still land correctly, and every
+board check passes. USB data would fail and a C-to-C charger would probably not supply power.
+
 - `build.py` builds everything: the library, the schematic in six sections (Power, USB, MCU, LoRa,
   GPS, UI), the board, its routes, pours, stitching, names, marking, the checks and the outputs.
   `parts.py` has the footprints (with where each comes from), `circuit.py` the components, the
