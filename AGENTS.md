@@ -47,4 +47,5 @@ Work: ROADMAP.md, "Where help is wanted most" in CONTRIBUTING.md, issues labelle
 | Assemblies, joints, motion | `skills/solidcraft-mechanisms/SKILL.md` |
 | Electronic components over MCP | `skills/solidcraft-electronics/SKILL.md` |
 | A part number or datasheet to a footprint and symbol, or checking one | `skills/solidcraft-datasheet/SKILL.md` |
+| What a board must do, before designing it | `skills/solidcraft-requirements/SKILL.md` |
 | PCB layout, checks and fixes over MCP | `skills/solidcraft-pcb/SKILL.md` |
