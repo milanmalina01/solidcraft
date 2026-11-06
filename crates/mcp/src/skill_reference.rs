@@ -61,6 +61,13 @@ const SKILLS: &[Skill] = &[
         ],
     },
     Skill { name: "solidcraft-requirements", files: &[("SKILL.md", include_str!("../../../skills/solidcraft-requirements/SKILL.md"))] },
+    Skill {
+        name: "solidcraft-schematic",
+        files: &[
+            ("SKILL.md", include_str!("../../../skills/solidcraft-schematic/SKILL.md")),
+            ("reference.md", include_str!("../../../skills/solidcraft-schematic/reference.md")),
+        ],
+    },
 ];
 
 pub(crate) fn read(args: &Map<String, Value>) -> Result<Value, String> {
