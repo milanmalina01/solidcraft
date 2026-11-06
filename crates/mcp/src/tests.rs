@@ -1730,6 +1730,7 @@ fn skills_name_only_real_tools_and_commands() {
         include_str!("../../../skills/solidcraft-pcb/reference/rf-emc.md"),
         include_str!("../../../skills/solidcraft-pcb/reference/silkscreen-assembly.md"),
         include_str!("../../../skills/solidcraft-pcb/reference/manufacturing.md"),
+        include_str!("../../../skills/solidcraft-pcb/reference/process.md"),
         include_str!("../../../skills/solidcraft-pcb/reference/review.md"),
     ];
     let mut s = server();

@@ -57,6 +57,7 @@ const SKILLS: &[Skill] = &[
             ("reference/rf-emc.md", include_str!("../../../skills/solidcraft-pcb/reference/rf-emc.md")),
             ("reference/silkscreen-assembly.md", include_str!("../../../skills/solidcraft-pcb/reference/silkscreen-assembly.md")),
             ("reference/manufacturing.md", include_str!("../../../skills/solidcraft-pcb/reference/manufacturing.md")),
+            ("reference/process.md", include_str!("../../../skills/solidcraft-pcb/reference/process.md")),
             ("reference/review.md", include_str!("../../../skills/solidcraft-pcb/reference/review.md")),
         ],
     },

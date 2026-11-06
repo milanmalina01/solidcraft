@@ -30,6 +30,7 @@ References, under `reference/`:
 - `silkscreen-assembly.md`: stage 7
 - `manufacturing.md`: profiles and release
 - `review.md`: the reviewer's rubric
+- `process.md`: blind starts, scoring, reviews, audit
 
 ## Reading a finding
 `ecad.drc.inspect` and `ecad.quality.inspect` give each finding:
@@ -54,5 +55,5 @@ For regulators and radios, copy the vendor reference layout; deviate only with a
 - Change copper only with `ecad.board.*` commands, a few items per batch, and read each reply's `findings_delta` before going on.
 - Lower findings by fixing, never by unrouting or deleting copper: the gate checks completion first and flags drops.
 - Approve a finding only with a note that says why it is fine; critical approvals wait for the user.
-- A 90° corner on an ordinary track is a style point, not a defect. An acute corner or a narrow pocket is a manufacturing problem.
-- Splitting a ground plane is almost never the fix. Partition the placement on one continuous ground.
+- A 90° track corner is a style point. An acute corner or narrow pocket is a manufacturing problem.
+- Splitting a ground plane is almost never the fix; partition the placement on one ground.
