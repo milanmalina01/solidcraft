@@ -161,6 +161,7 @@ fn calls(keys: &[String; 3]) -> Vec<(&'static str, Value)> {
         ("ecad.footprint.copy", json!({"footprint": "R0603", "name": "R0603b"})),
         ("ecad.footprint.delete", json!({"footprint": "HDR2", "force": true})),
         ("ecad.footprint.inspect", json!({"footprint": "R0603"})),
+        ("ecad.footprint.verify", json!({"footprint": "R0603", "pads": [{"number": 1, "at": [-0.8, 0], "size": [0.9, 1.0]}], "body": [1.6, 0.8]})),
         ("ecad.library.inspect", json!({})),
         (
             "ecad.library.import",

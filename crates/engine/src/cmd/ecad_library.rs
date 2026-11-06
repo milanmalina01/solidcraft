@@ -4,7 +4,12 @@
 //! them; deleting one a component uses is refused unless `force` clears the references.
 
 use serde_json::Value;
-use solidcraft_doc::ecad::{FootprintItem, MAX_DESCRIPTION, MAX_ITEMS, Severity as DocSeverity, SymbolItem, check_item_name, check_text};
+use solidcraft_doc::ecad::footprint::MAX_PADS;
+use solidcraft_doc::ecad::graphics::shapes_bbox;
+use solidcraft_doc::ecad::{
+    BoardLayer, FootprintItem, GraphicType, MAX_COORD, MAX_DESCRIPTION, MAX_ITEMS, PadKind, Severity as DocSeverity, Side, SymbolItem,
+    check_item_name, check_number, check_point, check_text,
+};
 
 use super::CommandSpec;
 use super::ecad::{
@@ -13,12 +18,15 @@ use super::ecad::{
 };
 use super::ecad_component::{pins_out, problems_out};
 use crate::params::bad;
-use crate::schema::ecad_component::{ComponentId, CourtyardOut, GapOut, LayerGraphicOut, PackageModel, PadMeasure, PadOut, PinMeasure};
+use crate::schema::ecad_component::{
+    ComponentId, CourtyardOut, GapOut, LayerGraphicOut, PackageModel, PadMeasure, PadOut, PinMeasure, ProblemOut, Severity,
+};
 use crate::schema::ecad_library::{
     FootprintCopyParams, FootprintCreateParams, FootprintDeleteParams, FootprintEditParams, FootprintInspectParams, FootprintInspectResult,
-    FootprintRecord, FootprintResult, FootprintSummary, ItemDeleteResult, ItemEditResult, LibraryInspectParams, LibraryInspectResult, PackageSummary,
-    SymbolCopyParams, SymbolCreateParams, SymbolDeleteParams, SymbolDeleteResult, SymbolEditParams, SymbolInspectParams, SymbolInspectResult,
-    SymbolRecord, SymbolResult, SymbolSummary, VariantUse,
+    FootprintRecord, FootprintResult, FootprintSummary, FootprintVerifyParams, FootprintVerifyResult, ItemDeleteResult, ItemEditResult,
+    LibraryInspectParams, LibraryInspectResult, PackageSummary, SymbolCopyParams, SymbolCreateParams, SymbolDeleteParams, SymbolDeleteResult,
+    SymbolEditParams, SymbolInspectParams, SymbolInspectResult, SymbolRecord, SymbolResult, SymbolSummary, VariantUse, VerifyBody, VerifyField,
+    VerifyMismatch, VerifyOrientation,
 };
 use crate::schema::{TypedContract, output_schema_for};
 use crate::{Result, Session};
@@ -94,6 +102,14 @@ pub static COMMANDS: &[CommandSpec] = &[
         .params(
             "footprint: id|name → {footprint: {id, name, description, pads, graphics, measured: [{number, area, bbox, annular_ring}], copper_bbox, min_pad_gap, courtyard, problems, ready, used_by: [{component, variant}]}}. Read-only",
         ),
+    CommandSpec::new("ecad.footprint.verify", "Verify Footprint", crate::checked!("ecad.footprint.verify", footprint_verify))
+        .icon("inspect")
+        .noundo()
+        .contract(&FOOTPRINT_VERIFY_CONTRACT)
+        .output(output_schema_for::<FootprintVerifyResult>)
+        .params(
+            "footprint: id|name; pads: [{number, at: [x, y], size: [w, h]}] (a table read from a datasheet, mm, top view); tolerance? (mm, 0.05, at most 1); body?: [w, h] (mm, against the box of the fab outline) → {ok, footprint, tolerance, footprint_pads, table_pads, offset, missing: [in the table only], extra: [in the footprint only], mismatches: [{number, field: at|size, table, footprint, difference}], worst, orientation: mirror_x|mirror_y|rotate_90|rotate_180|rotate_270|null, orientation_also?: [others that fit as well], body?: {table, footprint, difference}, problems}: pads compare by number after the table is moved so the mean centre of the pads both have lands on the footprint's (offset), with no rotation; a turned pad's size is its turned extent; orientation names what, done to the table, would make at least two pads that differ match; drills, sides and pad shapes aren't compared, and problems' not_compared names the pads with a drill or on the bottom. Read-only",
+        ),
     CommandSpec::new("ecad.library.inspect", "Inspect Library", crate::checked!("ecad.library.inspect", library_inspect))
         .icon("library")
         .noundo()
@@ -115,6 +131,7 @@ const FOOTPRINT_EDIT_CONTRACT: TypedContract<FootprintEditParams> = TypedContrac
 const FOOTPRINT_COPY_CONTRACT: TypedContract<FootprintCopyParams> = TypedContract::new();
 const FOOTPRINT_DELETE_CONTRACT: TypedContract<FootprintDeleteParams> = TypedContract::new();
 const FOOTPRINT_INSPECT_CONTRACT: TypedContract<FootprintInspectParams> = TypedContract::new();
+const FOOTPRINT_VERIFY_CONTRACT: TypedContract<FootprintVerifyParams> = TypedContract::new();
 const LIBRARY_INSPECT_CONTRACT: TypedContract<LibraryInspectParams> = TypedContract::new();
 
 /// `name` is free for a `kind` of library item among `items` (each id and name), or for `except`
@@ -416,6 +433,213 @@ fn footprint_inspect(s: &mut Session, p: &Value) -> Result<Value> {
         used_by: s.doc.ecad.footprint_users(fp.id).map(|(c, v)| VariantUse { component: id_of(c), variant: v.name.clone() }).collect(),
     };
     reply(FootprintInspectResult { footprint: record, param_warnings: Vec::new() })
+}
+
+/// The largest tolerance `ecad.footprint.verify` takes, in millimetres: past this nothing is checked.
+const MAX_VERIFY_TOLERANCE: f64 = 1.0;
+/// What arithmetic leaves on two values that are the same, in millimetres.
+const VERIFY_SLACK: f64 = 1e-9;
+
+/// A pad both sides have: the table's centre and size, the footprint's centre and turned extent.
+struct VerifyPair {
+    number: String,
+    table: ([f64; 2], [f64; 2]),
+    footprint: ([f64; 2], [f64; 2]),
+}
+
+/// One pair compared: the table's centre after the mirror or turn and the offset, its size after
+/// them, and the two differences.
+struct VerifyDiff {
+    at: [f64; 2],
+    size: [f64; 2],
+    at_difference: f64,
+    size_difference: f64,
+}
+
+/// `at` and `size` after a mirror or a quarter turn.
+fn verify_turn(turn: Option<VerifyOrientation>, [x, y]: [f64; 2], [w, h]: [f64; 2]) -> ([f64; 2], [f64; 2]) {
+    match turn {
+        None => ([x, y], [w, h]),
+        Some(VerifyOrientation::MirrorX) => ([-x, y], [w, h]),
+        Some(VerifyOrientation::MirrorY) => ([x, -y], [w, h]),
+        Some(VerifyOrientation::Rotate90) => ([-y, x], [h, w]),
+        Some(VerifyOrientation::Rotate180) => ([-x, -y], [w, h]),
+        Some(VerifyOrientation::Rotate270) => ([y, -x], [h, w]),
+    }
+}
+
+/// The offset that lands the mean of the table's centres (after `turn`) on the footprint's, and
+/// each pair compared with it. `pairs` is not empty, or the offset is 0.
+fn verify_compare(pairs: &[VerifyPair], turn: Option<VerifyOrientation>) -> ([f64; 2], Vec<VerifyDiff>) {
+    let turned: Vec<([f64; 2], [f64; 2])> = pairs.iter().map(|q| verify_turn(turn, q.table.0, q.table.1)).collect();
+    let n = pairs.len().max(1) as f64;
+    let mean = |pick: &dyn Fn(usize) -> f64| (0..pairs.len()).map(pick).sum::<f64>() / n;
+    let centre = |i: usize| turned.get(i).map_or([0.0; 2], |t| t.0);
+    let target = |i: usize| pairs.get(i).map_or([0.0; 2], |q| q.footprint.0);
+    let offset = [mean(&|i| target(i)[0] - centre(i)[0]), mean(&|i| target(i)[1] - centre(i)[1])];
+    let diffs = pairs
+        .iter()
+        .zip(&turned)
+        .map(|(q, (at, size))| {
+            let moved = [at[0] + offset[0], at[1] + offset[1]];
+            let (fp_at, fp_size) = q.footprint;
+            VerifyDiff {
+                at: moved,
+                size: *size,
+                at_difference: (moved[0] - fp_at[0]).hypot(moved[1] - fp_at[1]),
+                size_difference: (size[0] - fp_size[0]).abs().max((size[1] - fp_size[1]).abs()),
+            }
+        })
+        .collect();
+    (offset, diffs)
+}
+
+/// A length for the reply: to the nanometre, so a match reads 0 and not arithmetic's leftovers.
+fn verify_round(v: f64) -> f64 {
+    (v * 1e6).round() / 1e6 + 0.0
+}
+
+fn verify_round2([x, y]: [f64; 2]) -> [f64; 2] {
+    [verify_round(x), verify_round(y)]
+}
+
+fn footprint_verify(s: &mut Session, p: &Value) -> Result<Value> {
+    const CMD: &str = "ecad.footprint.verify";
+    const TURNS: [VerifyOrientation; 5] = [
+        VerifyOrientation::MirrorX,
+        VerifyOrientation::MirrorY,
+        VerifyOrientation::Rotate90,
+        VerifyOrientation::Rotate180,
+        VerifyOrientation::Rotate270,
+    ];
+    let p: FootprintVerifyParams = parse(CMD, p)?;
+    let fp = load_footprint(s, &p.footprint, CMD)?;
+    let tolerance = p.tolerance.unwrap_or(0.05);
+    if !(tolerance.is_finite() && (0.0..=MAX_VERIFY_TOLERANCE).contains(&tolerance)) {
+        return Err(bad(CMD, format!("`tolerance` must be 0 to {MAX_VERIFY_TOLERANCE} mm")));
+    }
+    if p.pads.is_empty() || p.pads.len() > MAX_PADS {
+        return Err(bad(CMD, format!("give 1 to {MAX_PADS} pads in `pads`")));
+    }
+    let side_ok = |v: f64| v.is_finite() && v > 0.0 && v <= MAX_COORD;
+    if let Some(body) = p.body
+        && !body.into_iter().all(side_ok)
+    {
+        return Err(bad(CMD, format!("each `body` side must be more than 0 and at most {MAX_COORD} mm")));
+    }
+    let mut numbers = std::collections::BTreeSet::new();
+    let (mut pairs, mut missing) = (Vec::new(), Vec::new());
+    for (i, q) in p.pads.iter().enumerate() {
+        let number = q.number.text();
+        check_number("pad", &number).map_err(|e| bad(CMD, format!("pads[{i}]: {e}")))?;
+        check_point(&format!("pads[{i}]: `at`"), q.at).map_err(|e| bad(CMD, e))?;
+        if !q.size.into_iter().all(side_ok) {
+            return Err(bad(CMD, format!("pads[{i}]: each `size` side must be more than 0 and at most {MAX_COORD} mm")));
+        }
+        if !numbers.insert(number.clone()) {
+            return Err(bad(CMD, format!("pads[{i}]: the table already has a pad numbered `{number}`")));
+        }
+        match fp.pad(&number) {
+            Some(pad) => {
+                let [[x0, y0], [x1, y1]] = pad.bbox();
+                pairs.push(VerifyPair { number, table: (q.at, q.size), footprint: (pad.at, [x1 - x0, y1 - y0]) });
+            }
+            None => missing.push(number),
+        }
+    }
+    let extra: Vec<String> = fp.pads.iter().filter(|q| !numbers.contains(&q.number)).map(|q| q.number.clone()).collect();
+    let limit = tolerance + VERIFY_SLACK;
+    let fits = |diffs: &[VerifyDiff]| diffs.iter().all(|d| d.at_difference <= limit && d.size_difference <= limit);
+
+    let (offset, diffs) = verify_compare(&pairs, None);
+    let worst = diffs.iter().map(|d| d.at_difference.max(d.size_difference)).fold(None, |w: Option<f64>, v| Some(w.map_or(v, |w| w.max(v))));
+    let mut mismatches = Vec::new();
+    for (q, d) in pairs.iter().zip(&diffs) {
+        if d.at_difference > limit {
+            mismatches.push(VerifyMismatch {
+                number: q.number.clone(),
+                field: VerifyField::At,
+                table: verify_round2(d.at),
+                footprint: verify_round2(q.footprint.0),
+                difference: verify_round(d.at_difference),
+            });
+        }
+        if d.size_difference > limit {
+            mismatches.push(VerifyMismatch {
+                number: q.number.clone(),
+                field: VerifyField::Size,
+                table: verify_round2(d.size),
+                footprint: verify_round2(q.footprint.1),
+                difference: verify_round(d.size_difference),
+            });
+        }
+    }
+    // One pad in common says nothing about which way round the table is.
+    let turns: Vec<VerifyOrientation> =
+        if pairs.len() < 2 || fits(&diffs) { Vec::new() } else { TURNS.into_iter().filter(|t| fits(&verify_compare(&pairs, Some(*t)).1)).collect() };
+
+    let mut problems = problems_out(fp.problems());
+    let copper = fp.pads.iter().filter(|q| q.kind != PadKind::Hole).count();
+    // A placeholder such as {reference} marks nothing; ecad.quality.inspect's silk.polarity judges a mark once the part is placed.
+    let silk = fp.layer(BoardLayer::Silkscreen, Side::Top).any(|g| !(g.kind == GraphicType::Text && g.text.starts_with('{')));
+    if copper > 2 && !silk {
+        problems.push(ProblemOut {
+            code: "no_pin_1_mark".into(),
+            severity: Severity::Warning,
+            items: Vec::new(),
+            message: "the footprint has no silkscreen drawing, so nothing marks pin 1: draw a mark beside it".into(),
+        });
+    }
+    let unchecked: Vec<String> = fp.pads.iter().filter(|q| q.drill.is_some() || q.side == Side::Bottom).map(|q| q.number.clone()).collect();
+    if !unchecked.is_empty() {
+        problems.push(ProblemOut {
+            code: "not_compared".into(),
+            severity: Severity::Warning,
+            message:
+                "these pads have a drill or are on the bottom, which a table of centres and sizes doesn't say: check them with ecad.footprint.inspect"
+                    .into(),
+            items: unchecked,
+        });
+    }
+    let body = p.body.map(|table| {
+        let outline = shapes_bbox(fp.layer(BoardLayer::Fab, Side::Top).filter(|g| g.kind != GraphicType::Text));
+        let size = outline.map(|[[x0, y0], [x1, y1]]| [x1 - x0, y1 - y0]);
+        let difference = size.map(|[w, h]| (table[0] - w).abs().max((table[1] - h).abs()));
+        VerifyBody { table, footprint: size.map(verify_round2), difference: difference.map(verify_round) }
+    });
+    if body.as_ref().is_some_and(|b| b.footprint.is_none()) {
+        problems.push(ProblemOut {
+            code: "body_not_checked".into(),
+            severity: Severity::Error,
+            items: Vec::new(),
+            message: "the footprint has no fabrication outline to compare `body` with: draw the body on the fab layer, or leave out `body`".into(),
+        });
+    }
+    problems.sort_by_key(|x| !matches!(x.severity, Severity::Error));
+    let body_fits = body.as_ref().is_none_or(|b| b.difference.is_none_or(|d| d <= limit));
+    let ok = missing.is_empty()
+        && extra.is_empty()
+        && mismatches.is_empty()
+        && body_fits
+        && !pairs.is_empty()
+        && !problems.iter().any(|x| matches!(x.severity, Severity::Error));
+    reply(FootprintVerifyResult {
+        ok,
+        footprint: item_id(fp.id, &fp.name),
+        tolerance,
+        footprint_pads: fp.pads.len(),
+        table_pads: p.pads.len(),
+        offset: (!pairs.is_empty()).then_some(verify_round2(offset)),
+        missing,
+        extra,
+        mismatches,
+        worst: worst.map(verify_round),
+        orientation: turns.first().copied(),
+        orientation_also: turns.get(1..).unwrap_or_default().to_vec(),
+        body,
+        problems,
+        param_warnings: Vec::new(),
+    })
 }
 
 fn library_inspect(s: &mut Session, _p: &Value) -> Result<Value> {

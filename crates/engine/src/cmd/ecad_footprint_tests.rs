@@ -536,3 +536,278 @@ fn a_tab_maps_one_pin_to_two_pads() {
     run(&mut s, "ecad.component.map_pins", json!({"component": "REG", "by_number": true}));
     assert_eq!(component(&mut s, "REG")["variants"][0]["pin_map"], json!(null));
 }
+
+/// SOT-23 as `ecad.footprint.generate` draws it (see the electronics skill's reference), as a
+/// table: 1 at [-0.95, -0.975], 2 at [0.95, -0.975], 3 at [0, 0.975], each 0.5 x 1.05 mm.
+const SOT23_TABLE: [(&str, [f64; 2]); 3] = [("1", [-0.95, -0.975]), ("2", [0.95, -0.975]), ("3", [0.0, 0.975])];
+const SOT23_PAD: [f64; 2] = [0.5, 1.05];
+
+fn sot23(s: &mut Session) {
+    run(s, "ecad.footprint.generate", json!({"footprint": "SOT-23", "package": "sot23"}));
+}
+
+/// The table with `f` done to each pad's centre and size.
+fn sot23_table(f: impl Fn([f64; 2], [f64; 2]) -> ([f64; 2], [f64; 2])) -> Value {
+    let pads: Vec<Value> = SOT23_TABLE
+        .iter()
+        .map(|(n, at)| {
+            let (at, size) = f(*at, SOT23_PAD);
+            json!({"number": n, "at": at, "size": size})
+        })
+        .collect();
+    json!(pads)
+}
+
+/// Each pad of a footprint as `ecad.footprint.inspect` gives it: number, centre, size.
+fn footprint_pads(s: &mut Session, footprint: &str) -> Vec<(String, [f64; 2], [f64; 2])> {
+    let r = run(s, "ecad.footprint.inspect", json!({"footprint": footprint}));
+    let xy = |v: &Value| [v[0].as_f64().unwrap(), v[1].as_f64().unwrap()];
+    r["footprint"]["pads"].as_array().unwrap().iter().map(|p| (p["number"].as_str().unwrap().to_string(), xy(&p["at"]), xy(&p["size"]))).collect()
+}
+
+fn verify(s: &mut Session, footprint: &str, pads: Value) -> Value {
+    run(s, "ecad.footprint.verify", json!({"footprint": footprint, "pads": pads}))
+}
+
+#[test]
+fn verify_passes_an_exact_table_and_changes_nothing() {
+    let mut s = Session::default();
+    sot23(&mut s);
+    let (before, undo) = (s.doc.clone(), s.undo.len());
+    let r = verify(&mut s, "SOT-23", sot23_table(|at, size| (at, size)));
+    assert!(Arc::ptr_eq(&before, &s.doc) && s.undo.len() == undo, "read-only");
+    assert_eq!(r["ok"], true, "{r}");
+    assert_eq!(r["footprint"]["name"], "SOT-23");
+    assert_eq!((r["footprint_pads"].clone(), r["table_pads"].clone(), r["tolerance"].clone()), (json!(3), json!(3), json!(0.05)));
+    assert_eq!((r["offset"].clone(), r["worst"].clone(), r["orientation"].clone()), (json!([0.0, 0.0]), json!(0.0), Value::Null));
+    assert_eq!(
+        (r["missing"].clone(), r["extra"].clone(), r["mismatches"].clone(), r["problems"].clone()),
+        (json!([]), json!([]), json!([]), json!([]))
+    );
+}
+
+#[test]
+fn verify_names_a_moved_pad_and_a_wrong_size() {
+    let mut s = Session::default();
+    sot23(&mut s);
+    // Pad 3 is 0.12 mm too high in the table. The mean moves 0.04 up, so the offset is -0.04, pad 3
+    // differs by 0.08 and pads 1 and 2 by 0.04, inside the tolerance.
+    let moved = |at: [f64; 2], size| (if at[0] == 0.0 { [at[0], at[1] + 0.12] } else { at }, size);
+    let r = verify(&mut s, "SOT-23", sot23_table(moved));
+    assert_eq!(r["ok"], false);
+    assert_eq!(r["offset"], json!([0.0, -0.04]));
+    assert_eq!(r["worst"], json!(0.08));
+    assert_eq!(r["mismatches"], json!([{"number": "3", "field": "at", "table": [0.0, 1.055], "footprint": [0.0, 0.975], "difference": 0.08}]));
+    assert_eq!(r["orientation"], Value::Null, "no mirror or turn explains a moved pad");
+    // A tighter tolerance names the other two; a looser one passes, and worst still says how far.
+    let tight = run(&mut s, "ecad.footprint.verify", json!({"footprint": "SOT-23", "pads": sot23_table(moved), "tolerance": 0.01}));
+    assert_eq!(tight["mismatches"].as_array().unwrap().len(), 3);
+    let loose = run(&mut s, "ecad.footprint.verify", json!({"footprint": "SOT-23", "pads": sot23_table(moved), "tolerance": 0.1}));
+    assert_eq!((loose["ok"].clone(), loose["worst"].clone()), (json!(true), json!(0.08)));
+
+    let r = verify(&mut s, "SOT-23", sot23_table(|at, [w, h]| (at, [w + 0.2, h])));
+    assert_eq!(r["ok"], false);
+    let m = &r["mismatches"][0];
+    assert_eq!((m["field"].clone(), m["table"].clone(), m["footprint"].clone()), (json!("size"), json!([0.7, 1.05]), json!([0.5, 1.05])));
+    assert_eq!((m["difference"].clone(), r["worst"].clone()), (json!(0.2), json!(0.2)));
+}
+
+#[test]
+fn verify_reports_missing_and_extra_pads_without_moving_the_rest() {
+    let mut s = Session::default();
+    sot23(&mut s);
+    // A pad in the table only: the rest still line up, whatever its position.
+    let mut pads = sot23_table(|at, size| (at, size));
+    pads.as_array_mut().unwrap().push(json!({"number": "EP", "at": [40, 40], "size": [1, 1]}));
+    let r = verify(&mut s, "SOT-23", pads);
+    assert_eq!((r["ok"].clone(), r["missing"].clone(), r["extra"].clone()), (json!(false), json!(["EP"]), json!([])));
+    assert_eq!((r["mismatches"].clone(), r["offset"].clone(), r["table_pads"].clone()), (json!([]), json!([0.0, 0.0]), json!(4)));
+    // A pad in the footprint only: likewise.
+    let mut pads = sot23_table(|at, size| (at, size));
+    pads.as_array_mut().unwrap().pop();
+    let r = verify(&mut s, "SOT-23", pads);
+    assert_eq!((r["ok"].clone(), r["missing"].clone(), r["extra"].clone()), (json!(false), json!([]), json!(["3"])));
+    assert_eq!((r["mismatches"].clone(), r["offset"].clone(), r["footprint_pads"].clone()), (json!([]), json!([0.0, 0.0]), json!(3)));
+    // Nothing in common: nothing to compare, and no number that looks like a pass.
+    let r = verify(&mut s, "SOT-23", json!([{"number": "X", "at": [0, 0], "size": [1, 1]}]));
+    assert_eq!((r["ok"].clone(), r["offset"].clone(), r["worst"].clone()), (json!(false), Value::Null, Value::Null));
+}
+
+#[test]
+fn verify_names_a_mirror_or_a_turn() {
+    let mut s = Session::default();
+    sot23(&mut s);
+    // Each table is the footprint with the opposite done to it, so `names` undoes it.
+    type Drawn = fn([f64; 2], [f64; 2]) -> ([f64; 2], [f64; 2]);
+    let tables: [(&str, Drawn); 5] = [
+        ("mirror_x", |[x, y], s| ([-x, y], s)),
+        ("mirror_y", |[x, y], s| ([x, -y], s)),
+        ("rotate_90", |[x, y], [w, h]| ([y, -x], [h, w])),
+        ("rotate_180", |[x, y], s| ([-x, -y], s)),
+        ("rotate_270", |[x, y], [w, h]| ([-y, x], [h, w])),
+    ];
+    for (names, drawn) in tables {
+        let r = verify(&mut s, "SOT-23", sot23_table(drawn));
+        assert_eq!((r["ok"].clone(), r["orientation"].clone()), (json!(false), json!(names)), "{r}");
+        assert!(!r["mismatches"].as_array().unwrap().is_empty(), "mismatches are as the table gives them: {r}");
+    }
+    // A mirror that also has a wrong pad size is not a mirror.
+    let r = verify(&mut s, "SOT-23", sot23_table(|[x, y], [w, h]| ([-x, y], [w + 0.2, h])));
+    assert_eq!(r["orientation"], Value::Null, "{r}");
+    // A mirror measured from elsewhere is still a mirror.
+    let r = verify(&mut s, "SOT-23", sot23_table(|[x, y], size| ([5.0 - x, y + 7.0], size)));
+    assert_eq!((r["orientation"].clone(), r.get("orientation_also")), (json!("mirror_x"), None), "{r}");
+    // One pad in common says nothing about which way round the table is, even with its sides swapped.
+    let r = verify(&mut s, "SOT-23", json!([{"number": 1, "at": [0, 0], "size": [1.05, 0.5]}]));
+    assert_eq!((r["ok"].clone(), r["orientation"].clone()), (json!(false), Value::Null), "{r}");
+    // A row reversed is a mirror or a half turn, and the reply doesn't pretend to know which.
+    run(&mut s, "ecad.footprint.create", json!({"name": "ROW"}));
+    run(
+        &mut s,
+        "ecad.pad.add",
+        json!({"footprint": "ROW", "pads": [{"number": 1, "at": [-3, 0], "size": [1, 2], "row": {"count": 4, "pitch": [2, 0]}}]}),
+    );
+    let row: Vec<Value> =
+        footprint_pads(&mut s, "ROW").into_iter().map(|(n, [x, y], size)| json!({"number": n, "at": [-x, y], "size": size})).collect();
+    let r = verify(&mut s, "ROW", json!(row));
+    assert_eq!((r["orientation"].clone(), r["orientation_also"].clone()), (json!("mirror_x"), json!(["rotate_180"])), "{r}");
+}
+
+#[test]
+fn verify_moves_a_table_measured_from_elsewhere() {
+    let mut s = Session::default();
+    sot23(&mut s);
+    let r = verify(&mut s, "SOT-23", sot23_table(|[x, y], size| ([x + 10.0, y - 3.0], size)));
+    assert_eq!((r["ok"].clone(), r["offset"].clone(), r["worst"].clone()), (json!(true), json!([-10.0, 3.0]), json!(0.0)), "{r}");
+}
+
+#[test]
+fn verify_compares_a_turned_pad_by_its_turned_extent() {
+    let mut s = Session::default();
+    run(&mut s, "ecad.footprint.create", json!({"name": "T"}));
+    run(
+        &mut s,
+        "ecad.pad.add",
+        json!({"footprint": "T", "pads": [
+            {"number": 1, "at": [-3, 0], "size": [1, 2], "rotation": 90},
+            {"number": 2, "at": [3, 0], "size": [1, 2], "rotation": 45},
+            {"number": 3, "at": [0, 3], "size": [1, 2], "shape": "oval", "rotation": 90}
+        ]}),
+    );
+    // Turned 90°: 2 x 1. Turned 45°: (1 + 2) sin 45° = 2.12132 each way. An oval's ends stay inside.
+    let table = |second: [f64; 2]| {
+        json!([
+            {"number": 1, "at": [-3, 0], "size": [2, 1]},
+            {"number": 2, "at": [3, 0], "size": second},
+            {"number": 3, "at": [0, 3], "size": [2, 1]}
+        ])
+    };
+    let r = verify(&mut s, "T", table([2.12132, 2.12132]));
+    assert_eq!(r["mismatches"], json!([]), "{r}");
+    assert!(r["worst"].as_f64().unwrap() < 1e-5, "{r}");
+    let r = verify(&mut s, "T", table([1.0, 2.0]));
+    assert_eq!(r["mismatches"][0]["number"], "2");
+    assert_eq!(r["mismatches"][0]["footprint"], json!([2.12132, 2.12132]), "{r}");
+    // The unturned size of a pad the footprint turns 90° is the wrong way round.
+    let r = verify(&mut s, "T", json!([{"number": 1, "at": [-3, 0], "size": [1, 2]}]));
+    assert_eq!((r["mismatches"][0]["field"].clone(), r["mismatches"][0]["difference"].clone()), (json!("size"), json!(1.0)));
+}
+
+#[test]
+fn verify_reports_what_inspect_knows_and_the_body() {
+    let mut s = Session::default();
+    run(&mut s, "ecad.footprint.create", json!({"name": "F"}));
+    let pads = json!([
+        {"number": 1, "at": [-2, 0], "size": [1, 1]},
+        {"number": 2, "at": [2, 0], "size": [1, 1]},
+        {"number": 3, "at": [0, 2], "size": [1, 1]}
+    ]);
+    run(&mut s, "ecad.pad.add", json!({"footprint": "F", "pads": pads}));
+    let codes = |r: &Value| r["problems"].as_array().unwrap().iter().map(|p| p["code"].as_str().unwrap().to_string()).collect::<Vec<_>>();
+    // Warnings are listed and leave `ok` alone: no courtyard, and three pads with no silkscreen.
+    let r = verify(&mut s, "F", pads.clone());
+    assert_eq!((r["ok"].clone(), codes(&r)), (json!(true), vec!["courtyard_missing".to_string(), "no_pin_1_mark".to_string()]), "{r}");
+    run(&mut s, "ecad.draw.circle", json!({"footprint": "F", "layer": "silkscreen", "center": [-3, 1], "radius": 0.2, "fill": true}));
+    assert_eq!(codes(&verify(&mut s, "F", pads.clone())), ["courtyard_missing"]);
+    // A courtyard that doesn't hold a pad is an error, even when every value matches.
+    run(&mut s, "ecad.draw.rect", json!({"footprint": "F", "layer": "courtyard", "from": [-1, -1], "to": [1, 1]}));
+    let r = verify(&mut s, "F", pads.clone());
+    assert_eq!((r["ok"].clone(), r["problems"][0]["code"].clone()), (json!(false), json!("pad_outside_courtyard")), "{r}");
+    run(&mut s, "ecad.footprint.courtyard", json!({"footprint": "F"}));
+    assert_eq!(verify(&mut s, "F", pads.clone())["ok"], true);
+    // A body with no outline to compare it with is not a pass; with one, it's compared.
+    let with_body = |s: &mut Session, body: [f64; 2]| run(s, "ecad.footprint.verify", json!({"footprint": "F", "pads": pads, "body": body}));
+    let r = with_body(&mut s, [3.0, 2.0]);
+    assert_eq!(
+        (r["ok"].clone(), r["body"]["footprint"].clone(), r["problems"][0]["code"].clone()),
+        (json!(false), Value::Null, json!("body_not_checked"))
+    );
+    run(&mut s, "ecad.draw.rect", json!({"footprint": "F", "layer": "fab", "from": [-1.5, -1], "to": [1.5, 1]}));
+    assert_eq!(with_body(&mut s, [3.0, 2.0])["ok"], true);
+    let r = with_body(&mut s, [3.2, 2.0]);
+    assert_eq!(
+        (r["ok"].clone(), r["body"]["footprint"].clone(), r["body"]["difference"].clone()),
+        (json!(false), json!([3.0, 2.0]), json!(0.2)),
+        "{r}"
+    );
+    // Overlapping pads are an error too.
+    run(&mut s, "ecad.pad.edit", json!({"footprint": "F", "pad": 3, "at": [2, 0.5]}));
+    let moved = json!([
+        {"number": 1, "at": [-2, 0], "size": [1, 1]},
+        {"number": 2, "at": [2, 0], "size": [1, 1]},
+        {"number": 3, "at": [2, 0.5], "size": [1, 1]}
+    ]);
+    let r = verify(&mut s, "F", moved);
+    assert_eq!((r["ok"].clone(), r["mismatches"].clone(), r["problems"][0]["code"].clone()), (json!(false), json!([]), json!("pads_overlap")), "{r}");
+}
+
+#[test]
+fn verify_says_what_a_table_cannot_check() {
+    let mut s = Session::default();
+    // A generated body is the box of its fab outline, chamfer and all: SOT-23 is 2.9 x 1.3 mm.
+    sot23(&mut s);
+    let r = run(&mut s, "ecad.footprint.verify", json!({"footprint": "SOT-23", "pads": sot23_table(|at, size| (at, size)), "body": [2.9, 1.3]}));
+    assert_eq!((r["ok"].clone(), r["body"]["difference"].clone()), (json!(true), json!(0.0)), "{r}");
+    // A through-hole pad, a bare hole and a bottom pad match, and the reply names them as not fully checked.
+    run(&mut s, "ecad.footprint.create", json!({"name": "D"}));
+    let pads = json!([
+        {"number": 1, "at": [-2, 0], "size": [1.7, 1.7], "kind": "through_hole", "drill": 1.0},
+        {"number": 2, "at": [2, 0], "size": [1, 1]},
+        {"number": 3, "at": [0, 3], "size": [1, 1], "side": "bottom"},
+        {"number": "MH", "at": [0, -3], "size": [2, 2], "shape": "round", "kind": "hole", "drill": 2}
+    ]);
+    run(&mut s, "ecad.pad.add", json!({"footprint": "D", "pads": pads}));
+    run(&mut s, "ecad.footprint.courtyard", json!({"footprint": "D"}));
+    let table: Vec<Value> = footprint_pads(&mut s, "D").into_iter().map(|(n, at, size)| json!({"number": n, "at": at, "size": size})).collect();
+    let r = verify(&mut s, "D", json!(table));
+    let not_compared = r["problems"].as_array().unwrap().iter().find(|p| p["code"] == "not_compared").cloned().unwrap_or(Value::Null);
+    assert_eq!((r["ok"].clone(), not_compared["items"].clone()), (json!(true), json!(["1", "3", "MH"])), "{r}");
+    assert_eq!(not_compared["severity"], "warning", "{r}");
+}
+
+#[test]
+fn verify_refuses_hostile_tables() {
+    let mut s = Session::default();
+    sot23(&mut s);
+    let good = json!([{"number": 1, "at": [0, 0], "size": [1, 1]}]);
+    let huge: Vec<Value> = (0..4097).map(|i| json!({"number": i, "at": [0, 0], "size": [1, 1]})).collect();
+    let cases = [
+        (json!({"footprint": "NOPE", "pads": good}), "NOPE"),
+        (json!({"footprint": "SOT-23", "pads": []}), "give 1 to 4096"),
+        (json!({"footprint": "SOT-23", "pads": huge}), "give 1 to 4096"),
+        (json!({"footprint": "SOT-23", "pads": good, "tolerance": -1}), "`tolerance`"),
+        (json!({"footprint": "SOT-23", "pads": good, "tolerance": 1e308}), "`tolerance`"),
+        (json!({"footprint": "SOT-23", "pads": good, "body": [0, 1]}), "`body`"),
+        (json!({"footprint": "SOT-23", "pads": good, "body": [1e308, 1]}), "`body`"),
+        (json!({"footprint": "SOT-23", "pads": [{"number": 1, "at": [1e308, 0], "size": [1, 1]}]}), "pads[0]: `at`"),
+        (json!({"footprint": "SOT-23", "pads": [{"number": 1, "at": [f64::NAN, 0], "size": [1, 1]}]}), "pads[0].at"),
+        (json!({"footprint": "SOT-23", "pads": [{"number": 1, "at": [0, 0], "size": [-1, 1]}]}), "pads[0]: each `size`"),
+        (json!({"footprint": "SOT-23", "pads": [{"number": 1, "at": [0, 0], "size": [1e308, 1]}]}), "pads[0]: each `size`"),
+        (json!({"footprint": "SOT-23", "pads": [{"number": "", "at": [0, 0], "size": [1, 1]}]}), "pads[0]"),
+        (json!({"footprint": "SOT-23", "pads": [good[0], good[0]]}), "pads[1]: the table already has"),
+    ];
+    for (p, says) in cases {
+        let e = refused(&mut s, "ecad.footprint.verify", p.clone());
+        assert!(e.contains(says), "{p}: {e}");
+    }
+}

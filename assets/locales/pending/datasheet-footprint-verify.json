@@ -1,0 +1,26 @@
+{
+  "en": {
+    "cmd.ecad_footprint_verify": "Verify Footprint"
+  },
+  "ar": {
+    "cmd.ecad_footprint_verify": "التحقق من البصمة"
+  },
+  "de": {
+    "cmd.ecad_footprint_verify": "Footprint verifizieren"
+  },
+  "he": {
+    "cmd.ecad_footprint_verify": "אימות טביעת רגל"
+  },
+  "ja": {
+    "cmd.ecad_footprint_verify": "フットプリントを検証"
+  },
+  "ko": {
+    "cmd.ecad_footprint_verify": "풋프린트 검증"
+  },
+  "vi": {
+    "cmd.ecad_footprint_verify": "Xác minh footprint"
+  },
+  "zh": {
+    "cmd.ecad_footprint_verify": "校验封装"
+  }
+}

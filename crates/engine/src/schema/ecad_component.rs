@@ -368,7 +368,7 @@ pub enum Severity {
 #[derive(Debug, Serialize, JsonSchema)]
 pub struct ProblemOut {
     /// Stable: `pads_overlap`, `pin_unconnected`, `pad_outside_courtyard`, `package_missing`, `courtyard_missing`,
-    /// `pad_unconnected`, `no_pins`, `no_pads`, `no_symbol`, `no_footprint`.
+    /// `pad_unconnected`, `no_pins`, `no_pads`, `no_symbol`, `no_footprint`; from `ecad.footprint.verify`, `no_pin_1_mark`, `not_compared`, `body_not_checked`.
     pub code: String,
     pub severity: Severity,
     /// The pins or pads it is about, by number.

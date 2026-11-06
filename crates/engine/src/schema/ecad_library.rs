@@ -4,7 +4,8 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use super::ecad_component::{
-    ComponentId, ComponentRef, CourtyardOut, GapOut, GraphicSpec, LayerGraphicOut, PackageModel, PadMeasure, PadOut, PinMeasure, PinOut, ProblemOut,
+    ComponentId, ComponentRef, CourtyardOut, GapOut, GraphicSpec, LayerGraphicOut, Number, PackageModel, PadMeasure, PadOut, PinMeasure, PinOut,
+    ProblemOut,
 };
 
 /// `ecad.symbol.create`: a new, empty library symbol.
@@ -103,6 +104,32 @@ pub struct SymbolInspectParams {
 #[schemars(deny_unknown_fields)]
 pub struct FootprintInspectParams {
     pub footprint: ComponentRef,
+}
+
+/// One pad of a table read from a datasheet, as seen from the top.
+#[derive(Debug, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+#[schemars(deny_unknown_fields)]
+pub struct VerifyPad {
+    /// The pad's number; unique in the table.
+    pub number: Number,
+    /// The pad's centre, in millimetres, from any origin the table likes.
+    pub at: [f64; 2],
+    /// Its extent along x and along y, in millimetres. A pad the footprint turns compares by its turned extent.
+    pub size: [f64; 2],
+}
+
+/// `ecad.footprint.verify`: compare a table of pads with a library footprint. Read-only.
+#[derive(Debug, Deserialize, JsonSchema)]
+#[schemars(deny_unknown_fields)]
+pub struct FootprintVerifyParams {
+    pub footprint: ComponentRef,
+    /// The table's pads; at most one of each number.
+    pub pads: Vec<VerifyPad>,
+    /// How far a value may differ, in millimetres; 0.05 when left out, at most 1.
+    pub tolerance: Option<f64>,
+    /// The part's body `[w, h]` in millimetres, to compare with the box of the footprint's fabrication outline.
+    pub body: Option<[f64; 2]>,
 }
 
 /// `ecad.library.inspect` takes no parameters. Read-only.
@@ -240,6 +267,100 @@ pub struct SymbolInspectResult {
 #[derive(Debug, Serialize, JsonSchema)]
 pub struct FootprintInspectResult {
     pub footprint: FootprintRecord,
+    /// In the warn parameter-check mode: what the call's parameters got wrong.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub param_warnings: Vec<String>,
+}
+
+/// Which value of a pad differs.
+#[derive(Clone, Copy, Debug, Serialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum VerifyField {
+    At,
+    Size,
+}
+
+/// A pad's value that differs from the table's by more than the tolerance.
+#[derive(Debug, Serialize, JsonSchema)]
+pub struct VerifyMismatch {
+    pub number: String,
+    pub field: VerifyField,
+    /// The table's value; a centre with `offset` added.
+    pub table: [f64; 2],
+    /// The footprint's value; a size is the pad's extent with its rotation.
+    pub footprint: [f64; 2],
+    /// A centre's distance from the table's, or the larger of a size's two differences, in millimetres.
+    pub difference: f64,
+}
+
+/// What, done to the table, makes it match the footprint.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, JsonSchema)]
+pub enum VerifyOrientation {
+    /// x becomes -x: the usual sign of a bottom view.
+    #[serde(rename = "mirror_x")]
+    MirrorX,
+    /// y becomes -y.
+    #[serde(rename = "mirror_y")]
+    MirrorY,
+    /// Turned 90 degrees counter-clockwise.
+    #[serde(rename = "rotate_90")]
+    Rotate90,
+    #[serde(rename = "rotate_180")]
+    Rotate180,
+    #[serde(rename = "rotate_270")]
+    Rotate270,
+}
+
+/// The table's body against the footprint's fabrication outline.
+#[derive(Debug, Serialize, JsonSchema)]
+pub struct VerifyBody {
+    pub table: [f64; 2],
+    /// The size of the box round the fabrication outline; null without one, which `problems` says.
+    pub footprint: Option<[f64; 2]>,
+    /// The larger of the two differences, in millimetres; null without an outline.
+    pub difference: Option<f64>,
+}
+
+/// What `ecad.footprint.verify` returns.
+#[derive(Debug, Serialize, JsonSchema)]
+pub struct FootprintVerifyResult {
+    /// Every pad matches within the tolerance, none is missing or extra, the body (when given)
+    /// matches, and `problems` has no error. Warnings don't count against it. Drills, sides and
+    /// pad shapes aren't compared.
+    pub ok: bool,
+    pub footprint: ComponentId,
+    /// The tolerance used, in millimetres.
+    pub tolerance: f64,
+    pub footprint_pads: usize,
+    pub table_pads: usize,
+    /// What was added to the table's centres, so the mean of the centres of the pads both have
+    /// lands on the footprint's; null when they have none in common.
+    pub offset: Option<[f64; 2]>,
+    /// Numbers in the table, not in the footprint.
+    pub missing: Vec<String>,
+    /// Numbers in the footprint, not in the table.
+    pub extra: Vec<String>,
+    /// Compared as the table gives them.
+    pub mismatches: Vec<VerifyMismatch>,
+    /// The largest difference of any compared value, in or out of tolerance, in millimetres; null
+    /// when nothing could be compared.
+    pub worst: Option<f64>,
+    /// When two or more pads both have don't match as given but do after this (the first that
+    /// fits, in the order mirror_x, mirror_y, rotate_90, rotate_180, rotate_270); null otherwise.
+    pub orientation: Option<VerifyOrientation>,
+    /// The others that fit as well, in the same order: a row of pads reversed is a mirror or a
+    /// half turn, and the pads can't say which.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub orientation_also: Vec<VerifyOrientation>,
+    /// With `body`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub body: Option<VerifyBody>,
+    /// What's wrong with the footprint itself, errors first: the codes `ecad.footprint.inspect`
+    /// gives, `no_pin_1_mark` (a warning: more than two copper pads and no silkscreen drawing, so
+    /// nothing can mark pin 1; a drawing there isn't proof that it marks pin 1), `not_compared` (a
+    /// warning: the pads with a drill or on the bottom, which the table doesn't say) and
+    /// `body_not_checked` (an error: `body` given and no fabrication outline to compare it with).
+    pub problems: Vec<ProblemOut>,
     /// In the warn parameter-check mode: what the call's parameters got wrong.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub param_warnings: Vec<String>,
