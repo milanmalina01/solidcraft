@@ -61,9 +61,10 @@ Kept on purpose, each approved in the design with its reason (the build's `APPRO
 `APPROVE_QUALITY`): JLCPCB's standard 0.3/0.6 mm via at the profile's least drill and ring; the
 nRF52840's VBUS sense pin joined by a 0.15 mm track (it detects USB, microamps); narrow same-net
 angles (38 to 67 degrees) and thin tracks leaving a pad near its corner, from the router and the
-hand routes; the 0.54 mV pocket and the 11 mm via-free circle behind the QR code (against 5.8 mm at
-2.4 GHz; the board has no RF line); and solid ground joins: 46 approvals, none of a critical
-finding. Tented vias next to pads stay as information. Ten short 45-degree chamfers (0.07-0.28 mm)
+hand routes; two 0.53 mV ground spots and the 11 mm via-free circle behind the QR code (against 5.8 mm at
+2.4 GHz; the board has no RF line); and solid joins on eight cramped ground pads (J1.A1, J1.B1,
+R2.2, R3.2, U1.21, U2.2, U3.2, U4.2), with thermal reliefs on the rest: 32 approvals, none of a
+critical finding. Tented vias next to pads stay as information. Ten short 45-degree chamfers (0.07-0.28 mm)
 remain at corners where a square corner would break clearance.
 
 ## Parts

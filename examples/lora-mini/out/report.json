@@ -2645,9 +2645,9 @@
  },
  "quality": {
   "counts": {
-   "approved": 18,
+   "approved": 4,
    "errors": 0,
-   "infos": 18,
+   "infos": 9,
    "pending_user": 0,
    "stale": 0,
    "warnings": 0
@@ -2831,312 +2831,17 @@
    {
     "approved": false,
     "args": {
-     "a": "C1",
-     "b": "C1.2",
-     "other": "C1.1",
-     "pad": "C1.2",
-     "required": "2",
-     "size": "0603",
-     "value": "3.9816"
-    },
-    "at": [
-     -0.85,
-     6.6
-    ],
-    "class": "practical",
-    "code": "dfm.tombstone",
-    "family": "dfm",
-    "fix": [
-     {
-      "command": "ecad.board.track.edit",
-      "says": "neck the copper at pad C1.2 (a narrow track into the pour or a relief), or give pad C1.1 as much"
-     }
-    ],
-    "key": "dfm.tombstone|f1",
-    "limit": {
-     "bound": "max",
-     "param": "dfm.tombstone.ratio",
-     "units": "ratio",
-     "value": 2.0
-    },
-    "margin": -1.9816,
-    "measured": {
-     "units": "ratio",
-     "value": 3.9816
-    },
-    "message": "0603 chip C1: pad C1.2 has 7.59 mm\u00b2 of copper within 1.5 mm and pad C1.1 has 1.9 mm\u00b2 (with the pads), 4\u00d7 the heat sinking: at 0603 a note",
-    "message_key": "electronics.quality_msg_dfm_tombstone",
-    "objects": [
-     {
-      "id": 1,
-      "key": "f1",
-      "kind": "footprint",
-      "ref": "C1"
-     },
-     {
-      "id": 1,
-      "key": "p1.2",
-      "kind": "pad",
-      "pad": "2",
-      "ref": "C1.2"
-     }
-    ],
-    "principle": "When one end of a small chip sits on much more copper, its solder melts later and surface tension stands the part on end.",
-    "regime": "0603 chip",
-    "section": "routing-dfm#pad-to-pour",
-    "severity": "info",
-    "status": "fail"
-   },
-   {
-    "approved": false,
-    "args": {
-     "a": "C10",
-     "b": "C10.2",
-     "other": "C10.1",
-     "pad": "C10.2",
-     "required": "2",
-     "size": "0603",
-     "value": "6.6952"
-    },
-    "at": [
-     -20.0,
-     10.55
-    ],
-    "class": "practical",
-    "code": "dfm.tombstone",
-    "family": "dfm",
-    "fix": [
-     {
-      "command": "ecad.board.track.edit",
-      "says": "neck the copper at pad C10.2 (a narrow track into the pour or a relief), or give pad C10.1 as much"
-     }
-    ],
-    "key": "dfm.tombstone|f2",
-    "limit": {
-     "bound": "max",
-     "param": "dfm.tombstone.ratio",
-     "units": "ratio",
-     "value": 2.0
-    },
-    "margin": -4.6952,
-    "measured": {
-     "units": "ratio",
-     "value": 6.6952
-    },
-    "message": "0603 chip C10: pad C10.2 has 8.02 mm\u00b2 of copper within 1.5 mm and pad C10.1 has 1.2 mm\u00b2 (with the pads), 6.7\u00d7 the heat sinking: at 0603 a note",
-    "message_key": "electronics.quality_msg_dfm_tombstone",
-    "objects": [
-     {
-      "id": 2,
-      "key": "f2",
-      "kind": "footprint",
-      "ref": "C10"
-     },
-     {
-      "id": 2,
-      "key": "p2.2",
-      "kind": "pad",
-      "pad": "2",
-      "ref": "C10.2"
-     }
-    ],
-    "principle": "When one end of a small chip sits on much more copper, its solder melts later and surface tension stands the part on end.",
-    "regime": "0603 chip",
-    "section": "routing-dfm#pad-to-pour",
-    "severity": "info",
-    "status": "fail"
-   },
-   {
-    "approved": false,
-    "args": {
-     "a": "C2",
-     "b": "C2.2",
-     "other": "C2.1",
-     "pad": "C2.2",
-     "required": "2",
-     "size": "0603",
-     "value": "4.4735"
-    },
-    "at": [
-     19.4,
-     0.75
-    ],
-    "class": "practical",
-    "code": "dfm.tombstone",
-    "family": "dfm",
-    "fix": [
-     {
-      "command": "ecad.board.track.edit",
-      "says": "neck the copper at pad C2.2 (a narrow track into the pour or a relief), or give pad C2.1 as much"
-     }
-    ],
-    "key": "dfm.tombstone|f3",
-    "limit": {
-     "bound": "max",
-     "param": "dfm.tombstone.ratio",
-     "units": "ratio",
-     "value": 2.0
-    },
-    "margin": -2.4735,
-    "measured": {
-     "units": "ratio",
-     "value": 4.4735
-    },
-    "message": "0603 chip C2: pad C2.2 has 8.65 mm\u00b2 of copper within 1.5 mm and pad C2.1 has 1.93 mm\u00b2 (with the pads), 4.5\u00d7 the heat sinking: at 0603 a note",
-    "message_key": "electronics.quality_msg_dfm_tombstone",
-    "objects": [
-     {
-      "id": 3,
-      "key": "f3",
-      "kind": "footprint",
-      "ref": "C2"
-     },
-     {
-      "id": 3,
-      "key": "p3.2",
-      "kind": "pad",
-      "pad": "2",
-      "ref": "C2.2"
-     }
-    ],
-    "principle": "When one end of a small chip sits on much more copper, its solder melts later and surface tension stands the part on end.",
-    "regime": "0603 chip",
-    "section": "routing-dfm#pad-to-pour",
-    "severity": "info",
-    "status": "fail"
-   },
-   {
-    "approved": false,
-    "args": {
-     "a": "C3",
-     "b": "C3.2",
-     "other": "C3.1",
-     "pad": "C3.2",
-     "required": "2",
-     "size": "0603",
-     "value": "10.1536"
-    },
-    "at": [
-     17.55,
-     9.5
-    ],
-    "class": "practical",
-    "code": "dfm.tombstone",
-    "family": "dfm",
-    "fix": [
-     {
-      "command": "ecad.board.track.edit",
-      "says": "neck the copper at pad C3.2 (a narrow track into the pour or a relief), or give pad C3.1 as much"
-     }
-    ],
-    "key": "dfm.tombstone|f4",
-    "limit": {
-     "bound": "max",
-     "param": "dfm.tombstone.ratio",
-     "units": "ratio",
-     "value": 2.0
-    },
-    "margin": -8.1536,
-    "measured": {
-     "units": "ratio",
-     "value": 10.1536
-    },
-    "message": "0603 chip C3: pad C3.2 has 9.42 mm\u00b2 of copper within 1.5 mm and pad C3.1 has 0.93 mm\u00b2 (with the pads), 10.2\u00d7 the heat sinking: at 0603 a note",
-    "message_key": "electronics.quality_msg_dfm_tombstone",
-    "objects": [
-     {
-      "id": 4,
-      "key": "f4",
-      "kind": "footprint",
-      "ref": "C3"
-     },
-     {
-      "id": 4,
-      "key": "p4.2",
-      "kind": "pad",
-      "pad": "2",
-      "ref": "C3.2"
-     }
-    ],
-    "principle": "When one end of a small chip sits on much more copper, its solder melts later and surface tension stands the part on end.",
-    "regime": "0603 chip",
-    "section": "routing-dfm#pad-to-pour",
-    "severity": "info",
-    "status": "fail"
-   },
-   {
-    "approved": false,
-    "args": {
-     "a": "C4",
-     "b": "C4.2",
-     "other": "C4.1",
-     "pad": "C4.2",
-     "required": "2",
-     "size": "0603",
-     "value": "2.9602"
-    },
-    "at": [
-     14.6,
-     13.4
-    ],
-    "class": "practical",
-    "code": "dfm.tombstone",
-    "family": "dfm",
-    "fix": [
-     {
-      "command": "ecad.board.track.edit",
-      "says": "neck the copper at pad C4.2 (a narrow track into the pour or a relief), or give pad C4.1 as much"
-     }
-    ],
-    "key": "dfm.tombstone|f5",
-    "limit": {
-     "bound": "max",
-     "param": "dfm.tombstone.ratio",
-     "units": "ratio",
-     "value": 2.0
-    },
-    "margin": -0.9602,
-    "measured": {
-     "units": "ratio",
-     "value": 2.9602
-    },
-    "message": "0603 chip C4: pad C4.2 has 5.21 mm\u00b2 of copper within 1.5 mm and pad C4.1 has 1.76 mm\u00b2 (with the pads), 3\u00d7 the heat sinking: at 0603 a note",
-    "message_key": "electronics.quality_msg_dfm_tombstone",
-    "objects": [
-     {
-      "id": 5,
-      "key": "f5",
-      "kind": "footprint",
-      "ref": "C4"
-     },
-     {
-      "id": 5,
-      "key": "p5.2",
-      "kind": "pad",
-      "pad": "2",
-      "ref": "C4.2"
-     }
-    ],
-    "principle": "When one end of a small chip sits on much more copper, its solder melts later and surface tension stands the part on end.",
-    "regime": "0603 chip",
-    "section": "routing-dfm#pad-to-pour",
-    "severity": "info",
-    "status": "fail"
-   },
-   {
-    "approved": false,
-    "args": {
      "a": "C5",
-     "b": "C5.2",
-     "other": "C5.1",
-     "pad": "C5.2",
+     "b": "C5.1",
+     "other": "C5.2",
+     "pad": "C5.1",
      "required": "2",
      "size": "0603",
-     "value": "2.1652"
+     "value": "2.7756"
     },
     "at": [
      -2.6,
-     -1.2
+     0.4
     ],
     "class": "practical",
     "code": "dfm.tombstone",
@@ -3144,7 +2849,7 @@
     "fix": [
      {
       "command": "ecad.board.track.edit",
-      "says": "neck the copper at pad C5.2 (a narrow track into the pour or a relief), or give pad C5.1 as much"
+      "says": "neck the copper at pad C5.1 (a narrow track into the pour or a relief), or give pad C5.2 as much"
      }
     ],
     "key": "dfm.tombstone|f6",
@@ -3154,12 +2859,12 @@
      "units": "ratio",
      "value": 2.0
     },
-    "margin": -0.1652,
+    "margin": -0.7756,
     "measured": {
      "units": "ratio",
-     "value": 2.1652
+     "value": 2.7756
     },
-    "message": "0603 chip C5: pad C5.2 has 6.16 mm\u00b2 of copper within 1.5 mm and pad C5.1 has 2.85 mm\u00b2 (with the pads), 2.2\u00d7 the heat sinking: at 0603 a note",
+    "message": "0603 chip C5: pad C5.1 has 2.85 mm\u00b2 of copper within 1.5 mm and pad C5.2 has 1.03 mm\u00b2 (with the pads), 2.8\u00d7 the heat sinking: at 0603 a note",
     "message_key": "electronics.quality_msg_dfm_tombstone",
     "objects": [
      {
@@ -3170,10 +2875,10 @@
      },
      {
       "id": 6,
-      "key": "p6.2",
+      "key": "p6.1",
       "kind": "pad",
-      "pad": "2",
-      "ref": "C5.2"
+      "pad": "1",
+      "ref": "C5.1"
      }
     ],
     "principle": "When one end of a small chip sits on much more copper, its solder melts later and surface tension stands the part on end.",
@@ -3185,17 +2890,17 @@
    {
     "approved": false,
     "args": {
-     "a": "C7",
-     "b": "C7.2",
-     "other": "C7.1",
-     "pad": "C7.2",
+     "a": "C6",
+     "b": "C6.1",
+     "other": "C6.2",
+     "pad": "C6.1",
      "required": "2",
      "size": "0603",
-     "value": "4.7127"
+     "value": "3.0103"
     },
     "at": [
-     16.45,
-     0.2
+     -2.6,
+     1.7
     ],
     "class": "practical",
     "code": "dfm.tombstone",
@@ -3203,154 +2908,36 @@
     "fix": [
      {
       "command": "ecad.board.track.edit",
-      "says": "neck the copper at pad C7.2 (a narrow track into the pour or a relief), or give pad C7.1 as much"
+      "says": "neck the copper at pad C6.1 (a narrow track into the pour or a relief), or give pad C6.2 as much"
      }
     ],
-    "key": "dfm.tombstone|f8",
+    "key": "dfm.tombstone|f7",
     "limit": {
      "bound": "max",
      "param": "dfm.tombstone.ratio",
      "units": "ratio",
      "value": 2.0
     },
-    "margin": -2.7127,
+    "margin": -1.0103,
     "measured": {
      "units": "ratio",
-     "value": 4.7127
+     "value": 3.0103
     },
-    "message": "0603 chip C7: pad C7.2 has 6.48 mm\u00b2 of copper within 1.5 mm and pad C7.1 has 1.38 mm\u00b2 (with the pads), 4.7\u00d7 the heat sinking: at 0603 a note",
+    "message": "0603 chip C6: pad C6.1 has 2.92 mm\u00b2 of copper within 1.5 mm and pad C6.2 has 0.97 mm\u00b2 (with the pads), 3\u00d7 the heat sinking: at 0603 a note",
     "message_key": "electronics.quality_msg_dfm_tombstone",
     "objects": [
      {
-      "id": 8,
-      "key": "f8",
+      "id": 7,
+      "key": "f7",
       "kind": "footprint",
-      "ref": "C7"
+      "ref": "C6"
      },
      {
-      "id": 8,
-      "key": "p8.2",
+      "id": 7,
+      "key": "p7.1",
       "kind": "pad",
-      "pad": "2",
-      "ref": "C7.2"
-     }
-    ],
-    "principle": "When one end of a small chip sits on much more copper, its solder melts later and surface tension stands the part on end.",
-    "regime": "0603 chip",
-    "section": "routing-dfm#pad-to-pour",
-    "severity": "info",
-    "status": "fail"
-   },
-   {
-    "approved": false,
-    "args": {
-     "a": "C8",
-     "b": "C8.2",
-     "other": "C8.1",
-     "pad": "C8.2",
-     "required": "2",
-     "size": "0603",
-     "value": "5.8758"
-    },
-    "at": [
-     16.45,
-     4.55
-    ],
-    "class": "practical",
-    "code": "dfm.tombstone",
-    "family": "dfm",
-    "fix": [
-     {
-      "command": "ecad.board.track.edit",
-      "says": "neck the copper at pad C8.2 (a narrow track into the pour or a relief), or give pad C8.1 as much"
-     }
-    ],
-    "key": "dfm.tombstone|f9",
-    "limit": {
-     "bound": "max",
-     "param": "dfm.tombstone.ratio",
-     "units": "ratio",
-     "value": 2.0
-    },
-    "margin": -3.8758,
-    "measured": {
-     "units": "ratio",
-     "value": 5.8758
-    },
-    "message": "0603 chip C8: pad C8.2 has 9.11 mm\u00b2 of copper within 1.5 mm and pad C8.1 has 1.55 mm\u00b2 (with the pads), 5.9\u00d7 the heat sinking: at 0603 a note",
-    "message_key": "electronics.quality_msg_dfm_tombstone",
-    "objects": [
-     {
-      "id": 9,
-      "key": "f9",
-      "kind": "footprint",
-      "ref": "C8"
-     },
-     {
-      "id": 9,
-      "key": "p9.2",
-      "kind": "pad",
-      "pad": "2",
-      "ref": "C8.2"
-     }
-    ],
-    "principle": "When one end of a small chip sits on much more copper, its solder melts later and surface tension stands the part on end.",
-    "regime": "0603 chip",
-    "section": "routing-dfm#pad-to-pour",
-    "severity": "info",
-    "status": "fail"
-   },
-   {
-    "approved": false,
-    "args": {
-     "a": "C9",
-     "b": "C9.2",
-     "other": "C9.1",
-     "pad": "C9.2",
-     "required": "2",
-     "size": "0603",
-     "value": "15.1825"
-    },
-    "at": [
-     16.05,
-     -10.2
-    ],
-    "class": "practical",
-    "code": "dfm.tombstone",
-    "family": "dfm",
-    "fix": [
-     {
-      "command": "ecad.board.track.edit",
-      "says": "neck the copper at pad C9.2 (a narrow track into the pour or a relief), or give pad C9.1 as much"
-     }
-    ],
-    "key": "dfm.tombstone|f10",
-    "limit": {
-     "bound": "max",
-     "param": "dfm.tombstone.ratio",
-     "units": "ratio",
-     "value": 2.0
-    },
-    "margin": -13.1825,
-    "measured": {
-     "units": "ratio",
-     "value": 15.1825
-    },
-    "message": "0603 chip C9: pad C9.2 has 10.82 mm\u00b2 of copper within 1.5 mm and pad C9.1 has 0.71 mm\u00b2 (with the pads), 15.2\u00d7 the heat sinking: at 0603 a note",
-    "message_key": "electronics.quality_msg_dfm_tombstone",
-    "objects": [
-     {
-      "id": 10,
-      "key": "f10",
-      "kind": "footprint",
-      "ref": "C9"
-     },
-     {
-      "id": 10,
-      "key": "p10.2",
-      "kind": "pad",
-      "pad": "2",
-      "ref": "C9.2"
+      "pad": "1",
+      "ref": "C6.1"
      }
     ],
     "principle": "When one end of a small chip sits on much more copper, its solder melts later and surface tension stands the part on end.",
@@ -3368,7 +2955,7 @@
      "pad": "D2.1",
      "required": "2",
      "size": "0603",
-     "value": "14.7054"
+     "value": "2.6008"
     },
     "at": [
      7.7,
@@ -3390,12 +2977,12 @@
      "units": "ratio",
      "value": 2.0
     },
-    "margin": -12.7054,
+    "margin": -0.6008,
     "measured": {
      "units": "ratio",
-     "value": 14.7054
+     "value": 2.6008
     },
-    "message": "0603 chip D2: pad D2.1 has 9.49 mm\u00b2 of copper within 1.5 mm and pad D2.2 has 0.65 mm\u00b2 (with the pads), 14.7\u00d7 the heat sinking: at 0603 a note",
+    "message": "0603 chip D2: pad D2.1 has 1.68 mm\u00b2 of copper within 1.5 mm and pad D2.2 has 0.65 mm\u00b2 (with the pads), 2.6\u00d7 the heat sinking: at 0603 a note",
     "message_key": "electronics.quality_msg_dfm_tombstone",
     "objects": [
      {
@@ -3410,65 +2997,6 @@
       "kind": "pad",
       "pad": "1",
       "ref": "D2.1"
-     }
-    ],
-    "principle": "When one end of a small chip sits on much more copper, its solder melts later and surface tension stands the part on end.",
-    "regime": "0603 chip",
-    "section": "routing-dfm#pad-to-pour",
-    "severity": "info",
-    "status": "fail"
-   },
-   {
-    "approved": false,
-    "args": {
-     "a": "R1",
-     "b": "R1.2",
-     "other": "R1.1",
-     "pad": "R1.2",
-     "required": "2",
-     "size": "0603",
-     "value": "7.8464"
-    },
-    "at": [
-     -15.6,
-     5.85
-    ],
-    "class": "practical",
-    "code": "dfm.tombstone",
-    "family": "dfm",
-    "fix": [
-     {
-      "command": "ecad.board.track.edit",
-      "says": "neck the copper at pad R1.2 (a narrow track into the pour or a relief), or give pad R1.1 as much"
-     }
-    ],
-    "key": "dfm.tombstone|f18",
-    "limit": {
-     "bound": "max",
-     "param": "dfm.tombstone.ratio",
-     "units": "ratio",
-     "value": 2.0
-    },
-    "margin": -5.8464,
-    "measured": {
-     "units": "ratio",
-     "value": 7.8464
-    },
-    "message": "0603 chip R1: pad R1.2 has 6 mm\u00b2 of copper within 1.5 mm and pad R1.1 has 0.77 mm\u00b2 (with the pads), 7.8\u00d7 the heat sinking: at 0603 a note",
-    "message_key": "electronics.quality_msg_dfm_tombstone",
-    "objects": [
-     {
-      "id": 18,
-      "key": "f18",
-      "kind": "footprint",
-      "ref": "R1"
-     },
-     {
-      "id": 18,
-      "key": "p18.2",
-      "kind": "pad",
-      "pad": "2",
-      "ref": "R1.2"
      }
     ],
     "principle": "When one end of a small chip sits on much more copper, its solder melts later and surface tension stands the part on end.",
@@ -3545,7 +3073,7 @@
      "pad": "R3.2",
      "required": "2",
      "size": "0603",
-     "value": "7.8178"
+     "value": "7.3953"
     },
     "at": [
      0.55,
@@ -3567,12 +3095,12 @@
      "units": "ratio",
      "value": 2.0
     },
-    "margin": -5.8178,
+    "margin": -5.3953,
     "measured": {
      "units": "ratio",
-     "value": 7.8178
+     "value": 7.3953
     },
-    "message": "0603 chip R3: pad R3.2 has 5.04 mm\u00b2 of copper within 1.5 mm and pad R3.1 has 0.64 mm\u00b2 (with the pads), 7.8\u00d7 the heat sinking: at 0603 a note",
+    "message": "0603 chip R3: pad R3.2 has 4.77 mm\u00b2 of copper within 1.5 mm and pad R3.1 has 0.64 mm\u00b2 (with the pads), 7.4\u00d7 the heat sinking: at 0603 a note",
     "message_key": "electronics.quality_msg_dfm_tombstone",
     "objects": [
      {
@@ -3646,65 +3174,6 @@
       "kind": "pad",
       "pad": "1",
       "ref": "R4.1"
-     }
-    ],
-    "principle": "When one end of a small chip sits on much more copper, its solder melts later and surface tension stands the part on end.",
-    "regime": "0603 chip",
-    "section": "routing-dfm#pad-to-pour",
-    "severity": "info",
-    "status": "fail"
-   },
-   {
-    "approved": false,
-    "args": {
-     "a": "R7",
-     "b": "R7.2",
-     "other": "R7.1",
-     "pad": "R7.2",
-     "required": "2",
-     "size": "0603",
-     "value": "12.3194"
-    },
-    "at": [
-     17.45,
-     -10.2
-    ],
-    "class": "practical",
-    "code": "dfm.tombstone",
-    "family": "dfm",
-    "fix": [
-     {
-      "command": "ecad.board.track.edit",
-      "says": "neck the copper at pad R7.2 (a narrow track into the pour or a relief), or give pad R7.1 as much"
-     }
-    ],
-    "key": "dfm.tombstone|f24",
-    "limit": {
-     "bound": "max",
-     "param": "dfm.tombstone.ratio",
-     "units": "ratio",
-     "value": 2.0
-    },
-    "margin": -10.3194,
-    "measured": {
-     "units": "ratio",
-     "value": 12.3194
-    },
-    "message": "0603 chip R7: pad R7.2 has 8.87 mm\u00b2 of copper within 1.5 mm and pad R7.1 has 0.72 mm\u00b2 (with the pads), 12.3\u00d7 the heat sinking: at 0603 a note",
-    "message_key": "electronics.quality_msg_dfm_tombstone",
-    "objects": [
-     {
-      "id": 24,
-      "key": "f24",
-      "kind": "footprint",
-      "ref": "R7"
-     },
-     {
-      "id": 24,
-      "key": "p24.2",
-      "kind": "pad",
-      "pad": "2",
-      "ref": "R7.2"
      }
     ],
     "principle": "When one end of a small chip sits on much more copper, its solder melts later and surface tension stands the part on end.",
@@ -3817,15 +3286,15 @@
     },
     "practical": {
      "errors": 0,
-     "fail": 18,
-     "infos": 18,
+     "fail": 9,
+     "infos": 9,
      "not_applicable": 3,
      "review": 0,
      "warnings": 0
     }
    },
    "by_code": {
-    "dfm.tombstone": 15,
+    "dfm.tombstone": 6,
     "si.pair": 2,
     "si.skew": 1
    },
@@ -5465,14 +4934,14 @@
    },
    {
     "by_code": {
-     "dfm.tombstone": 15,
+     "dfm.tombstone": 6,
      "si.pair": 2,
      "si.skew": 1,
      "via_near_pad": 20
     },
     "counts": {
-     "approved": 46,
-     "open": 38
+     "approved": 32,
+     "open": 29
     },
     "gate": "practical",
     "status": "waived"
@@ -5512,7 +4981,7 @@
    "by_class": {
     "cosmetic": 0,
     "critical": 0,
-    "practical": 38
+    "practical": 29
    },
    "drc_errors": 0,
    "drc_warnings": 0,
@@ -5542,14 +5011,14 @@
     "note": "The nRF52840's VBUS pin only detects USB (microamps): its branch of VBUS is a 0.15 mm signal track b\u2026"
    }
   ],
-  "waivers_more": 43
+  "waivers_more": 29
  },
  "jlc": {
   "bom_rows": 20,
   "cpl_rows": 30,
   "files": [
    {
-    "bytes": 186404,
+    "bytes": 207275,
     "function": "zip",
     "path": "examples/lora-mini/out/lora-mini-jlcpcb.zip"
    },
@@ -5603,7 +5072,7 @@
  "pdf": {
   "files": [
    {
-    "bytes": 402163,
+    "bytes": 443259,
     "pages": [
      1,
      2,

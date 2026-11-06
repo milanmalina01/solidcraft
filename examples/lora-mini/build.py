@@ -186,8 +186,8 @@ def results_of(reply):
 
 # Practical quality findings this prototype keeps, with why.
 APPROVE_QUALITY = {
-    "pi.stitching": "A small bottom pocket by the USB-C (between VBUS and RST, tied by R2's ground via) rises 0.54 mV against the 0.5 mV target; the QR code on U1's back leaves an 11 mm via-free circle against 5.8 mm (silk breaks on vias); the board has no RF line.",
-    "dfm.pad_to_pour": "Solid joins kept for the ground's sake: the board is reflowed by the assembler, and J4 (hand-fitted, not assembled) takes a hotter iron.",
+    "dfm.pad_to_pour": "Solid only where tracks and neighbouring pads leave no room for 2 spokes (J1.A1, J1.B1, R2.2, R3.2, U1.21, U2.2, U3.2, U4.2), all reflowed by the assembler; every other ground pad is relieved.",
+    "pi.stitching": "Two spots rise 0.53 mV against the 0.5 mV target: a bottom pocket by the USB-C (tied by R2's ground via) and top copper at U1's lower-left corner; the QR code behind U1 leaves an 11 mm via-free circle against 5.8 mm (silk breaks on vias); no RF line.",
 }
 
 # Practical design-rule findings this prototype keeps, with why; the board's other findings are fixed.
@@ -346,7 +346,10 @@ def main():
     script += list(tracks) + [("ecad.board.track", t) for t in HAND_ROUTES]
     hw, hh = BOARD_W / 2, BOARD_H / 2
     for layer in ("top", "bottom"):
-        script.append(("ecad.board.pour", {"layer": layer, "net": "GND", "rect": [BOARD_W - 0.2, BOARD_H - 0.2], "connect": "solid"}))
+        script.append(("ecad.board.pour", {"layer": layer, "net": "GND", "rect": [BOARD_W - 0.2, BOARD_H - 0.2], "connect": "thermal"}))
+    # Too cramped for at least 2 spokes (tracks and neighbouring pads block the rest): joined solid.
+    for part, pads in (("J1", ["A1", "B1"]), ("R2", ["2"]), ("R3", ["2"]), ("U1", ["21"]), ("U2", ["2"]), ("U3", ["2"]), ("U4", ["2"])):
+        script.append(("ecad.board.pour.connect", {"footprint": part, "pads": pads, "connect": "solid"}))
     # Under the modules first, tented (the top copper there has no other tie but the modules' edges
     # and is the weakest on the board), and under the other large parts, whose bodies would
     # otherwise leave holes wider than lambda/10 in the grid, then over the rest.
