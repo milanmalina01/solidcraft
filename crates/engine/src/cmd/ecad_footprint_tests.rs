@@ -671,6 +671,16 @@ fn verify_names_a_mirror_or_a_turn() {
         footprint_pads(&mut s, "ROW").into_iter().map(|(n, [x, y], size)| json!({"number": n, "at": [-x, y], "size": size})).collect();
     let r = verify(&mut s, "ROW", json!(row));
     assert_eq!((r["orientation"].clone(), r["orientation_also"].clone()), (json!("mirror_x"), json!(["rotate_180"])), "{r}");
+    // A connector's row kept in order while its opening is flipped: only the pegs and the shell, off
+    // the row, say it's a mirror, and it isn't taken for the half turn it was meant to be.
+    run(&mut s, "ecad.footprint.create", json!({"name": "SOCKET"}));
+    let socket = [("A", -1.25, 1.07), ("B", -0.25, 1.07), ("C", 0.25, 1.07), ("D", 1.25, 1.07), ("S1", -4.3, -3.68), ("S2", 4.3, -3.68)];
+    let pads = |flip: f64| -> Value {
+        json!(socket.iter().map(|(n, x, y)| json!({"number": n, "at": [x, y * flip], "size": [0.3, 1.0]})).collect::<Vec<_>>())
+    };
+    run(&mut s, "ecad.pad.add", json!({"footprint": "SOCKET", "pads": pads(-1.0)}));
+    let r = verify(&mut s, "SOCKET", pads(1.0));
+    assert_eq!((r["ok"].clone(), r["orientation"].clone(), r.get("orientation_also")), (json!(false), json!("mirror_y"), None), "{r}");
 }
 
 #[test]
