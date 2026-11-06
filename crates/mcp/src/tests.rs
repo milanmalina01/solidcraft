@@ -177,6 +177,8 @@ fn skill_reference_returns_bundled_text_without_backend_calls() {
         ("solidcraft-modeling", "SKILL.md", include_str!("../../../skills/solidcraft-modeling/SKILL.md")),
         ("solidcraft-mechanisms", "SKILL.md", include_str!("../../../skills/solidcraft-mechanisms/SKILL.md")),
         ("solidcraft-checking", "SKILL.md", include_str!("../../../skills/solidcraft-checking/SKILL.md")),
+        ("solidcraft-datasheet", "SKILL.md", include_str!("../../../skills/solidcraft-datasheet/SKILL.md")),
+        ("solidcraft-datasheet", "reference.md", include_str!("../../../skills/solidcraft-datasheet/reference.md")),
         ("solidcraft-editing", "SKILL.md", include_str!("../../../skills/solidcraft-editing/SKILL.md")),
         ("solidcraft-electronics", "SKILL.md", include_str!("../../../skills/solidcraft-electronics/SKILL.md")),
         ("solidcraft-electronics", "reference.md", include_str!("../../../skills/solidcraft-electronics/reference.md")),
@@ -196,7 +198,14 @@ fn skill_reference_returns_bundled_text_without_backend_calls() {
 #[test]
 fn skill_reference_refuses_unknown_names_and_paths_with_available_choices() {
     let mut s = server();
-    let skills = ["solidcraft-checking", "solidcraft-editing", "solidcraft-electronics", "solidcraft-mechanisms", "solidcraft-modeling"];
+    let skills = [
+        "solidcraft-checking",
+        "solidcraft-datasheet",
+        "solidcraft-editing",
+        "solidcraft-electronics",
+        "solidcraft-mechanisms",
+        "solidcraft-modeling",
+    ];
     for skill in ["unknown", "../solidcraft-modeling", "/tmp/solidcraft-modeling"] {
         let r = raw_tool(&mut s, "skill_reference", json!({"skill": skill}));
         assert_eq!(r["result"]["isError"], true, "{r}");
@@ -1614,6 +1623,37 @@ fn electronics_skill_example_builds_as_documented() {
     assert_eq!(q["ready"], true, "{q}");
 }
 
+/// The example table in `skills/solidcraft-datasheet/reference.md` is what readers copy the shape
+/// of: its pads, passed to `ecad.footprint.verify`, match the generated SOT-23 they describe, and
+/// the same table mirrored is named as a mirror.
+#[test]
+fn datasheet_skill_example_table_verifies() {
+    let doc = include_str!("../../../skills/solidcraft-datasheet/reference.md");
+    let start = doc.find("{\"part\":\"EXAMPLE-3\",\"reader\"").expect("the reference has an example table");
+    let end = start + doc[start..].find("```").expect("the example's code block ends");
+    let table: Value = serde_json::from_str(&doc[start..end]).expect("the example is JSON");
+    let mut s = server();
+    let generate = json!({"footprint": "SOT-23", "package": "sot23"});
+    tool(&mut s, "execute", json!({"command": "ecad.footprint.generate", "params": generate}));
+    let pads = |flip: f64| -> Vec<Value> {
+        let cells = table["pads"].as_array().unwrap().iter();
+        cells
+            .map(|p| {
+                let at = &p["at"]["value"];
+                json!({"number": p["number"], "at": [flip * at[0].as_f64().unwrap(), at[1]], "size": p["size"]["value"]})
+            })
+            .collect()
+    };
+    let verify = |s: &mut Server, pads: Vec<Value>| {
+        let params = json!({"footprint": "SOT-23", "pads": pads, "body": table["body"]["value"]});
+        tool(s, "execute", json!({"command": "ecad.footprint.verify", "params": params}))
+    };
+    let r = verify(&mut s, pads(1.0));
+    assert_eq!((r["ok"].clone(), r["orientation"].clone()), (json!(true), Value::Null), "{r}");
+    let r = verify(&mut s, pads(-1.0));
+    assert_eq!((r["ok"].clone(), r["orientation"].clone()), (json!(false), json!("mirror_x")), "{r}");
+}
+
 /// The tool and command names a skill's text calls or names: a call in backticks is `name {}`,
 /// `name {"json":…}` or `name {placeholder}` (a tool when the name is snake_case, a command when it
 /// is a dotted id); a command named in backticks is its dotted id, alone or with others sharing its
@@ -1671,6 +1711,8 @@ fn skills_name_only_real_tools_and_commands() {
         include_str!("../../../skills/solidcraft-reporting/reference/report-template.md"),
         include_str!("../../../skills/solidcraft-electronics/SKILL.md"),
         include_str!("../../../skills/solidcraft-electronics/reference.md"),
+        include_str!("../../../skills/solidcraft-datasheet/SKILL.md"),
+        include_str!("../../../skills/solidcraft-datasheet/reference.md"),
         include_str!("../../../skills/solidcraft-pcb/SKILL.md"),
         include_str!("../../../skills/solidcraft-pcb/reference/workflow.md"),
         include_str!("../../../skills/solidcraft-pcb/reference/placement.md"),

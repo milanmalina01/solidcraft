@@ -35,7 +35,8 @@ and dimension (`sketch.dimension {entities, value}`; values may name parameters)
 edge], radius}`, `solid.chamfer`, patterns, mirror, primitives). Use `batch` for several steps at once, \
 `list_commands` for ids and parameter docs, `describe_command` for a command's schemas, `inspect_design` / `measure` to verify, \
 `body_topology` to find edge points, `set_parameter` to drive the design and `screenshot` to look at it. Circuit-board work: read \
-the solidcraft-pcb skill first (`skill_reference`); a board is not finished until ecad.board.check has no blocking items. A call \
+the solidcraft-pcb skill first (`skill_reference`); a board is not finished until ecad.board.check has no blocking items. A part from a datasheet: read the solidcraft-datasheet \
+skill first. A call \
 whose error starts `still running:` was not cancelled: don't send it again; `pending` waits for its result.";
 
 pub struct Server {

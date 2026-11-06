@@ -5,6 +5,7 @@ The worked example builds two parts an agent often needs: an 0603 chip resistor 
 ## Commands
 
 - Library items: `ecad.symbol.create|edit|copy|delete|inspect {"symbol":…}`, `ecad.footprint.create|edit|copy|delete|inspect {"footprint":…}`, `ecad.package.create|edit|delete {"package":…}`; `ecad.library.inspect` lists all with who uses them. `create` takes `component` (and `variant` for a footprint or package) to give the new item to a component in the same call; so do both generators.
+- Checking a footprint against a table read from a datasheet: `ecad.footprint.verify {"footprint":…,"pads":…}`. The whole process is the solidcraft-datasheet skill.
 - Pins and pads: `ecad.pin.add|edit|delete {"symbol":…}`, `ecad.pad.add|edit|delete {"footprint":…}`. Lists; a `row` `{count, pitch}` repeats one item, numbering on from its number; `replace: true` rebuilds the list. Pads: `shape` rect, round, oval or rounded_rect; `kind` smd, through_hole (give a `drill`) or hole.
 - Graphics: `ecad.symbol.set_graphics {"symbol":…}` and `ecad.footprint.set_graphics {"footprint":…,"layer":…}` replace one set; `ecad.draw.line|rect|circle|text` add one shape to a `symbol`, or to a `footprint` with its `layer`; `ecad.footprint.courtyard {"footprint":…}` draws the courtyard round the pads and fab outline.
 - Components: `ecad.component.create {name, prefix?, …, symbol?, footprint?, package?}`, `ecad.component.edit` (`symbol: null` clears it), `ecad.component.variant.add|edit|delete {"component":…}`, `ecad.component.map_pins {"component":…,"variant"?:…,"map"|"by_number"}`.

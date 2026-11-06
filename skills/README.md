@@ -6,7 +6,7 @@ description that tell the agent when to load it, and an optional supporting refe
 
 The modelling documents are built into SolidCraft: its MCP server's `skill_reference` tool returns them, so an
 agent without file access (such as the one in SolidCraft's own chat) can still read a skill's reference.
-The contributor skills (everything except modeling, editing, checking, mechanisms, electronics and pcb) are for repository work and are not embedded in that tool. `AGENTS.md` routes to them; `cargo xtask skills` fails when its table and this folder disagree or a file, `cargo xtask` command or skill they name is gone.
+The contributor skills (everything except modeling, editing, checking, mechanisms, electronics, datasheet and pcb) are for repository work and are not embedded in that tool. `AGENTS.md` routes to them; `cargo xtask skills` fails when its table and this folder disagree or a file, `cargo xtask` command or skill they name is gone.
 
 | Skill | Loads when the agent |
 |---|---|
@@ -26,6 +26,7 @@ The contributor skills (everything except modeling, editing, checking, mechanism
 | [`solidcraft-editing`](solidcraft-editing/SKILL.md) | changes, fixes or extends an existing design |
 | [`solidcraft-checking`](solidcraft-checking/SKILL.md) | builds, changes or ports a design, next to the two above: parameter ranges, every allowed value, exact STEP comparison, regression tests, designs kept in git |
 | [`solidcraft-electronics`](solidcraft-electronics/SKILL.md) | makes electronic components: symbol pins, footprint pads, generated packages, courtyards, 3D packages |
+| [`solidcraft-datasheet`](solidcraft-datasheet/SKILL.md) | turns a part number or datasheet into a footprint and symbol, or checks one: two independent readers, `ecad.footprint.verify`, saved evidence and an auditor who tries to fail the result |
 | [`solidcraft-pcb`](solidcraft-pcb/SKILL.md) | lays out a circuit board: stack-up, fab profile, design intent, placement, routing, pours and stitching, the design rule and quality checks and their fixes, silkscreen, release |
 | [`solidcraft-mechanisms`](solidcraft-mechanisms/SKILL.md) | builds, drives or animates an assembly: components, joints, motion links, closed loops such as actuators, contact sets, motion studies |
 | [`solidcraft-reporting`](solidcraft-reporting/SKILL.md) | hears that something went wrong (a crash, a failed command, a wrong shape or number, a hang): reproduces it in a fresh design, shrinks it to a minimal script and writes the bug report |
@@ -66,6 +67,7 @@ foreach ($s in 'modeling','editing','checking','mechanisms') { Copy-Item -Recurs
 - The worked example in `solidcraft-modeling/reference.md` runs in CI. `skill_reference_example_builds_as_documented` in `crates/mcp/src/tests.rs` builds it, checks the documented volume, changes a parameter and checks it again.
 - The sketch-plane table is covered by `sketch_plane_axes_match_the_skill_reference` in the same file.
 - The worked example in `solidcraft-mechanisms/reference.md` runs in CI too: `mechanisms_skill_example_moves_as_documented` builds it, drives the hinge and checks the actuator stroke, the linked panel and the stop against their analytic values.
+- The example table in `solidcraft-datasheet/reference.md` runs in CI too: `datasheet_skill_example_table_verifies` passes its pads to `ecad.footprint.verify` on the SOT-23 they describe. The script beside it does not run in CI.
 - `skills_name_only_real_tools_and_commands` checks that every tool and command the skills call or name exists (a skill that warns a name is not a command lists it in the test's `NOT_COMMANDS`).
 - Every quality and design rule check code names a section of `solidcraft-pcb/reference/` (its `section`), and the links between those files name their headings: `section_misses` in `crates/doc/src/ecad/quality/catalog.rs` lists what doesn't resolve and `quality_codes_match_skill_sections` runs it on the files `skill_reference` serves, so renaming a heading means changing the codes that point to it.
 - `solidcraft-checking/scripts/tests` checks that skill's helpers, its traps and conventions, and the facts behind the corrections in `solidcraft-modeling`: `PYTHONDONTWRITEBYTECODE=1 uv run --no-project --with pytest --with build123d pytest -p no:cacheprovider skills/solidcraft-checking/scripts/tests`. The tests run the `solidcraft-cli` on `PATH`, not the workspace build, and CI does not run them.
