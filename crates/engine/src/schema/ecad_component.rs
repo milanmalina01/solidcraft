@@ -529,6 +529,9 @@ pub struct PadOut {
     pub kind: Kind,
     /// `[w, h]` in millimetres (equal for a round hole); null for a surface-mount pad.
     pub drill: Option<[f64; 2]>,
+    /// A surface-mount pad's solder paste opening, when it isn't the whole pad.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub paste: Option<[f64; 2]>,
 }
 
 #[derive(Debug, Serialize, JsonSchema)]

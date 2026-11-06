@@ -1123,7 +1123,7 @@ pub(crate) fn new_pad(footprint: &solidcraft_engine::doc::ecad::FootprintItem, k
                 PadKind::ThroughHole => ([1.7, 1.7], PadShape::Round, Some([1.0, 1.0])),
                 PadKind::Hole => ([3.2, 3.2], PadShape::Round, Some([3.2, 3.2])),
             };
-            Pad { number, at, size, rotation: rotate(0.0), side: Side::Top, shape, corner: 0.0, kind, drill }
+            Pad { number, at, size, rotation: rotate(0.0), side: Side::Top, shape, corner: 0.0, kind, drill, paste: None }
         }
     }
 }
@@ -1138,6 +1138,9 @@ fn pad_spec(pad: &Pad) -> Value {
         "shape": SHAPES.iter().find(|(s, _)| *s == pad.shape).map_or("rect", |(_, s)| *s),
         "kind": KINDS.iter().find(|(k, _)| *k == pad.kind).map_or("smd", |(_, s)| *s),
     });
+    if let Some(paste) = pad.paste {
+        spec["paste"] = json!(paste);
+    }
     if pad.shape == PadShape::RoundedRect {
         spec["corner"] = json!(pad.corner);
     }

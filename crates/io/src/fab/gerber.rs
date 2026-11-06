@@ -18,7 +18,7 @@ use std::fmt::Write as _;
 use solidcraft_doc::ecad::Electronics;
 use solidcraft_doc::ecad::airwires::{BoardNets, BoardPad};
 use solidcraft_doc::ecad::board::other;
-use solidcraft_doc::ecad::copper::{hull_outline, pad_core};
+use solidcraft_doc::ecad::copper::{hull_outline, pad_core, paste_core};
 use solidcraft_doc::ecad::footprint::{PadKind, Side};
 use solidcraft_doc::ecad::graphics::{BoardLayer, Graphic, GraphicType};
 use solidcraft_doc::ecad::layers::{CopperLayer, DrawLayer};
@@ -239,7 +239,7 @@ pub fn files(ecad: &Electronics, nets: &BoardNets, o: &Options, glyphs: &Glyphs)
         // Paste.
         let mut w = Writer::new(&format!("Paste,{tb}"), "Positive");
         for p in nets.pads.iter().filter(|p| p.pad.kind == PadKind::Smd && p.on(copper)) {
-            w.region(&pad_outline(p, 0.0), true);
+            w.region(&hull_outline(&paste_core(p), 0.0), true);
         }
         out.push(FabFile::text(format!("{}.G{letter}P", o.stem), format!("Paste,{tb}"), w.finish()));
         // Legend.

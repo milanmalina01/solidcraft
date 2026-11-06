@@ -390,6 +390,7 @@ pub(super) fn pads_out(fp: &FootprintItem) -> Vec<PadOut> {
             corner: p.corner,
             kind: kind_out(p.kind),
             drill: p.drill,
+            paste: p.paste,
         })
         .collect()
 }

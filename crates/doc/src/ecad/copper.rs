@@ -28,6 +28,12 @@ pub fn pad_core(p: &BoardPad) -> Core {
     Core { points: c.points.iter().map(|q| p.placement.apply(*q)).collect(), radius: c.radius }
 }
 
+/// A pad's solder paste opening on the board: the whole pad unless the pad gives its own.
+pub fn paste_core(p: &BoardPad) -> Core {
+    let c = Pad { size: p.pad.paste.unwrap_or(p.pad.size), paste: None, ..p.pad.clone() }.core();
+    Core { points: c.points.iter().map(|q| p.placement.apply(*q)).collect(), radius: c.radius }
+}
+
 /// A pad's drill on the board (an oval for a slot); `None` without one.
 pub fn drill_core(p: &BoardPad) -> Option<Core> {
     let drill = p.pad.drill?;

@@ -28,6 +28,8 @@ pub struct PadSpec {
     pub kind: Option<Kind>,
     /// A through-hole pad's or a hole's drill.
     pub drill: Option<DrillSpec>,
+    /// A surface-mount pad's solder paste opening `[w, h]`, centred on the pad, from a maker's stencil drawing; the whole pad when left out.
+    pub paste: Option<[f64; 2]>,
     /// Repeat this pad, numbering on from `number`.
     pub row: Option<RowSpec>,
 }
@@ -60,6 +62,8 @@ pub struct EditParams {
     pub kind: Option<Kind>,
     /// A drill; a `kind` of `smd` drops it.
     pub drill: Option<DrillSpec>,
+    /// A solder paste opening `[w, h]`, centred on the pad; a `kind` other than `smd` drops it.
+    pub paste: Option<[f64; 2]>,
 }
 
 /// `ecad.pad.delete`: delete pads by number, all or none.
@@ -120,7 +124,7 @@ mod tests {
         assert_keys(input_schema_for::<AddParams>(), &["footprint", "pads", "replace"]);
         assert_keys(
             input_schema_for::<EditParams>(),
-            &["at", "corner", "drill", "footprint", "kind", "number", "pad", "rotation", "shape", "side", "size"],
+            &["at", "corner", "drill", "footprint", "kind", "number", "pad", "paste", "rotation", "shape", "side", "size"],
         );
         assert_keys(input_schema_for::<DeleteParams>(), &["footprint", "pads"]);
     }

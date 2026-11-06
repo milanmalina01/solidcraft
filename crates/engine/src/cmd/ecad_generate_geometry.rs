@@ -36,7 +36,18 @@ pub(super) fn chip_size(code: &str) -> Option<[f64; 3]> {
 }
 
 pub(super) fn pad(number: impl ToString, at: [f64; 2], size: [f64; 2]) -> Pad {
-    Pad { number: number.to_string(), at, size, rotation: 0.0, side: Side::Top, shape: PadShape::Rect, corner: 0.0, kind: PadKind::Smd, drill: None }
+    Pad {
+        number: number.to_string(),
+        at,
+        size,
+        rotation: 0.0,
+        side: Side::Top,
+        shape: PadShape::Rect,
+        corner: 0.0,
+        kind: PadKind::Smd,
+        drill: None,
+        paste: None,
+    }
 }
 
 pub(super) fn graphic(kind: GraphicType, layer: Option<BoardLayer>, width: f64) -> Graphic {

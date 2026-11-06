@@ -21,7 +21,7 @@ pub static COMMANDS: &[CommandSpec] = &[
         .contract(&ADD_CONTRACT)
         .output(output_schema_for::<AddResult>)
         .params(
-            "footprint: id|name (a library footprint); pads: [{number, at: [x, y] (centre, mm), size: [w, h] (mm), rotation? (degrees ccw, 0), side? (top|bottom, surface-mount), shape? (rect|round|oval|rounded_rect), corner? (0.25 of the shorter side for rounded_rect), kind? (smd|through_hole|hole; through_hole with a drill), drill? (d or [w, h] mm), row? {count, pitch: [dx, dy]} (numbers on from `number`)}]; replace? (pin_map_cleared: a variant's map naming dropped pads is dropped) → {footprint, added, pads, pin_map_cleared}",
+            "footprint: id|name (a library footprint); pads: [{number, at: [x, y] (centre, mm), size: [w, h] (mm), rotation? (degrees ccw, 0), side? (top|bottom, surface-mount), shape? (rect|round|oval|rounded_rect), corner? (0.25 of the shorter side for rounded_rect), kind? (smd|through_hole|hole; through_hole with a drill), paste? ([w, h], a surface-mount pad's stencil opening; the whole pad), drill? (d or [w, h] mm), row? {count, pitch: [dx, dy]} (numbers on from `number`)}]; replace? (pin_map_cleared: a variant's map naming dropped pads is dropped) → {footprint, added, pads, pin_map_cleared}",
         ),
     CommandSpec::new("ecad.pad.add.through_hole", "Through-hole Pad", crate::checked!("ecad.pad.add.through_hole", add_through_hole))
         .icon("c_concentric")
@@ -45,7 +45,7 @@ pub static COMMANDS: &[CommandSpec] = &[
         .contract(&EDIT_CONTRACT)
         .output(output_schema_for::<EditResult>)
         .params(
-            "footprint: id|name; pad: number; number?, at?, size?, rotation?, side?, shape?, corner?, kind?, drill? → {footprint, pad, changed: [keys]}; pin maps follow a renumbered pad",
+            "footprint: id|name; pad: number; number?, at?, size?, rotation?, side?, shape?, corner?, kind?, drill?, paste? → {footprint, pad, changed: [keys]}; pin maps follow a renumbered pad",
         ),
     CommandSpec::new("ecad.pad.delete", "Delete Footprint Pads", crate::checked!("ecad.pad.delete", delete))
         .icon("delete")
@@ -108,6 +108,7 @@ fn add_kind(s: &mut Session, p: &Value, cmd: &'static str, default: Option<PadKi
             corner: spec.corner.unwrap_or(if spec.shape.map(shape) == Some(PadShape::RoundedRect) { 0.25 } else { 0.0 }),
             kind: spec.kind.map(kind).unwrap_or(if drill.is_some() { PadKind::ThroughHole } else { PadKind::Smd }),
             drill,
+            paste: spec.paste,
         };
         for (number, at) in row_items(&spec.number, spec.at, spec.row, cmd, &format!("pads[{i}]"))? {
             let pad = Pad { number, at, ..template.clone() };
@@ -172,10 +173,15 @@ fn edit(s: &mut Session, p: &Value) -> Result<Value> {
             pad.kind = PadKind::ThroughHole;
         }
     }
+    if let Some(paste) = p.paste {
+        pad.paste = Some(paste);
+    }
     if let Some(k) = p.kind {
         pad.kind = kind(k);
         if pad.kind == PadKind::Smd {
             pad.drill = None;
+        } else if p.paste.is_none() {
+            pad.paste = None;
         }
     }
     pad.validate().map_err(|e| bad(CMD, e))?;
@@ -189,6 +195,7 @@ fn edit(s: &mut Session, p: &Value) -> Result<Value> {
         ("corner", old.corner != pad.corner),
         ("kind", old.kind != pad.kind),
         ("drill", old.drill != pad.drill),
+        ("paste", old.paste != pad.paste),
     ]);
     let (footprint, number) = (item_id(c.id, &c.name), pad.number.clone());
     if !changed.is_empty() {

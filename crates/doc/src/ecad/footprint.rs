@@ -72,6 +72,10 @@ pub struct Pad {
     /// (an oval hole), before the pad's rotation.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub drill: Option<[f64; 2]>,
+    /// A surface-mount pad's solder paste opening `[w, h]`, centred on the pad, when a maker's stencil
+    /// drawing asks for less than the whole pad; the whole pad when `None`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub paste: Option<[f64; 2]>,
 }
 
 fn is_zero(v: &f64) -> bool {
@@ -209,6 +213,14 @@ impl Pad {
                 return Err(format!("pad {n}: only a rounded rectangle has a `corner`"));
             }
             _ => {}
+        }
+        if let Some(paste) = self.paste {
+            if self.kind != PadKind::Smd {
+                return Err(format!("pad {n}: only a surface-mount pad has a `paste` opening"));
+            }
+            if !paste.iter().zip(self.size).all(|(p, side)| p.is_finite() && *p > 0.0 && *p <= side) {
+                return Err(format!("pad {n}: each `paste` side must be more than 0 and no more than the pad's"));
+            }
         }
         match (self.kind, self.drill) {
             (PadKind::Smd, Some(_)) => return Err(format!("pad {n}: a surface-mount pad has no `drill`; make it a through-hole pad")),

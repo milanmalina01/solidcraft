@@ -215,6 +215,7 @@ fn pins_and_pads_round_trip_and_connect_by_number() {
             corner: 0.0,
             kind: PadKind::Smd,
             drill: None,
+            paste: None,
         },
         Pad {
             number: "2".into(),
@@ -226,6 +227,7 @@ fn pins_and_pads_round_trip_and_connect_by_number() {
             corner: 0.0,
             kind: PadKind::Smd,
             drill: None,
+            paste: None,
         },
     ];
     let r = ElectronicComponent {

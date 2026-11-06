@@ -479,6 +479,7 @@ fn pad() -> solidcraft_doc::ecad::Pad {
         corner: 0.0,
         kind: Default::default(),
         drill: None,
+        paste: None,
     }
 }
 
@@ -820,4 +821,27 @@ fn verify_refuses_hostile_tables() {
         let e = refused(&mut s, "ecad.footprint.verify", p.clone());
         assert!(e.contains(says), "{p}: {e}");
     }
+}
+
+#[test]
+fn a_pad_keeps_a_paste_opening_within_it() {
+    let mut s = Session::default();
+    run(&mut s, "ecad.footprint.create", json!({"name": "F"}));
+    run(&mut s, "ecad.pad.add", json!({"footprint": "F", "pads": [{"number": 1, "at": [0, 0], "size": [1, 2], "paste": [0.8, 1.8]}]}));
+    let pad = |s: &mut Session| run(s, "ecad.footprint.inspect", json!({"footprint": "F"}))["footprint"]["pads"][0].clone();
+    assert_eq!(pad(&mut s)["paste"], json!([0.8, 1.8]));
+    let r = run(&mut s, "ecad.pad.edit", json!({"footprint": "F", "pad": 1, "paste": [0.5, 1.8]}));
+    assert_eq!(r["changed"], json!(["paste"]), "{r}");
+    assert_eq!(pad(&mut s)["paste"], json!([0.5, 1.8]));
+    for paste in [json!([1.1, 1]), json!([0, 1]), json!([-1, 1])] {
+        refused(&mut s, "ecad.pad.edit", json!({"footprint": "F", "pad": 1, "paste": paste}));
+    }
+    // A hole has no paste: turning the pad into one drops it, and asking for both is refused.
+    refused(
+        &mut s,
+        "ecad.pad.add",
+        json!({"footprint": "F", "pads": [{"number": 2, "at": [3, 0], "size": [1, 1], "drill": 0.5, "paste": [0.5, 0.5]}]}),
+    );
+    run(&mut s, "ecad.pad.edit", json!({"footprint": "F", "pad": 1, "kind": "through_hole", "drill": 0.5}));
+    assert_eq!(pad(&mut s).get("paste"), None);
 }
