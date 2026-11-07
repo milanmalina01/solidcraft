@@ -411,9 +411,15 @@ fn labels(cx: &mut Cx) -> Vec<Label> {
         if t.kind != GraphicType::Text {
             continue;
         }
-        let corners = t.text_box();
+        let mut corners = t.text_box();
         if corners.len() < 4 {
             continue;
+        }
+        // Mirrored text runs back from its start, as the fab files draw it.
+        if let (true, Some([x, _])) = (g.mirror, t.at) {
+            for c in &mut corners {
+                c[0] = 2.0 * x - c[0];
+            }
         }
         labels.push(Label {
             kind: Kind::Drawing,

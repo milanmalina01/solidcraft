@@ -277,3 +277,23 @@ fn a_fab_profile_sets_the_rules_it_needs_and_never_loosens_the_users() {
     let e = refused(&mut s, "ecad.board.profile", json!({"fab": "cheap"}));
     assert!(e.contains("standard"), "{e}");
 }
+
+#[test]
+fn mirrored_text_on_the_bottom_silk_is_measured_running_back_from_its_start() {
+    // Mirrored, it runs back into the board from the right edge; unmirrored, off it.
+    let off_the_edge = |mirror: bool| {
+        let mut s = board();
+        run(
+            &mut s,
+            "ecad.board.draw.text",
+            json!({"layer": "silkscreen_bottom", "at": [14.5, -8], "text": "SERVO", "height": 1.5, "mirror": mirror}),
+        );
+        let q = run(&mut s, "ecad.quality.inspect", json!({"limit": 500}));
+        q["findings"].as_array().unwrap().iter().any(|f| {
+            let says = f["message"].as_str().unwrap_or("");
+            f["code"] == "silk.clip" && says.contains("SERVO") && says.contains("edge")
+        })
+    };
+    assert!(!off_the_edge(true), "mirrored text stays on the board");
+    assert!(off_the_edge(false), "unmirrored text runs off it");
+}
