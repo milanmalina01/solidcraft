@@ -260,7 +260,15 @@ fn the_fab_files_read_back_as_the_board_and_the_assembly_lists_match_its_parts()
     let cpl = std::fs::read_to_string(dir.join("dnp-cpl.csv")).unwrap();
     assert!(bom.lines().any(|l| l == "10k,R1,R0603,C25804") && !bom.contains(",R2,") && !bom.contains("\"R1,R2\""), "{bom}");
     assert!(cpl.lines().all(|l| !l.starts_with("R2,")) && cpl.lines().any(|l| l.starts_with("R1,")), "{cpl}");
+    // And it gets no paste: a solder bridge left open must not be joined by the stencil.
+    let paste = |s: &Session| {
+        let files = fab::gerbers(&s.doc.ecad, &s.board_nets(), &fab::Options::default()).unwrap();
+        let f = files.iter().find(|f| f.name.ends_with(".GTP")).unwrap();
+        std::str::from_utf8(&f.bytes).unwrap().matches("G36*").count()
+    };
+    let without = paste(&s);
     run(&mut s, "ecad.schematic.edit", json!({"parts": [{"part": "R2", "dnp": false}]}));
+    assert_eq!(paste(&s), without + 2, "fitted again, R2's two pads have their paste back");
     // A zip short of a copper layer doesn't pass.
     let short: Vec<fab::FabFile> = files.into_iter().filter(|f| !f.name.ends_with(".G1")).collect();
     std::fs::write(dir.join("short.zip"), fab::zip(&short).unwrap()).unwrap();

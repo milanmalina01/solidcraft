@@ -238,7 +238,10 @@ pub fn files(ecad: &Electronics, nets: &BoardNets, o: &Options, glyphs: &Glyphs)
         out.push(FabFile::text(format!("{}.G{letter}S", o.stem), format!("Soldermask,{tb}"), w.finish()));
         // Paste.
         let mut w = Writer::new(&format!("Paste,{tb}"), "Positive");
-        for p in nets.pads.iter().filter(|p| p.pad.kind == PadKind::Smd && p.on(copper)) {
+        // A part that isn't fitted gets no paste: nothing would sit on it, and paste across close
+        // pads (a solder bridge left open) would join them.
+        let fitted = |p: &BoardPad| !b.footprints.iter().any(|f| f.id == p.footprint && ecad.placed(f).is_some_and(|q| q.part.dnp));
+        for p in nets.pads.iter().filter(|p| p.pad.kind == PadKind::Smd && p.on(copper) && fitted(p)) {
             w.region(&hull_outline(&paste_core(p), 0.0), true);
         }
         out.push(FabFile::text(format!("{}.G{letter}P", o.stem), format!("Paste,{tb}"), w.finish()));
