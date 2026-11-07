@@ -14,10 +14,11 @@ Several blind starting placements are scored by code and the weak ones dropped, 
 1. **Starts.** 3 or 4 agents, each blind to the others, each with one priority, in the brief below. Each writes `place.json` and may run the scorer as often as it needs.
 2. **Score.** `place_tool.py compare 2 */score.json`. A hard failure is out. Keep two. Starts within 5% of the second also stay. Weights are not calibrated, so report the raw numbers and don't trust a small gap.
 3. **Route** every kept start, using `reference/routing-dfm.md`. Compare what the scorer only guesses: unrouted connections, via count, power width kept, RF line length. Pick one and write why. An idea from a dropped start can be applied to it only if the result is scored again.
+   The scorer can't see routability, so let the router answer. When connections stay open: first check the router itself (does it use every layer it may, are its via and clearance margins the real rules, do ground vias go in first?), then give one placer the open connections and let it move parts and route again, then add a layer, and only then a larger board. Draw by hand, before routing, the links a fine-pitch connector's pads can't untangle (a USB-C's A and B rows). When all connections route, keep those tracks and fix the rest on them: another routing run will not give the same board.
 4. **Finish** the chosen one through stages 5 to 7 of `workflow.md`, until `ecad.board.check {"stage":"release"}` has no block. Any approval carries its reason. Critical approvals wait for the user.
 5. **Specialists.** One fresh agent per row. They read and report; they change nothing.
 6. **Settle.** Check each finding on its page or with a data command, because findings can be wrong. Fix the real ones, rerun the gate, then send the changed area back to that specialist.
-7. **Planted faults.** Copy the board, plant 5 or 6 faults, and give a fresh reviewer that copy. Leave no note that contradicts a fault. Report how many were found. A miss becomes a rubric line or a check.
+7. **Planted faults.** Copy the board, plant 5 or 6 faults, and give a fresh reviewer that copy. Leave no note that contradicts a fault, and nothing beside the copy that lists them: the scripts stay in another folder. Report how many were found. A miss becomes a rubric line or a check.
 8. **Audit.** The brief below. The auditor can't fix anything.
 9. **Record** in `verification/board.json`: starts and their scores, what was dropped and why, the route comparison, reviews, faults found, audits, approvals, and one row per requirement with its layout evidence. `status` is `not_checked` until the user signs off.
 10. **Every mistake that escaped** becomes a constraint, a check or a rubric line.
@@ -33,6 +34,8 @@ Several blind starting placements are scored by code and the weak ones dropped, 
 | Visual | `review.md` sections 3 to 5, pictures only | flow, tidiness, labels |
 
 Each answers `yes`, `no` or `unknown` per item, with objects and the command or page that shows it. Limit findings to what could change the board or a decision.
+
+Things that have slipped past checks, for the specialists to look at by name: a heat pad with no vias (a stitch command can report success and place none); paste on parts not fitted; capacitor voltage ratings against what the table assumes, and their value under bias; a checker's current figure against each branch's real load; connector names on the silk, above all two plugs of the same size; pin marks clipped by the board's edge; socket positions of a module's own antennas, and which is which; the fab's stack-up, and whether the design is sensitive to it.
 
 ## Briefs
 
