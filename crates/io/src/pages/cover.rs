@@ -62,7 +62,7 @@ pub(super) fn draw(ecad: &Electronics, page: &mut Page, geometry: &Sheet, pal: &
         // list counts them), not the picture's.
         let b = &ecad.board;
         let caption = format!(
-            "Top side  ·  board {:.1} × {:.1} mm, {} copper layers, {} parts fitted on both sides",
+            "Top side  ·  board {:.1} × {:.1} mm, {} copper layers, {} parts fitted",
             size[0],
             size[1],
             b.copper_layers,
