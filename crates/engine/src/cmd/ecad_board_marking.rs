@@ -100,8 +100,8 @@ fn place(s: &mut Session, p: &Value) -> Result<Value> {
     board.markings.push(m.clone());
     let (graphics, keepouts) =
         (board.graphics.iter().filter(|g| g.marking == Some(id)).count(), board.keepouts.iter().filter(|k| k.marking == Some(id)).count());
-    let bbox = solidcraft_doc::ecad::bbox(board.graphics.iter().filter(|g| g.marking == Some(id)).filter_map(|g| g.graphic.bbox()).flatten())
-        .unwrap_or([at, at]);
+    let bbox =
+        solidcraft_doc::ecad::bbox(board.graphics.iter().filter(|g| g.marking == Some(id)).filter_map(|g| g.bbox()).flatten()).unwrap_or([at, at]);
     // On the board, and its copper within the rules.
     let ring = solidcraft_doc::ecad::path::tessellate(&board.outline, &board.outline_curves, true, 0.01);
     let corners = [bbox[0], [bbox[1][0], bbox[0][1]], bbox[1], [bbox[0][0], bbox[1][1]]];
@@ -114,7 +114,7 @@ fn place(s: &mut Session, p: &Value) -> Result<Value> {
     let nets = s.board_nets();
     let ours: Vec<&solidcraft_doc::ecad::board::BoardGraphic> = board.graphics.iter().filter(|g| g.marking == Some(id)).collect();
     let rect = |g: &solidcraft_doc::ecad::board::BoardGraphic| {
-        g.graphic.bbox().map(|[a, b]| solidcraft_doc::ecad::footprint::Core { points: vec![a, [b[0], a[1]], b, [a[0], b[1]]], radius: 0.0 })
+        g.bbox().map(|[a, b]| solidcraft_doc::ecad::footprint::Core { points: vec![a, [b[0], a[1]], b, [a[0], b[1]]], radius: 0.0 })
     };
     let pieces: Vec<(solidcraft_doc::ecad::CopperLayer, solidcraft_doc::ecad::footprint::Core)> = ours
         .iter()

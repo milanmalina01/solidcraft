@@ -576,6 +576,19 @@ impl BoardGraphic {
         let g = &self.graphic;
         g.points.first().copied().or(g.from).or(g.center).or(g.at)
     }
+
+    /// The smallest box around it, its line width included: mirrored text runs back from its
+    /// `at` before its turn, as the fab files draw it.
+    pub fn bbox(&self) -> Option<[[f64; 2]; 2]> {
+        let g = &self.graphic;
+        let (true, GraphicType::Text, Some([x, y]), Some(h)) = (self.mirror, g.kind, g.at, g.height) else { return g.bbox() };
+        let w = h * 0.6 * super::overbar::plain(&g.text).chars().count() as f64;
+        let (s, c) = g.rotation.to_radians().sin_cos();
+        let corners = [[0.0, 0.0], [-w, 0.0], [-w, h], [0.0, h]].map(|[u, v]| [x + u * c - v * s, y + u * s + v * c]);
+        let [[x0, y0], [x1, y1]] = bbox(corners)?;
+        let half = g.width / 2.0;
+        Some([[x0 - half, y0 - half], [x1 + half, y1 + half]])
+    }
 }
 
 /// The box round a footprint in its own frame: its copper and its graphics' geometry.

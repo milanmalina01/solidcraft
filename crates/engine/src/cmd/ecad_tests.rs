@@ -517,3 +517,21 @@ fn a_board_marking_is_one_step_and_follows_the_design_info() {
     let over = run(&mut s, "ecad.board.marking", json!({"side": "top", "at": [pad[0] - 0.5, pad[1] + 2.0], "dry_run": true}));
     assert!(over["warnings"].as_array().is_some_and(|w| w.iter().any(|x| x.as_str().is_some_and(|t| t.contains("pad")))), "{over}");
 }
+
+#[test]
+fn a_bottom_marking_is_measured_where_its_mirrored_text_prints() {
+    let mut s = board();
+    run(&mut s, "ecad.design.info", json!({"title": "Sensor", "revision": "A", "date": "2026-10-31"}));
+    let bbox = |s: &mut Session, side: &str, x: f64, qr: bool| {
+        let r = run(s, "ecad.board.marking", json!({"side": side, "at": [x, 9.5], "template": {"qr": qr}, "dry_run": true}));
+        [r["bbox"][0][0].as_f64().unwrap(), r["bbox"][1][0].as_f64().unwrap()]
+    };
+    // The text block covers the same ground on either side.
+    let (top, bottom) = (bbox(&mut s, "top", -14.0, false), bbox(&mut s, "bottom", -14.0, false));
+    assert!((top[0] - bottom[0]).abs() < 1e-3 && (top[1] - bottom[1]).abs() < 1e-3, "{top:?} {bottom:?}");
+    // The QR code sits after the text on the top, before it on the bottom: moved by its width,
+    // the bottom block covers what the top one does, and fits where that one fits.
+    let top_qr = bbox(&mut s, "top", -14.0, true);
+    let bottom_qr = bbox(&mut s, "bottom", -14.0 + top_qr[1] - top[1], true);
+    assert!((top_qr[0] - bottom_qr[0]).abs() < 1e-3 && (top_qr[1] - bottom_qr[1]).abs() < 1e-3, "{top_qr:?} {bottom_qr:?}");
+}

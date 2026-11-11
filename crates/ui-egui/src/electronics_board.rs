@@ -439,7 +439,7 @@ fn bounds(app: &SolveApp) -> Option<[[f64; 2]; 2]> {
     points.extend(b.tracks.iter().flat_map(|t| t.points.iter().copied()));
     points.extend(b.vias.iter().map(|v| v.at));
     points.extend(b.holes.iter().map(|h| h.at));
-    points.extend(b.graphics.iter().filter_map(|g| g.graphic.bbox()).flatten());
+    points.extend(b.graphics.iter().filter_map(|g| g.bbox()).flatten());
     points.extend(b.pours.iter().flat_map(|p| p.outline.iter().copied()));
     points.extend(b.keepouts.iter().flat_map(|k| k.outline.iter().copied()));
     solidcraft_engine::doc::ecad::bbox(points)
